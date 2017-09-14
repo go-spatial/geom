@@ -1,53 +1,48 @@
 // Package geom describes geometry interfaces.
 package geom
 
-// Geometry describes a geometry.
 type Geometry interface{}
 
-// Point is a point with two dimensions.
-type Point interface {
+// Pointer is a point with two dimensions.
+type Pointer interface {
 	Geometry
-	XY() (float64, float64)
+	XY() [2]float64
 }
 
-// Point3 is a point with three dimensions.
-type Point3 interface {
-	Point
-	XYZ() (float64, float64, float64)
-}
-
-// MultiPoint is a geometry with multiple points.
-type MultiPoint interface {
+// MultiPointer is a geometry with multiple points.
+type MultiPointer interface {
 	Geometry
-	Points() []Point
+	Points() [][2]float64
 }
 
-// LineString is a line of two or more points
-type LineString interface {
+// LineStringer is a line of two or more points
+type LineStringer interface {
 	Geometry
-	SubPoints() []Point
+	SubPoints() [][2]float64
 }
 
-// MultiLineString is a geometry with multiple LineStrings.
-type MultiLineString interface {
+// MultiLineStringer is a geometry with multiple LineStrings.
+type MultiLineStringer interface {
 	Geometry
-	LineStrings() []LineString
+	LineStrings() [][][2]float64
 }
 
-// Polygon is a geometry consisting of multiple closed LineStrings. There must be only one exterior LineString with a clockwise winding order. There may be one or more interior LineStrings with a counterclockwise winding orders.
-type Polygon interface {
+// 	Polygoner is a geometry consisting of multiple closed LineStrings.
+//	There must be only one exterior LineString with a clockwise winding order.
+//	There may be one or more interior LineStrings with a counterclockwise winding orders.
+type Polygoner interface {
 	Geometry
-	SubLineStrings() []LineString
+	SubLineStrings() [][][2]float64
 }
 
-// MultiPolygon is a geometry of multiple polygons.
-type MultiPolygon interface {
+// MultiPolygoner is a geometry of multiple polygons.
+type MultiPolygoner interface {
 	Geometry
-	Polygons() []Polygon
+	Polygons() [][][][2]float64
 }
 
-// Collection is a collections of different geometries.
-type Collection interface {
+// Collectioner is a collections of different geometries.
+type Collectioner interface {
 	Geometry
 	Geometries() []Geometry
 }
