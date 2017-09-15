@@ -9,3 +9,8 @@ type Point struct {
 func (p *Point) XY() [2]float64 {
 	return [2]float64{p.X, p.Y}
 }
+
+func (p *Point) SetXY(xy [2]float64) {
+	p.X = xy[0]
+	p.Y = xy[1]
+}

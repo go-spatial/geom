@@ -36,7 +36,7 @@ func TestBBox(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		output := util.BBox(tc.points)
+		output := util.BBox(tc.points...)
 
 		if !reflect.DeepEqual(output, tc.expected) {
 			t.Errorf("test case (%v) failed. output (%+v) does not match expected (%+v)", i, output, tc.expected)
