@@ -4,6 +4,6 @@ package geom
 type Collection []Geometry
 
 // Geometries returns the slice of Geometries
-func (c Collection) Geometries() []Geometry {
-	return c
+func (c *Collection) Geometries() []Geometry {
+	return *c
 }
