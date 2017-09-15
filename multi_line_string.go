@@ -1,7 +1,9 @@
 package geom
 
+// MultiLineString is a geometry with multiple LineStrings.
 type MultiLineString [][][2]float64
 
-func (mls MultiLineString) LineStrings() [][][2]float64 {
-	return mls
+// LineStrings returns the coordinates for the linestrings
+func (mls *MultiLineString) LineStrings() [][][2]float64 {
+	return *mls
 }

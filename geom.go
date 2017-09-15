@@ -1,6 +1,7 @@
 // Package geom describes geometry interfaces.
 package geom
 
+// Geometry is an object with a spatial reference.
 type Geometry interface{}
 
 // Pointer is a point with two dimensions.
@@ -9,9 +10,10 @@ type Pointer interface {
 	XY() [2]float64
 }
 
+// PointSetter is a mutable Pointer.
 type PointSetter interface {
 	Pointer
-	SetXY([2]float64) error
+	SetXY([2]float64)
 }
 
 // MultiPointer is a geometry with multiple points.
@@ -20,17 +22,19 @@ type MultiPointer interface {
 	Points() [][2]float64
 }
 
+// MultiPointSetter is a mutable MultiPointer.
 type MultiPointSetter interface {
 	MultiPointer
 	SetPoints([][2]float64) error
 }
 
-// LineStringer is a line of two or more points
+// LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
 	SubPoints() [][2]float64
 }
 
+// LineStringSetter is a mutable LineStringer.
 type LineStringSetter interface {
 	LineStringer
 	SetSubPoints([][2]float64) error
@@ -42,19 +46,21 @@ type MultiLineStringer interface {
 	LineStrings() [][][2]float64
 }
 
+// MultiLineStringSetter is a mutable MultiLineStringer.
 type MultiLineStringSetter interface {
 	MultiLineStringer
 	SetLineStrings([][][2]float64) error
 }
 
-// 	Polygoner is a geometry consisting of multiple closed LineStrings.
-//	There must be only one exterior LineString with a clockwise winding order.
-//	There may be one or more interior LineStrings with a counterclockwise winding orders.
+// Polygoner is a geometry consisting of multiple closed LineStrings.
+// There must be only one exterior LineString with a clockwise winding order.
+// There may be one or more interior LineStrings with a counterclockwise winding orders.
 type Polygoner interface {
 	Geometry
 	SubLineStrings() [][][2]float64
 }
 
+// PolygonSetter is a mutable Polygoner.
 type PolygonSetter interface {
 	Polygoner
 	SetSubLineStrings([][][2]float64) error
@@ -66,6 +72,7 @@ type MultiPolygoner interface {
 	Polygons() [][][][2]float64
 }
 
+// MultiPolygonSetter is a mutable MultiPolygoner.
 type MultiPolygonSetter interface {
 	MultiPolygoner
 	SetPolygons([][][][2]float64) error
@@ -77,6 +84,7 @@ type Collectioner interface {
 	Geometries() []Geometry
 }
 
+// CollectionSetter is a mutable Collectioner.
 type CollectionSetter interface {
 	Collectioner
 	SetGeometries([]Geometry) error

@@ -25,11 +25,12 @@ func TestBBox(t *testing.T) {
 		{
 			points: [][2]float64{
 				{0.0, 0.0},
-				{6.0, 4.0},
+				{6.0, -4.0},
+				{-6.0, 4.0},
 				{3.0, 7.0},
 			},
 			expected: util.BoundingBox{
-				0.0, 0.0,
+				-6.0, -4.0,
 				6.0, 7.0,
 			},
 		},
