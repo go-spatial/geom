@@ -2,7 +2,9 @@
 package geom
 
 // Geometry is an object with a spatial reference.
-type Geometry interface{}
+type Geometry interface {
+	Points() [][2]float64
+}
 
 // Pointer is a point with two dimensions.
 type Pointer interface {
@@ -19,7 +21,6 @@ type PointSetter interface {
 // MultiPointer is a geometry with multiple points.
 type MultiPointer interface {
 	Geometry
-	Points() [][2]float64
 }
 
 // MultiPointSetter is a mutable MultiPointer.
@@ -31,7 +32,6 @@ type MultiPointSetter interface {
 // LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
-	SubPoints() [][2]float64
 }
 
 // LineStringSetter is a mutable LineStringer.

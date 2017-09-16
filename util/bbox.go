@@ -1,13 +1,17 @@
 package util
 
+import (
+	"github.com/go-spatial/geom"
+)
+
 // BoundingBox represents X1, Y1, X2, Y2 (LL, UR) of a geometry
 // TODO: maybe setup UL, LR as geom.Point to e more explicit?
 type BoundingBox [4]float64
 
 // BBox returns X1, Y1, X2, Y2 (LL, UR) for the input points
-func BBox(points ...[2]float64) (bbox BoundingBox) {
+func BBox(g geom.Geometry) (bbox BoundingBox) {
 
-	for i, xy := range points {
+	for i, xy := range g.Points() {
 
 		if i == 0 {
 			bbox[0] = xy[0]

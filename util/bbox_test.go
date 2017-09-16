@@ -4,31 +4,39 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/util"
 )
 
 func TestBBox(t *testing.T) {
 	testcases := []struct {
-		points   [][2]float64
+		geom     geom.Geometry
 		expected util.BoundingBox
 	}{
 
 		{
-			points: [][2]float64{
-				{1.0, 2.0},
-			},
+			geom: &geom.Point{X: 1.0, Y: 2.0},
 			expected: util.BoundingBox{
 				1.0, 2.0,
 				1.0, 2.0,
 			},
 		},
 		{
-			points: [][2]float64{
-				{0.0, 0.0},
-				{6.0, -4.0},
-				{-6.0, 4.0},
-				{3.0, 7.0},
+			geom: &geom.LineString{[2]float64{0.0, 0.0},
+				[2]float64{6.0, -4.0},
+				[2]float64{-6.0, 4.0},
+				[2]float64{3.0, 7.0}},
+			expected: util.BoundingBox{
+				-6.0, -4.0,
+				6.0, 7.0,
 			},
+		},
+		{
+			geom: &geom.Collection{&geom.Polygon{[][2]float64{[2]float64{0.0, 0.0},
+				[2]float64{6.0, -4.0},
+				[2]float64{-6.0, 4.0},
+				[2]float64{3.0, 7.0}}},
+				&geom.Point{X: 1.0, Y: 2.0}},
 			expected: util.BoundingBox{
 				-6.0, -4.0,
 				6.0, 7.0,
@@ -37,7 +45,7 @@ func TestBBox(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		output := util.BBox(tc.points...)
+		output := util.BBox(tc.geom)
 
 		if !reflect.DeepEqual(output, tc.expected) {
 			t.Errorf("test case (%v) failed. output (%+v) does not match expected (%+v)", i, output, tc.expected)

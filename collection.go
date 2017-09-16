@@ -7,3 +7,11 @@ type Collection []Geometry
 func (c *Collection) Geometries() []Geometry {
 	return *c
 }
+
+// Points returns a slice of XY values
+func (c *Collection) Points() (points [][2]float64) {
+	for _, g := range *c {
+		points = append(points, g.Points()...)
+	}
+	return
+}

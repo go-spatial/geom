@@ -11,4 +11,5 @@ func TestPolygon(t *testing.T) {
 		[2]float64{-10, -5},
 		[2]float64{10, 20}}}
 	polygon.SubLineStrings()
+	polygon.Points()
 }
