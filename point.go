@@ -12,9 +12,10 @@ func (p *Point) XY() [2]float64 {
 }
 
 // SetXY sets a pair of coordinates
-func (p *Point) SetXY(xy [2]float64) {
+func (p *Point) SetXY(xy [2]float64) (err error) {
 	p.X = xy[0]
 	p.Y = xy[1]
+	return
 }
 
 // Points returns a slice of XY values

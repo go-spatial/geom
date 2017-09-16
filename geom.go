@@ -15,7 +15,7 @@ type Pointer interface {
 // PointSetter is a mutable Pointer.
 type PointSetter interface {
 	Pointer
-	SetXY([2]float64)
+	SetXY([2]float64) error
 }
 
 // MultiPointer is a geometry with multiple points.
