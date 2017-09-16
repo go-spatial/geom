@@ -17,3 +17,9 @@ func (mp *MultiPolygon) Points() (points [][2]float64) {
 	}
 	return
 }
+
+// SetPolygons modifies the array of 2D coordinates
+func (mp *MultiPolygon) SetPolygons(input [][][][2]float64) (err error) {
+	*mp = append((*mp)[:0], input...)
+	return
+}

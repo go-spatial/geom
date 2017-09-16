@@ -15,3 +15,9 @@ func (mls *MultiLineString) Points() (points [][2]float64) {
 	}
 	return
 }
+
+// SetLineStrings modifies the array of 2D coordinates
+func (mls *MultiLineString) SetLineStrings(input [][][2]float64) (err error) {
+	*mls = append((*mls)[:0], input...)
+	return
+}

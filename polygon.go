@@ -5,8 +5,8 @@ package geom
 // There may be one or more interior LineStrings with a counterclockwise winding orders.
 type Polygon [][][2]float64
 
-// SubLineStrings returns the coordinates of the lineStrings
-func (p *Polygon) SubLineStrings() [][][2]float64 {
+// LineStrings returns the coordinates of the lineStrings
+func (p *Polygon) LineStrings() [][][2]float64 {
 	return *p
 }
 
@@ -15,5 +15,11 @@ func (p *Polygon) Points() (points [][2]float64) {
 	for _, ls := range *p {
 		points = append(points, ls...)
 	}
+	return
+}
+
+// SetLineStrings modifies the array of 2D coordinates
+func (p *Polygon) SetLineStrings(input [][][2]float64) (err error) {
+	*p = append((*p)[:0], input...)
 	return
 }
