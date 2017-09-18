@@ -4,13 +4,13 @@ package geom
 type MultiPolygon [][][][2]float64
 
 // Polygons returns the array of polygons.
-func (mp *MultiPolygon) Polygons() [][][][2]float64 {
-	return *mp
+func (mp MultiPolygon) Polygons() [][][][2]float64 {
+	return mp
 }
 
 // Points returns a slice of XY values
-func (mp *MultiPolygon) Points() (points [][2]float64) {
-	for _, p := range *mp {
+func (mp MultiPolygon) Points() (points [][2]float64) {
+	for _, p := range mp {
 		for _, ls := range p {
 			points = append(points, ls...)
 		}

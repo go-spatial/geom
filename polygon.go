@@ -6,13 +6,13 @@ package geom
 type Polygon [][][2]float64
 
 // LineStrings returns the coordinates of the lineStrings
-func (p *Polygon) LineStrings() [][][2]float64 {
-	return *p
+func (p Polygon) LineStrings() [][][2]float64 {
+	return p
 }
 
 // Points returns a slice of XY values
-func (p *Polygon) Points() (points [][2]float64) {
-	for _, ls := range *p {
+func (p Polygon) Points() (points [][2]float64) {
+	for _, ls := range p {
 		points = append(points, ls...)
 	}
 	return

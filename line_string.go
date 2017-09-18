@@ -4,8 +4,8 @@ package geom
 type LineString [][2]float64
 
 // Points returns a slice of XY values
-func (ls *LineString) Points() [][2]float64 {
-	return *ls
+func (ls LineString) Points() [][2]float64 {
+	return ls
 }
 
 // SetPoints modifies the array of 2D coordinates

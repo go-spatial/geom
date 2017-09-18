@@ -7,7 +7,7 @@ type Point struct {
 }
 
 // XY returns an array of 2D coordinates
-func (p *Point) XY() [2]float64 {
+func (p Point) XY() [2]float64 {
 	return [2]float64{p.X, p.Y}
 }
 
@@ -19,6 +19,6 @@ func (p *Point) SetXY(xy [2]float64) (err error) {
 }
 
 // Points returns a slice of XY values
-func (p *Point) Points() [][2]float64 {
+func (p Point) Points() [][2]float64 {
 	return [][2]float64{[2]float64{p.X, p.Y}}
 }
