@@ -32,12 +32,13 @@ type MultiPointSetter interface {
 // LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
+	Vertexes() [][2]float64
 }
 
 // LineStringSetter is a mutable LineStringer.
 type LineStringSetter interface {
 	LineStringer
-	SetPoints([][2]float64) error
+	SetVertexes([][2]float64) error
 }
 
 // MultiLineStringer is a geometry with multiple LineStrings.
@@ -52,18 +53,18 @@ type MultiLineStringSetter interface {
 	SetLineStrings([][][2]float64) error
 }
 
-// Polygoner is a geometry consisting of multiple closed LineStrings.
+// Polygoner is a geometry consisting of multiple Linear Rings.
 // There must be only one exterior LineString with a clockwise winding order.
 // There may be one or more interior LineStrings with a counterclockwise winding orders.
 type Polygoner interface {
 	Geometry
-	LineStrings() [][][2]float64
+	LinearRings() [][][2]float64
 }
 
 // PolygonSetter is a mutable Polygoner.
 type PolygonSetter interface {
 	Polygoner
-	SetLineStrings([][][2]float64) error
+	SetLinearRings([][][2]float64) error
 }
 
 // MultiPolygoner is a geometry of multiple polygons.
