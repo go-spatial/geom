@@ -1,18 +1,35 @@
-package geom
+package geom_test
 
 import (
+	"reflect"
 	"testing"
+
+	"github.com/go-spatial/geom"
 )
 
-func TestPoint(t *testing.T) {
-	var (
-		point PointSetter
-	)
-	point = &Point{X: 10, Y: 20}
-	point.XY()
-	point.SetXY([2]float64{30, 40})
-	xy := point.XY()
-	if xy[0] != 30 {
-		t.Errorf("Expected 30, received %v", xy[0])
+func TestPointSetter(t *testing.T) {
+	testcases := []struct {
+		point    [2]float64
+		setter   geom.PointSetter
+		expected geom.PointSetter
+	}{
+		{
+			point:    [2]float64{10, 20},
+			setter:   &geom.Point{15, 20},
+			expected: &geom.Point{10, 20},
+		},
+	}
+
+	for i, tc := range testcases {
+		err := tc.setter.SetXY(tc.point)
+		if err != nil {
+			t.Errorf("test case (%v) failed. err: %v", i, err)
+			continue
+		}
+
+		//	compare the results
+		if !reflect.DeepEqual(tc.expected, tc.setter) {
+			t.Errorf("test case (%v) failed. Expected (%v) does not match result (%v)", i, tc.expected, tc.setter)
+		}
 	}
 }

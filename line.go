@@ -1,4 +1,4 @@
 package geom
 
-// Line has no clear function in this library
-type Line [2]Point
+// Line has exactly two points
+type Line [2][2]float64

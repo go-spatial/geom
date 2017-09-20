@@ -1,19 +1,53 @@
-package geom
+package geom_test
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/go-spatial/geom"
 )
 
-func TestCollection(t *testing.T) {
-	var (
-		c1, c2 CollectionSetter
-	)
-	c1 = &Collection{&Point{10, 20}, &LineString{{30, 40}, {50, 60}}}
-	c2 = &Collection{&Point{15, 25}, &MultiPoint{{35, 45}, {55, 65}}}
-	c1.SetGeometries(c2.Geometries())
-	if !reflect.DeepEqual(c1, c2) {
-		t.Errorf("Output (%+v) does not match expected (%+v).", c1, c2)
+func TestCollectionSetter(t *testing.T) {
+	testcases := []struct {
+		geoms    []geom.Geometry
+		setter   geom.CollectionSetter
+		expected geom.CollectionSetter
+	}{
+		{
+			geoms: []geom.Geometry{
+				&geom.Point{10, 20},
+				&geom.LineString{
+					{30, 40},
+					{50, 60},
+				},
+			},
+			setter: &geom.Collection{
+				&geom.Point{15, 25},
+				&geom.MultiPoint{
+					{35, 45},
+					{55, 65},
+				},
+			},
+			expected: &geom.Collection{
+				&geom.Point{10, 20},
+				&geom.LineString{
+					{30, 40},
+					{50, 60},
+				},
+			},
+		},
 	}
-	c1.Points()
+
+	for i, tc := range testcases {
+		err := tc.setter.SetGeometries(tc.geoms)
+		if err != nil {
+			t.Errorf("test case (%v) failed. err:", i, err)
+			continue
+		}
+
+		//	compare the results
+		if !reflect.DeepEqual(tc.expected, tc.setter) {
+			t.Errorf("test case (%v) failed. Expected (%v) does not match result (%v)", i, tc.expected, tc.setter)
+		}
+	}
 }
