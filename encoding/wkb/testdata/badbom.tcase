@@ -1,0 +1,11 @@
+desc: Bad Bom
+decode_error: decode: bad byte order marker
+skip: encode
+bytes:{{
+//01 02 03 04 05 06 07 08
+  02                      // Byte order Marker little
+  01 00 00 00             // Type 1 Point
+  00 00 00 00 00 00 F0 3F // x 1
+  00 00 00 00 00 00 00 40 // y 2
+}}
+
