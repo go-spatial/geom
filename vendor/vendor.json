@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "PigyCtFZeHFv8E6PAa4j5NMBlvY=",
+			"path": "github.com/mattn/goveralls",
+			"revision": "1c14a4061c1cb86f0310cc0d4c0b5bc743879bc5",
+			"revisionTime": "2018-03-19T02:19:29Z"
+		},
+		{
+			"checksumSHA1": "i05c1J3Pkn6Ll+YINNnf6nv8z0g=",
+			"path": "golang.org/x/tools/cmd/cover",
+			"revision": "73e16cff9e0d4a802937444bebb562458548241d",
+			"revisionTime": "2018-02-27T16:02:18Z"
+		},
+		{
+			"checksumSHA1": "w/OExaIcqB7E5IG5097RPHtOlzc=",
+			"path": "golang.org/x/tools/cover",
+			"revision": "73e16cff9e0d4a802937444bebb562458548241d",
+			"revisionTime": "2018-02-27T16:02:18Z"
+		}
+	],
+	"rootPath": "github.com/go-spatial/geom"
+}
