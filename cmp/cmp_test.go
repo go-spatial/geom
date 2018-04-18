@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	geom "github.com/go-spatial/tegola/geom"
+	geom "github.com/go-spatial/geom"
 )
 
 /*

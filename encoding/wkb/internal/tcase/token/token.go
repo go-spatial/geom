@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/tcase/symbol"
-	"github.com/go-spatial/tegola/geom/internal/parsing"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/wkb/internal/tcase/symbol"
+	"github.com/go-spatial/geom/internal/parsing"
 )
 
 type T struct {

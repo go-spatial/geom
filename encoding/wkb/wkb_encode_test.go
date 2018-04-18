@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/tegola/geom/encoding/wkb"
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/tcase"
+	"github.com/go-spatial/geom/encoding/wkb"
+	"github.com/go-spatial/geom/encoding/wkb/internal/tcase"
 )
 
 func TestWKBEncode(t *testing.T) {

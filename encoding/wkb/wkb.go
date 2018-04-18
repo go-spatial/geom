@@ -2,8 +2,8 @@
 // sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
 // There are a few types supported by the specification. Each general type is in it's own file.
 // So, to find the implementation of Point (and MultiPoint) it will be located in the point.go
-// file. Each of the basic type here adhere to the tegola.Geometry interface. So, a wkb point
-// is, also, a tegola.Point
+// file. Each of the basic type here adhere to the geom.Geometry interface. So, a wkb point
+// is, also, a geom.Point
 package wkb
 
 import (
@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/consts"
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/decode"
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/encode"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/wkb/internal/consts"
+	"github.com/go-spatial/geom/encoding/wkb/internal/decode"
+	"github.com/go-spatial/geom/encoding/wkb/internal/encode"
 )
 
 type ErrUnknownGeometry struct {

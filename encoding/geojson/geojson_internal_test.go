@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
 func TestClosePolygon(t *testing.T) {

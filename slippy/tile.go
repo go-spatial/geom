@@ -3,7 +3,7 @@ package slippy
 import (
 	"math"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
 func NewTile(z, x, y uint, buffer float64, srid uint64) *Tile {

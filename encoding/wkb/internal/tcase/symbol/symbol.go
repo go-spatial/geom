@@ -4,7 +4,7 @@ import (
 	"io"
 	"unicode"
 
-	"github.com/go-spatial/tegola/geom/internal/parsing"
+	"github.com/go-spatial/geom/internal/parsing"
 )
 
 const (

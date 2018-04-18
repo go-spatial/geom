@@ -5,56 +5,53 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/geom/internal/parsing"
+	"github.com/go-spatial/geom/internal/parsing"
 )
 
 func TestSymbol(t *testing.T) {
 
-	type tc struct {
+	type tcase struct {
 		input    string
 		expected [][]byte
 		err      error
 	}
-	fn := func(idx int, test tc) {
-		r := strings.NewReader(test.input)
+	fn := func(t *testing.T, tc tcase) {
+		r := strings.NewReader(tc.input)
 		s := parsing.NewScanner(r, SplitFn)
 		i := 0
 		for s.Scan() {
-			if i >= len(test.expected) {
-				t.Errorf("[%v] Got(%v) more entries then expected (%v).", idx, i, len(test.expected))
+			if i >= len(tc.expected) {
+				t.Errorf("number of entries, expected %v got %v", i, len(tc.expected))
 			}
 			b := s.RawBytes()
-			if !reflect.DeepEqual(test.expected[i], b) {
-				t.Errorf("[%v] Bytes Expected: %v got: %v", idx, test.expected[i], b)
+			if !reflect.DeepEqual(tc.expected[i], b) {
+				t.Errorf("bytes, expected %v got %v", tc.expected[i], b)
 			}
 			f, m := s.RawPeek()
 			i++
 			if m {
-				if i >= len(test.expected) {
-					t.Errorf("[%v] Got(%v) more entries then expected (%v).", idx, i, len(test.expected))
+				if i >= len(tc.expected) {
+					t.Errorf("number of entries, expected %v got %v", len(tc.expected), i)
 					break
 				}
-				if !reflect.DeepEqual(test.expected[i], f) {
-					t.Errorf("[%v] M Expected: %v got: %v", idx, test.expected[i], f)
+				if !reflect.DeepEqual(tc.expected[i], f) {
+					t.Errorf("M, expected %v got %v", tc.expected[i], f)
 				}
 			} else {
 				if !reflect.DeepEqual([]byte{parsing.EOF}, f) {
-					t.Errorf("[%v] !M Expected: %v got: %v", idx, []byte{parsing.EOF}, f)
+					t.Errorf("!M, expected %v got %v", []byte{parsing.EOF}, f)
 				}
 			}
 		}
-		if i < len(test.expected) {
-			t.Errorf("[%v] Got(%v) entries fewer then expected (%v).", idx, i, len(test.expected))
-			for j := i; j < len(test.expected); j++ {
-				t.Errorf("[%v] Missing: %v:%v:%v", idx, test.expected[j][0], string(test.expected[j][1:]), test.expected[j])
+		if i < len(tc.expected) {
+			t.Errorf("number of entries, expected %v got %v", len(tc.expected), i)
+			for j := i; j < len(tc.expected); j++ {
+				t.Errorf("\tmissing: %v:%v:%v", tc.expected[j][0], string(tc.expected[j][1:]), tc.expected[j])
 			}
 		}
-
 	}
-
-	tbltest.Cases(
-		tc{
+	tests := map[string]tcase{
+		"1": {
 			input: ` this is a test.`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Space, 1, []byte{' '}),
@@ -68,7 +65,7 @@ func TestSymbol(t *testing.T) {
 				parsing.EncodeSymbol(Dot, 1, []byte{'.'}),
 			},
 		},
-		tc{
+		"2": {
 			input: ` { this is a test.}`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Space, 1, []byte{' '}),
@@ -85,31 +82,31 @@ func TestSymbol(t *testing.T) {
 				parsing.EncodeSymbol(Cbrace, 1, []byte{'}'}),
 			},
 		},
-		tc{
+		"3": {
 			input: `}`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Cbrace, 1, []byte{'}'}),
 			},
 		},
-		tc{
+		"4": {
 			input: `{`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Brace, 1, []byte{'{'}),
 			},
 		},
-		tc{
+		"5": {
 			input: `[`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Bracket, 1, []byte{'['}),
 			},
 		},
-		tc{
+		"6": {
 			input: `}}`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Cdbrace, 1, []byte{'}', '}'}),
 			},
 		},
-		tc{
+		"7": {
 			input: `-12.000`,
 			expected: [][]byte{
 				parsing.EncodeSymbol(Dash, 1, []byte{'-'}),
@@ -118,6 +115,9 @@ func TestSymbol(t *testing.T) {
 				parsing.EncodeSymbol(Digit, 3, []byte{'0', '0', '0'}),
 			},
 		},
-	).Run(fn)
-
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }

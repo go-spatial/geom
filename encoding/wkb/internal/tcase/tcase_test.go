@@ -4,41 +4,40 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
-type testcase struct {
+type tcase struct {
 	filename string
 	cases    []C
 }
 
 func TestParse(t *testing.T) {
 
-	fn := func(idx int, test testcase) {
-		cases, err := ParseFile(test.filename)
+	fn := func(t *testing.T, tc tcase) {
+		cases, err := ParseFile(tc.filename)
 		if err != nil {
-			t.Errorf("%v : expect error: nil got: %v", idx, err)
+			t.Errorf("error, expected nil got %v", err)
 		}
-		if len(cases) != len(test.cases) {
-			t.Errorf("%v : number of cases expected: %v got: %v", idx, len(test.cases), len(cases))
+		if len(cases) != len(tc.cases) {
+			t.Errorf("number of cases, expected %v got %v", len(tc.cases), len(cases))
 			return
 		}
-		for i, tcase := range test.cases {
+		for i, tcase := range tc.cases {
 			acase := cases[i]
 			if acase.Desc != tcase.Desc {
-				t.Errorf("%v : Desc expected: %v got: %v", idx, tcase.Desc, acase.Desc)
+				t.Errorf("Desc, expected %v got %v", tcase.Desc, acase.Desc)
 			}
 			if !reflect.DeepEqual(tcase.Expected, acase.Expected) {
-				t.Errorf("%v : Expected expected: %#v got: %#v", idx, tcase.Expected, acase.Expected)
+				t.Errorf("Expected, expected %#v got %#v", tcase.Expected, acase.Expected)
 			}
 			if !reflect.DeepEqual(tcase.Bytes, acase.Bytes) {
-				t.Errorf("%v : Bytes expected: %v got: %v", idx, tcase.Bytes, acase.Bytes)
+				t.Errorf("Bytes, expected %v got %v", tcase.Bytes, acase.Bytes)
 			}
 		}
 	}
-	tbltest.Cases(
-		testcase{
+	tests := map[string]tcase{
+		"1": {
 			filename: "testdata/point.tcase",
 			cases: []C{
 				{
@@ -53,6 +52,9 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-	).Run(fn)
-
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }

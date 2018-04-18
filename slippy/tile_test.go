@@ -4,10 +4,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/go-spatial/tegola"
-	"github.com/go-spatial/tegola/geom"
-	"github.com/go-spatial/tegola/geom/cmp"
-	"github.com/go-spatial/tegola/geom/slippy"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/slippy"
 )
 
 func TestNewTile(t *testing.T) {
@@ -78,7 +77,7 @@ func TestNewTile(t *testing.T) {
 			x:      1,
 			y:      1,
 			buffer: 64,
-			srid:   tegola.WebMercator,
+			srid:   geom.WebMercator,
 			eExtent: geom.NewExtent(
 				[2]float64{-10018754.17, 10018754.17},
 				[2]float64{0, 0},
@@ -94,7 +93,7 @@ func TestNewTile(t *testing.T) {
 			x:      11436,
 			y:      26461,
 			buffer: 64,
-			srid:   tegola.WebMercator,
+			srid:   geom.WebMercator,
 			eExtent: geom.NewExtent(
 				[2]float64{-13044437.497219238996, 3856706.6986199953},
 				[2]float64{-13043826.000993041, 3856095.202393799},

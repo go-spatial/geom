@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/consts"
+	"github.com/go-spatial/geom/encoding/wkb/internal/consts"
 )
 
 type Encoder struct {

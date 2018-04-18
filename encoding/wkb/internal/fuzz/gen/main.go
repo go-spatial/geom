@@ -6,7 +6,7 @@ package main
 import (
 	"github.com/dvyukov/go-fuzz/gen"
 
-	"github.com/go-spatial/tegola/geom/encoding/wkb/internal/tcase"
+	"github.com/go-spatial/geom/encoding/wkb/internal/tcase"
 )
 
 func main() {

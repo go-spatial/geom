@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gdey/tbltest"
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestParseFloat64(t *testing.T) {
@@ -15,33 +15,36 @@ func TestParseFloat64(t *testing.T) {
 		exp   float64
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParseFloat64()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf(" error, expected %v got %v", tc.err, err)
 		}
-		if test.err != nil {
+		if tc.err != nil {
 			return
 		}
-		if test.exp != f {
-			t.Errorf("[%v] Exp: %v Got: %v", idx, test.exp, f)
+		if tc.exp != f {
+			t.Errorf("float64, expected %v got %v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{input: "-12", exp: -12.0},
-		tcase{input: "0", exp: 0.0},
-		tcase{input: "+1_000.00", exp: 1000.0},
-		tcase{input: "-12_000.00", exp: -12000.0},
-		tcase{input: "10.005e5", exp: 10.005e5},
-		tcase{input: "10.005e+5", exp: 10.005e5},
-		tcase{input: "10.005e+05", exp: 10.005e5},
-		tcase{input: "1.0005e+6", exp: 10.005e5},
-		tcase{input: "1.0005e+06", exp: 10.005e5},
-		tcase{input: "1.0005e-06", exp: 1.0005e-06},
-		tcase{input: "1.0005e-06a", exp: 1.0005e-06},
-	).Run(fn)
-
+	tests := map[string]tcase{
+		"1":  {input: "-12", exp: -12.0},
+		"2":  {input: "0", exp: 0.0},
+		"3":  {input: "+1_000.00", exp: 1000.0},
+		"4":  {input: "-12_000.00", exp: -12000.0},
+		"5":  {input: "10.005e5", exp: 10.005e5},
+		"6":  {input: "10.005e+5", exp: 10.005e5},
+		"7":  {input: "10.005e+05", exp: 10.005e5},
+		"8":  {input: "1.0005e+6", exp: 10.005e5},
+		"9":  {input: "1.0005e+06", exp: 10.005e5},
+		"10": {input: "1.0005e-06", exp: 1.0005e-06},
+		"11": {input: "1.0005e-06a", exp: 1.0005e-06},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 func TestParsePoint(t *testing.T) {
 	type tcase struct {
@@ -49,28 +52,27 @@ func TestParsePoint(t *testing.T) {
 		exp   [2]float64
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParsePoint()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		/*
-			if test.err != nil {
-				return
-			}
-		*/
-		if test.exp[0] != f[0] || test.exp[1] != f[1] {
-			t.Errorf("[%v] Exp: %v Got: %v", idx, test.exp, f)
+		if tc.exp[0] != f[0] || tc.exp[1] != f[1] {
+			t.Errorf(" parse point, expected %v got %v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{input: "1,-12", exp: [2]float64{1.0, -12.0}},
-		tcase{input: "0 /*x*/ ,0 /*y*/", exp: [2]float64{0.0, 0.0}},
-		tcase{input: "  +1_000.00 ,/*y*/ 1", exp: [2]float64{1000.0, 1.0}},
-		tcase{input: "-12_000.00,0", exp: [2]float64{-12000.0, 0.0}},
-		tcase{input: "/* x */ -12_000.00 /* in dollars */, /* y */ 0 /* ponds */ // This is just for kicks", exp: [2]float64{-12000.0, 0.0}},
-	).Run(fn)
+	tests := map[string]tcase{
+		"1": {input: "1,-12", exp: [2]float64{1.0, -12.0}},
+		"2": {input: "0 /*x*/ ,0 /*y*/", exp: [2]float64{0.0, 0.0}},
+		"3": {input: "  +1_000.00 ,/*y*/ 1", exp: [2]float64{1000.0, 1.0}},
+		"4": {input: "-12_000.00,0", exp: [2]float64{-12000.0, 0.0}},
+		"5": {input: "/* x */ -12_000.00 /* in dollars */, /* y */ 0 /* ponds */ // This is just for kicks", exp: [2]float64{-12000.0, 0.0}},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 
 }
 func TestParseMultiPoint(t *testing.T) {
@@ -79,41 +81,36 @@ func TestParseMultiPoint(t *testing.T) {
 		exp   geom.MultiPoint
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParseMultiPoint()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		/*
-			if test.err != nil {
-				return
-			}
-		*/
-		if !reflect.DeepEqual(test.exp, f) {
-			t.Errorf("[%v]\nExp:(%#v) %[2]v\nGot:(%#v) %[3]v", idx, test.exp, f)
+		if !reflect.DeepEqual(tc.exp, f) {
+			t.Errorf("parse multipoint, expected %#v got%#v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"1": {
 			input: `
 			( 1,-12 )
 			`,
 			exp: geom.MultiPoint([][2]float64{{1.0, -12.0}}),
 		},
-		tcase{
+		"2": {
 			input: `
 			( 1,-12 0,1)
 			`,
 			exp: geom.MultiPoint([][2]float64{{1.0, -12.0}, {0.0, 1.0}}),
 		},
-		tcase{
+		"3": {
 			input: `
 			(1,-12 0,1 1,2 )
 			`,
 			exp: geom.MultiPoint([][2]float64{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}),
 		},
-		tcase{
+		"4": {
 			input: `
 			( 
 			1,-12 // Position 1
@@ -124,8 +121,11 @@ func TestParseMultiPoint(t *testing.T) {
 			`,
 			exp: geom.MultiPoint([][2]float64{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}),
 		},
-	).Run(fn)
-
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestParseLineString(t *testing.T) {
@@ -134,41 +134,37 @@ func TestParseLineString(t *testing.T) {
 		exp   geom.LineString
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParseLineString()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		/*
-			if test.err != nil {
-				return
-			}
-		*/
-		if !reflect.DeepEqual(test.exp, f) {
-			t.Errorf("[%v]\nExp:(%#v) %[2]v\nGot:(%#v) %[3]v", idx, test.exp, f)
+		if !reflect.DeepEqual(tc.exp, f) {
+			t.Errorf("parse line string, expected (%#v) %[1]v got (%#v) %[2]v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+
+	tests := map[string]tcase{
+		"1": {
 			input: `
 			[ 1,-12 ]
 			`,
 			exp: geom.LineString([][2]float64{{1.0, -12.0}}),
 		},
-		tcase{
+		"2": {
 			input: `
 			[ 1,-12 0,1]
 			`,
 			exp: geom.LineString([][2]float64{{1.0, -12.0}, {0.0, 1.0}}),
 		},
-		tcase{
+		"3": {
 			input: `
 			[ 1,-12 0,1 1,2 ]
 			`,
 			exp: geom.LineString([][2]float64{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}),
 		},
-		tcase{
+		"4": {
 			input: `
 			[ 
 			1,-12 // Position 1
@@ -179,31 +175,31 @@ func TestParseLineString(t *testing.T) {
 			`,
 			exp: geom.LineString([][2]float64{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}),
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
+
 func TestParseMultiLineString(t *testing.T) {
 	type tcase struct {
 		input string
 		exp   geom.MultiLineString
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParseMultiLineString()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		/*
-			if test.err != nil {
-				return
-			}
-		*/
-		if !reflect.DeepEqual(test.exp, f) {
-			t.Errorf("[%v]\nExp:(%#v) %[2]v\nGot:(%#v) %[3]v", idx, test.exp, f)
+		if !reflect.DeepEqual(tc.exp, f) {
+			t.Errorf("parse multi-linestring, expected (%#v) %[1]v got (%#v) %[2]v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"1": {
 			input: `
 			[[
 			[ 1,-12 ]
@@ -211,25 +207,25 @@ func TestParseMultiLineString(t *testing.T) {
 			`,
 			exp: geom.MultiLineString([][][2]float64{{{1.0, -12.0}}}),
 		},
-		tcase{
+		"2": {
 			input: `
 			[[ [ 1,-12 0,1] ]]
 			`,
 			exp: geom.MultiLineString([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}}}),
 		},
-		tcase{
+		"3": {
 			input: `
 			[[ [ 1,-12 0,1 1,2 ] ]]
 			`,
 			exp: geom.MultiLineString([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}}),
 		},
-		tcase{
+		"4": {
 			input: `
 			[[ [ 1,-12 0,1 1,2 ] [ 1, 2] ]]
 			`,
 			exp: geom.MultiLineString([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}, {{1.0, 2.0}}}),
 		},
-		tcase{
+		"5": {
 			input: `[[
 			[ 
 			1,-12 // Position 1
@@ -240,7 +236,11 @@ func TestParseMultiLineString(t *testing.T) {
 			]]`,
 			exp: geom.MultiLineString([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}}),
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 func TestParsePolygon(t *testing.T) {
 	type tcase struct {
@@ -248,23 +248,18 @@ func TestParsePolygon(t *testing.T) {
 		exp   geom.Polygon
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParsePolygon()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v ", tc.err, err)
 		}
-		/*
-			if test.err != nil {
-				return
-			}
-		*/
-		if !reflect.DeepEqual(test.exp, f) {
-			t.Errorf("[%v]\nExp:(%#v) %[2]v\nGot:(%#v) %[3]v", idx, test.exp, f)
+		if !reflect.DeepEqual(tc.exp, f) {
+			t.Errorf("parse polygon, expected (%#v) %[1]v got (%#v) %[2]v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"1": {
 			input: `
 			{
 			[ 1,-12 ]
@@ -272,25 +267,25 @@ func TestParsePolygon(t *testing.T) {
 			`,
 			exp: geom.Polygon([][][2]float64{{{1.0, -12.0}}}),
 		},
-		tcase{
+		"2": {
 			input: `
 			{ [ 1,-12 0,1]
 		}
 			`,
 			exp: geom.Polygon([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}}}),
 		},
-		tcase{
+		"3": {
 			input: `
 			{ [ 1,-12 0,1 1,2 ] }`,
 			exp: geom.Polygon([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}}),
 		},
-		tcase{
+		"4": {
 			input: `
 			{ [ 1,-12 0,1 1,2 ] [ 1, 2]} 
 			`,
 			exp: geom.Polygon([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}, {{1.0, 2.0}}}),
 		},
-		tcase{
+		"5": {
 			input: `{
 			[ 
 			1,-12 // Position 1
@@ -301,8 +296,11 @@ func TestParsePolygon(t *testing.T) {
 		}`,
 			exp: geom.Polygon([][][2]float64{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}}),
 		},
-	).Run(fn)
-
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 func TestParseMultiPolygon(t *testing.T) {
 	type tcase struct {
@@ -310,18 +308,18 @@ func TestParseMultiPolygon(t *testing.T) {
 		exp   geom.MultiPolygon
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParseMultiPolygon()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected: %v got %v", tc.err, err)
 		}
-		if !reflect.DeepEqual(test.exp, f) {
-			t.Errorf("[%v]\nExp:(%#v) %[2]v\nGot:(%#v) %[3]v", idx, test.exp, f)
+		if !reflect.DeepEqual(tc.exp, f) {
+			t.Errorf("parse multi-polygon expected (%#v) %[1]v got (%#v) %[2]v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"1": {
 			input: `{{
 			{
 			[ 1,-12 ]
@@ -329,25 +327,25 @@ func TestParseMultiPolygon(t *testing.T) {
 		}}`,
 			exp: geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}}}}),
 		},
-		tcase{
+		"2": {
 			input: `{{
 			{ [ 1,-12 0,1]
 		} }}
 			`,
 			exp: geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}}}}),
 		},
-		tcase{
+		"3": {
 			input: `
 			{{ { [ 1,-12 0,1 1,2 ] } }}`,
 			exp: geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}}}),
 		},
-		tcase{
+		"4": {
 			input: `
 			{{{ [ 1,-12 0,1 1,2 ] [ 1, 2]} 
 		}}`,
 			exp: geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}, {{1.0, 2.0}}}}),
 		},
-		tcase{
+		"5": {
 			input: `{{{
 			[ 
 			1,-12 // Position 1
@@ -358,7 +356,11 @@ func TestParseMultiPolygon(t *testing.T) {
 		}}`,
 			exp: geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}}}),
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestParseCollection(t *testing.T) {
@@ -367,18 +369,18 @@ func TestParseCollection(t *testing.T) {
 		exp   geom.Collection
 		err   error
 	}
-	fn := func(idx int, test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		f, err := tt.ParseCollection()
-		if test.err != err {
-			t.Errorf("[%v] Did not get correct error value expected: %v, got %v", idx, test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		if !reflect.DeepEqual(test.exp, f) {
-			t.Errorf("[%v]\nExp:(%#v) %[2]v\nGot:(%#v) %[3]v", idx, test.exp, f)
+		if !cmp.CollectionerEqual(tc.exp, f) {
+			t.Errorf("parse collection, \nexpected (%#v) %[1]v \ngot      (%#v) %[2]v", tc.exp, f)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"1": {
 			input: `(( {{
 			{
 			[ 1,-12 ]
@@ -388,7 +390,7 @@ func TestParseCollection(t *testing.T) {
 				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}}}}),
 			},
 		},
-		tcase{
+		"2": {
 			input: `(( {{
 			{ [ 1,-12 0,1]
 		} }}
@@ -397,14 +399,14 @@ func TestParseCollection(t *testing.T) {
 				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}}}}),
 			},
 		},
-		tcase{
+		"3": {
 			input: `((
 			{{ { [ 1,-12 0,1 1,2 ] } }} ))`,
 			exp: geom.Collection{
 				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}}}),
 			},
 		},
-		tcase{
+		"4": {
 			input: `((
 			{{{ [ 1,-12 0,1 1,2 ] [ 1, 2]} 
 		}}))`,
@@ -412,7 +414,7 @@ func TestParseCollection(t *testing.T) {
 				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}, {{1.0, 2.0}}}}),
 			},
 		},
-		tcase{
+		"5": {
 			input: `(( {{{
 			[ 
 			1,-12 // Position 1
@@ -425,7 +427,11 @@ func TestParseCollection(t *testing.T) {
 				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}}}),
 			},
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestParseBinary(t *testing.T) {
@@ -434,18 +440,18 @@ func TestParseBinary(t *testing.T) {
 		exp   []byte
 		err   error
 	}
-	fn := func(test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		c, err := tt.ParseBinaryField()
-		if test.err != err {
-			t.Errorf("Did not get correct error value expected: %v, got %v", test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		if !reflect.DeepEqual(test.exp, c) {
-			t.Errorf("\nExp: %v \nGot: %v", test.exp, c)
+		if !reflect.DeepEqual(tc.exp, c) {
+			t.Errorf("parse binary, expected %v got %v", tc.exp, c)
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"simple": {
 			input: `
 // 	01 02 03 04  05 06 07 08
 {{
@@ -467,8 +473,11 @@ func TestParseBinary(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40,
 			},
 		},
-	).Run(fn)
-
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestParseLabel(t *testing.T) {
@@ -477,26 +486,26 @@ func TestParseLabel(t *testing.T) {
 		exp   string
 		err   error
 	}
-	fn := func(test tcase) {
-		tt := NewT(strings.NewReader(test.input))
+	fn := func(t *testing.T, tc tcase) {
+		tt := NewT(strings.NewReader(tc.input))
 		c, err := tt.ParseLabel()
-		if test.err != err {
-			t.Errorf("Did not get correct error value expected: %v, got %v", test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		if !reflect.DeepEqual(test.exp, string(c)) {
-			t.Errorf("Expected: %v Got: %v", test.exp, string(c))
+		if !reflect.DeepEqual(tc.exp, string(c)) {
+			t.Errorf("parse label, expected %v got %v", tc.exp, string(c))
 		}
 	}
-	tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"easy": {
 			input: "easy: an easy label",
 			exp:   "easy",
 		},
-		tcase{
+		"little-easy": {
 			input: "little-easy: an easy label",
 			exp:   "little-easy",
 		},
-		tcase{
+		"little_easy": {
 			input: `
 			
 			
@@ -507,7 +516,7 @@ func TestParseLabel(t *testing.T) {
 			`,
 			exp: "little_easy",
 		},
-		tcase{
+		"little.easy": {
 			input: `
 			/*
 			    This one is also pretty easy.
@@ -519,7 +528,11 @@ func TestParseLabel(t *testing.T) {
 			`,
 			exp: "little.easy",
 		},
-	).Run(fn)
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestPraseLineComment(t *testing.T) {
@@ -528,48 +541,68 @@ func TestPraseLineComment(t *testing.T) {
 		dontwrap bool
 		err      error
 	}
-	fn := func(test tcase) {
-		input := test.exp
-		if !test.dontwrap {
+	fn := func(t *testing.T, tc tcase) {
+		input := tc.exp
+		if !tc.dontwrap {
 			input = "//" + input + "\n"
 		}
 		tt := NewT(strings.NewReader(input))
 		c, err := tt.ParseLineComment()
-		if test.err != err {
-			t.Errorf("Did not get correct error value expected: %v, got %v", test.err, err)
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
 		}
-		if !reflect.DeepEqual(test.exp, string(c)) {
-			t.Errorf("Expected: “%v” Got: “%v”", test.exp, string(c))
+		if !reflect.DeepEqual(tc.exp, string(c)) {
+			t.Errorf("prase comment, expected “%v” got “%v”", tc.exp, string(c))
 		}
 	}
-	tests := tbltest.Cases(
-		tcase{
+	tests := map[string]tcase{
+		"simple": {
 			exp: `This is a string. `,
 		},
-	)
-	tests.Run(fn)
+		"slashes inside": {
+			exp: " this comment // and another.",
+		},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 func TestParseComment(t *testing.T) {
 
 	type tcase struct {
-		desc     string `tbltest: "description"`
 		exp      string
 		dontwrap bool
 		err      error
 	}
-	tests := tbltest.Cases(
-		tcase{
+
+	fn := func(t *testing.T, tc tcase) {
+		input := tc.exp
+		if !tc.dontwrap {
+			input = "/*" + input + "*/"
+		}
+		tt := NewT(strings.NewReader(input))
+		c, err := tt.ParseComment()
+		if tc.err != err {
+			t.Errorf("error, expected %v got %v", tc.err, err)
+		}
+		if !reflect.DeepEqual(tc.exp, string(c)) {
+			t.Errorf("parsing comment, expected %v got %v", tc.exp, string(c))
+		}
+	}
+	tests := map[string]tcase{
+		"simple": {
 			exp: `This is a string. 
 			In a multiline comment.`,
 		},
-		tcase{
+		"empty": {
 			exp: "",
 		},
-		tcase{
+		"empty with inline": {
 			exp: "//",
 		},
-		tcase{
+		"spread out empty": {
 			exp: `
 
 
@@ -579,7 +612,7 @@ func TestParseComment(t *testing.T) {
 
 			`,
 		},
-		tcase{
+		"complex": {
 			exp: `
 			This is a line // with an line comment that does not mean anything.
 
@@ -590,19 +623,10 @@ func TestParseComment(t *testing.T) {
 			*/
 			`,
 		},
-	)
-	tests.Run(func(test tcase) {
-		input := test.exp
-		if !test.dontwrap {
-			input = "/*" + input + "*/"
-		}
-		tt := NewT(strings.NewReader(input))
-		c, err := tt.ParseComment()
-		if test.err != err {
-			t.Errorf("Did not get correct error value expected: %v, got %v", test.err, err)
-		}
-		if !reflect.DeepEqual(test.exp, string(c)) {
-			t.Errorf("Expected: %v Got: %v", test.exp, string(c))
-		}
-	})
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+
 }

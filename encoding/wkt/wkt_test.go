@@ -3,7 +3,7 @@ package wkt
 import (
 	"testing"
 
-	"github.com/go-spatial/tegola/geom"
+	"github.com/go-spatial/geom"
 )
 
 func TestEncode(t *testing.T) {
