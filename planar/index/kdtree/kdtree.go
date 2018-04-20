@@ -2,7 +2,6 @@
 
 A two dimensional kd-tree implementation
 
-Use the associated iterator class to query the tree.
 */
 package kdtree
 
@@ -16,6 +15,19 @@ type KdTree struct {
 	root *KdNode
 }
 
+/*
+
+Creates a empty kd-tree to be populated.
+
+Limitations:
+
+* Bulk inserts and balancing are not supported. If you have a large amount of data to insert it is
+  best to randomize the data before inserting.
+* Duplicate points are not supported and will return an error.
+
+See the *_iterator.go files for how to query data out of the kd-tree.
+
+*/
 func NewKdTree() *KdTree {
 	return &KdTree{}
 }
@@ -23,7 +35,7 @@ func NewKdTree() *KdTree {
 /*
 Insert the specified geometry into the kd-tree.
 
-An error will be raised if a duplicate point is inserted.
+If a duplicate point is inserted, the currently indexed point will be returned along with an error.
 */
 func (this *KdTree) Insert(p geom.Pointer) (*KdNode, error) {
 	node := NewKdNode(p)
@@ -40,7 +52,7 @@ func (this *KdTree) Insert(p geom.Pointer) (*KdNode, error) {
 			currentNode.bbox.AddPoints(p.XY())
 			if p.XY()[0] == currentNode.p.XY()[0] &&
 				p.XY()[1] == currentNode.p.XY()[1] {
-				return nil, errors.New("duplicate node")
+				return currentNode, errors.New("duplicate node")
 				// if the new point is on the left
 			} else if p.XY()[d] < currentNode.p.XY()[d] {
 				// if there is no left node, populate it
