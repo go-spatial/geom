@@ -63,21 +63,29 @@ func TestRandomQueries(t *testing.T) {
 
 	rng := rand.New(rand.NewSource(0))
 
+	// create a kd-tree filled with random points
 	pointCount := 200
 	for i := 0; i < pointCount; i++ {
 		kdt.Insert(geom.Point{rng.Float64() * 1000, rng.Float64() * 1000})
 	}
 
+	// iterate over the tree several times and verify the results.
 	for i := 0; i < 10; i++ {
 		from := geom.Point{rng.Float64() * 1500, rng.Float64() * 1500}
 		uut := NewNearestNeighborIterator(from, kdt, EuclideanDistance)
 
+		// verify that every point is touched exactly once.
 		touchedSet := make(map[string]bool)
+
+		// keep track of the last distance so we can verify it goes in ascending order.
 		lastD := -1.0
 		for uut.Next() {
 			n, d := uut.Value()
+			// simple key for uniquely identifying a point. The odds of two random points being
+			// identical are astronomical.
 			key := toJson(t, n)
 
+			// verify the distance is correct.
 			dx := n.XY()[0] - from.XY()[0]
 			dy := n.XY()[1] - from.XY()[1]
 			td := math.Sqrt(dx*dx + dy*dy)

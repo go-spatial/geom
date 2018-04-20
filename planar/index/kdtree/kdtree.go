@@ -52,15 +52,15 @@ func (this *KdTree) Insert(p geom.Pointer) (*KdNode, error) {
 			currentNode.bbox.AddPoints(p.XY())
 			if p.XY()[0] == currentNode.p.XY()[0] &&
 				p.XY()[1] == currentNode.p.XY()[1] {
-				return currentNode, errors.New("duplicate node")
 				// if the new point is on the left
+				return currentNode, errors.New("duplicate node")
 			} else if p.XY()[d] < currentNode.p.XY()[d] {
-				// if there is no left node, populate it
 				if currentNode.Left() == nil {
+					// if there is no left node, populate it
 					currentNode.SetLeft(node)
 					break
-					// if there already is a left node, traverse into it
 				} else {
+					// if there already is a left node, traverse into it
 					currentNode = currentNode.Left()
 				}
 				// if the new point is the same or on the right

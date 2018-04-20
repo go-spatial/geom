@@ -2,7 +2,6 @@ package kdtree
 
 import (
 	"encoding/json"
-	//"fmt"
 	"testing"
 
 	"github.com/go-spatial/geom"
