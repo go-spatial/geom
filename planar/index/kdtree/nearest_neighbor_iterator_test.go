@@ -2,65 +2,148 @@ package kdtree
 
 import (
 	"container/heap"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/go-spatial/geom"
 )
 
-/*
-Test a simple predefined query
-*/
+// TestQuery tests a simple predefined query
 func TestQuery(t *testing.T) {
-	kdt := NewKdTree()
-
-	kdt.Insert(geom.Point{0, 0})
-	kdt.Insert(geom.Point{1, 0})
-	kdt.Insert(geom.Point{1, 1})
-	kdt.Insert(geom.Point{-1, 0})
-
-	uut := NewNearestNeighborIterator(geom.Point{2, 2}, kdt, EuclideanDistance)
-
-	s := ""
-	for uut.Next() {
-		n, d := uut.Value()
-		s += fmt.Sprintf("%s:%.2g  ", toJson(t, n), d)
+	type tcase struct {
+		points     []geom.Point
+		queryPoint geom.Point
+		eOrder     []string
+		err        error
 	}
-	assertEqual(t, "[1,1]:1.4  [1,0]:2.2  [0,0]:2.8  [-1,0]:3.6  ", s)
+
+	fn := func(t *testing.T, tc tcase) {
+		var err error
+
+		kdt := new(KdTree)
+
+		for _, pt := range tc.points {
+			if _, err = kdt.Insert(pt); err != nil {
+				break
+			}
+		}
+
+		if tc.err == nil && err != nil {
+			t.Errorf("insert points error, expected nil, got %v", err)
+			return
+		}
+
+		if tc.err != nil {
+			if err == nil || err.Error() != tc.err.Error() {
+				t.Errorf("error, expected %v got %v", tc.err, err)
+			}
+			return
+		}
+
+		uut := NewNearestNeighborIterator(tc.queryPoint, kdt, EuclideanDistance)
+
+		i := 0
+		for uut.Next() {
+			n, d := uut.Value()
+			gJSON, err := json.Marshal(n)
+			if err != nil {
+				t.Fatalf("converting to json error, expected nil, got %v", err)
+				return
+			}
+
+			s := fmt.Sprintf("%s:%.2g", string(gJSON), d)
+
+			if tc.eOrder[i] != s {
+				t.Errorf("nearest neighbor iterator, expected %v got %v", tc.eOrder[i], s)
+			}
+			i++
+		}
+	}
+
+	tests := map[string]tcase{
+		"good": {
+			points: []geom.Point{
+				geom.Point{0, 0},
+				geom.Point{1, 0},
+				geom.Point{1, 1},
+				geom.Point{-1, 0},
+			},
+			queryPoint: geom.Point{2, 2},
+			eOrder: []string{
+				"[1,1]:1.4",
+				"[1,0]:2.2",
+				"[0,0]:2.8",
+				"[-1,0]:3.6",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
-/*
-First time with a go-heap, lemme make sure it works.
-*/
+// TestHeap verifies the basic functionality of the heapEntry & container/heap
 func TestHeap(t *testing.T) {
-	var dummy KdNode
-	h := KdNodeHeap{
-		{&dummy, 2},
-		{&dummy, 1},
-		{&dummy, 5},
-		{&dummy, 3},
-		{&dummy, 8},
+	type tcase struct {
+		distances []float64
 	}
 
-	heap.Init(&h)
-	heap.Push(&h, &HeapEntry{&dummy, 0})
-	heap.Push(&h, &HeapEntry{&dummy, 10})
+	fn := func(t *testing.T, tc tcase) {
+		// dummy is a node placeholder that isn't relevant to the test
+		var dummy KdNode
+		var h kdNodeHeap
 
-	var s string
-	for h.Len() > 0 {
-		s += fmt.Sprintf(" %f", heap.Pop(&h).(*HeapEntry).d)
+		for i := 0; i < len(tc.distances)/2; i++ {
+			h = append(h, heapEntry{&dummy, tc.distances[i]})
+		}
+
+		heap.Init(&h)
+
+		for i := len(tc.distances) / 2; i < len(tc.distances); i++ {
+			heap.Push(&h, &heapEntry{&dummy, tc.distances[i]})
+		}
+
+		var gDistances []float64
+		for h.Len() > 0 {
+			gDistances = append(gDistances, heap.Pop(&h).(heapEntry).d)
+		}
+
+		sort.Float64s(tc.distances)
+
+		if reflect.DeepEqual(tc.distances, gDistances) == false {
+			t.Errorf("heap results are in the wrong order. expected %v got %v", tc.distances, gDistances)
+		}
 	}
-	assertEqual(t, " 0.000000 1.000000 2.000000 3.000000 5.000000 8.000000 10.000000", s)
+
+	tests := map[string]tcase{
+		"simple": {
+			distances: []float64{2, 1, 5, 3, 8},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }
 
 /*
-Test random data and some random queries
+TestRandomQueries creates a kdtree full of random pointers and then executes multiple
+NewNearestNeighborIterator against the tree to validate the results.
+
+Due to the random nature of this test the typical tcase table structure is not being utilized.
 */
 func TestRandomQueries(t *testing.T) {
-	kdt := NewKdTree()
+	kdt := new(KdTree)
 
+	// make the tests consistent with seed of zero.
 	rng := rand.New(rand.NewSource(0))
 
 	// create a kd-tree filled with random points
@@ -83,29 +166,35 @@ func TestRandomQueries(t *testing.T) {
 			n, d := uut.Value()
 			// simple key for uniquely identifying a point. The odds of two random points being
 			// identical are astronomical.
-			key := toJson(t, n)
+			keyBytes, err := json.Marshal(n)
+			if err != nil {
+				t.Errorf("converting to json error, expected nil, got %v", err)
+				return
+			}
+			key := string(keyBytes)
 
 			// verify the distance is correct.
 			dx := n.XY()[0] - from.XY()[0]
 			dy := n.XY()[1] - from.XY()[1]
 			td := math.Sqrt(dx*dx + dy*dy)
 			if td != d {
-				t.Fatalf("distances was not the expected value: %f != %f", d, td)
+				t.Errorf("distances was not the expected value, expected %f got %f", td, d)
 			}
 
 			if d < lastD {
-				t.Fatalf("distances were not in ascending order: %.3g < %.3g", d, lastD)
+				t.Errorf("distances were not in ascending order, expected <%.3g got %.3g", lastD, d)
 			}
 			lastD = d
 
 			if val, ok := touchedSet[key]; ok && val {
-				t.Fatalf("Value was returned multiple times in the iterator: %s", key)
+				t.Errorf("value was returned multiple times in the iterator, expected 1 got >1")
+				return
 			}
 			touchedSet[key] = true
 		}
 
 		if len(touchedSet) != pointCount {
-			t.Fatalf("Expected %d points, but received %d points.", pointCount, len(touchedSet))
+			t.Errorf("unexpected number of points returned, expected %d got %d", pointCount, len(touchedSet))
 		}
 	}
 

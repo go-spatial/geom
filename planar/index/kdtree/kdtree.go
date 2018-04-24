@@ -1,8 +1,4 @@
-/*
-
-A two dimensional kd-tree implementation
-
-*/
+// kdtree is a two dimensional kd-tree implementation
 package kdtree
 
 import (
@@ -11,13 +7,8 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-type KdTree struct {
-	root *KdNode
-}
-
 /*
-
-Creates a empty kd-tree to be populated.
+KdTree is an index for 2 dimensional point data.
 
 Limitations:
 
@@ -28,56 +19,57 @@ Limitations:
 See the *_iterator.go files for how to query data out of the kd-tree.
 
 */
-func NewKdTree() *KdTree {
-	return &KdTree{}
+type KdTree struct {
+	root *KdNode
 }
+
+var ErrDuplicateNode = errors.New("duplicate node")
 
 /*
 Insert the specified geometry into the kd-tree.
 
 If a duplicate point is inserted, the currently indexed point will be returned along with an error.
 */
-func (this *KdTree) Insert(p geom.Pointer) (*KdNode, error) {
+func (kdt *KdTree) Insert(p geom.Pointer) (*KdNode, error) {
 	node := NewKdNode(p)
 
-	if this.root == nil {
-		this.root = node
-	} else {
-		currentNode := this.root
+	if kdt.root == nil {
+		kdt.root = node
+		return node, nil
+	}
 
-		// dimension being evaluated in the loop
-		d := 0
+	currentNode := kdt.root
 
-		for {
-			currentNode.bbox.AddPoints(p.XY())
-			if p.XY()[0] == currentNode.p.XY()[0] &&
-				p.XY()[1] == currentNode.p.XY()[1] {
-				// if the new point is on the left
-				return currentNode, errors.New("duplicate node")
-			} else if p.XY()[d] < currentNode.p.XY()[d] {
-				if currentNode.Left() == nil {
-					// if there is no left node, populate it
-					currentNode.SetLeft(node)
-					break
-				} else {
-					// if there already is a left node, traverse into it
-					currentNode = currentNode.Left()
-				}
-			} else {
-				// if the new point is the same or on the right
-				currentNode.bbox.AddPoints(p.XY())
-				if currentNode.Right() == nil {
-					// if there is no right node, populate it
-					currentNode.SetRight(node)
-					break
-				} else {
-					// if there already is a right node, traverse into it
-					currentNode = currentNode.Right()
-				}
+	// toggle between dimensions 0 and 1
+	for d := 0; ; d = d ^ 1 {
+		cxy := currentNode.p.XY()
+		currentNode.bbox.AddPoints(p.XY())
+
+		switch {
+		// if the new point is a duplicate
+		case p.XY()[0] == cxy[0] && p.XY()[1] == cxy[1]:
+			return currentNode, ErrDuplicateNode
+
+		// if the new point is on the left
+		case p.XY()[d] < currentNode.p.XY()[d]:
+			if currentNode.Left() == nil {
+				// if there is no left node, populate it
+				currentNode.SetLeft(node)
+				return node, nil
+			}
+			// if there already is a left node, traverse into it
+			currentNode = currentNode.Left()
+
+		// if the new point is the same or on the right
+		default:
+			if currentNode.Right() == nil {
+				// if there is no right node, populate it
+				currentNode.SetRight(node)
+				return node, nil
 			}
 
-			// switch back and forth between the zeroth and first dimensions
-			d = d ^ 1
+			// traverse into the right node
+			currentNode = currentNode.Right()
 		}
 	}
 

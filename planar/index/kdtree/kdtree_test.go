@@ -7,33 +7,73 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
-	if a != b {
-		t.Fatalf("%s != %s", a, b)
-	}
-}
-
-func toJson(t *testing.T, v interface{}) string {
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	return string(b)
-}
-
-/*
-Very simple white-box test to validate the structure of the tree
-*/
+// TestInsertPoints is a very simple white-box test to validate the structure of the tree
 func TestInsertPoints(t *testing.T) {
-	uut := NewKdTree()
+	type tcase struct {
+		points []geom.Point
+		eJSON  string
+		err    error
+	}
 
-	uut.Insert(geom.Point{0, 0})
-	uut.Insert(geom.Point{1, 0})
-	// duplicate points are not allowed
-	_, err := uut.Insert(geom.Point{0, 0})
-	assertEqual(t, err != nil, true)
-	uut.Insert(geom.Point{1, 1})
-	uut.Insert(geom.Point{-1, 0})
+	fn := func(t *testing.T, tc tcase) {
+		var err error
 
-	assertEqual(t, `{"P":[0,0],"Left":{"P":[-1,0]},"Right":{"P":[1,0],"Right":{"P":[1,1]}}}`, toJson(t, uut.root))
+		uut := new(KdTree)
+
+		for _, pt := range tc.points {
+			if _, err = uut.Insert(pt); err != nil {
+				break
+			}
+		}
+
+		if tc.err == nil && err != nil {
+			t.Errorf("insert points error, expected nil, got %v", err)
+			return
+		}
+
+		if tc.err != nil {
+			if err == nil || err.Error() != tc.err.Error() {
+				t.Errorf("error, expected %f got %v", tc.err, err)
+			}
+			return
+		}
+
+		gJSON, err := json.Marshal(uut.root)
+		if err != nil {
+			t.Fatalf("converting to json error, expected nil, got %v", err)
+			return
+		}
+
+		if tc.eJSON != string(gJSON) {
+			t.Errorf("nearest neighbor iterator, expected %v got %v", tc.eJSON, string(gJSON))
+		}
+	}
+
+	tests := map[string]tcase{
+		"good": {
+			points: []geom.Point{
+				geom.Point{0, 0},
+				geom.Point{1, 0},
+				geom.Point{1, 1},
+				geom.Point{-1, 0},
+			},
+			eJSON: `{"P":[0,0],"Left":{"P":[-1,0]},"Right":{"P":[1,0],"Right":{"P":[1,1]}}}`,
+		},
+		// insert 0,0 twice which should return an error
+		"duplicate point": {
+			points: []geom.Point{
+				geom.Point{0, 0},
+				geom.Point{1, 0},
+				geom.Point{1, 1},
+				geom.Point{0, 0},
+				geom.Point{-1, 0},
+			},
+			err: ErrDuplicateNode,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
 }

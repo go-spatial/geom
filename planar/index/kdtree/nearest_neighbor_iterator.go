@@ -8,31 +8,49 @@ import (
 )
 
 /*
-Create a heap for storing nodes so we can get back the nearest neighbors in order.
+heapEntry is an entry in the heap for storing nodes so we can get back the nearest neighbors
+in order.
 */
-type HeapEntry struct {
+type heapEntry struct {
 	node *KdNode
 	d    float64
 }
 
-type KdNodeHeap []*HeapEntry
+/*
+kdNodeHeap is an array of heap entries.
 
-func (this KdNodeHeap) Len() int            { return len(this) }
-func (this KdNodeHeap) Less(i, j int) bool  { return this[i].d < this[j].d }
-func (this KdNodeHeap) Swap(i, j int)       { this[i], this[j] = this[j], this[i] }
-func (this *KdNodeHeap) Push(x interface{}) { *this = append(*this, x.(*HeapEntry)) }
-func (this *KdNodeHeap) Pop() interface{} {
-	old := *this
+We are not using a pointer in this array for simplicity and to avoid the dereference. This is
+likely ok due to the small size of heapEntry. If for some reason heapEntry gets larger then this
+should be changed to a pointer. Also, benchmarks may reveal that a pointer is faster. Dunno.
+
+https://stackoverflow.com/questions/27622083/performance-slices-of-structs-vs-slices-of-pointers-to-structs
+*/
+type kdNodeHeap []heapEntry
+
+// Implements the container/heap interface.
+func (knh kdNodeHeap) Len() int           { return len(knh) }
+func (knh kdNodeHeap) Less(i, j int) bool { return knh[i].d < knh[j].d }
+func (knh kdNodeHeap) Swap(i, j int)      { knh[i], knh[j] = knh[j], knh[i] }
+func (knh *kdNodeHeap) Push(x interface{}) {
+	// this will simply panic if the wrong type is passed.
+	he, ok := x.(*heapEntry)
+	if !ok {
+		panic("the wrong interface type was passed to kdNodeHeap.")
+	}
+	*knh = append(*knh, *he)
+}
+func (knh *kdNodeHeap) Pop() interface{} {
+	old := *knh
 	n := len(old)
 	x := old[n-1]
-	*this = old[0 : n-1]
+	*knh = old[0 : n-1]
 	return x
 }
 
 /*
-The distance function specifies how to calculate the distance from a point to the extent.
+DistanceFunc specifies how to calculate the distance from a point to the extent.
 
-In most cases the default euclidean distance function will do just fine.
+In most cases the default EuclideanDistance function will do just fine.
 */
 type DistanceFunc func(p geom.Pointer, e *geom.Extent) float64
 
@@ -43,47 +61,51 @@ func distance(c1 [2]float64, c2 [2]float64) float64 {
 }
 
 func EuclideanDistance(p geom.Pointer, e *geom.Extent) float64 {
-	x := p.XY()[0]
-	y := p.XY()[1]
-	var result float64
 	if e.ContainsPoint(p.XY()) {
-		result = 0
-	} else if x < e.MinX() {
-		if y < e.MinY() {
-			result = distance(p.XY(), e.Min())
-		} else if y > e.MaxY() {
-			result = distance(p.XY(), [2]float64{e.MinX(), e.MaxY()})
-		} else {
-			result = e.MinX() - x
-		}
-	} else if x > e.MaxX() {
-		if y < e.MinY() {
-			result = distance(p.XY(), [2]float64{e.MaxX(), e.MinY()})
-		} else if y > e.MaxY() {
-			result = distance(p.XY(), e.Max())
-		} else {
-			result = x - e.MaxX()
-		}
-	} else if y < e.MinY() {
-		result = e.MinY() - y
-	} else {
-		result = y - e.MaxY()
+		return 0
 	}
 
-	return result
+	x := p.XY()[0]
+	y := p.XY()[1]
+
+	if x < e.MinX() {
+		if y < e.MinY() {
+			return distance(p.XY(), e.Min())
+		}
+		if y > e.MaxY() {
+			return distance(p.XY(), [2]float64{e.MinX(), e.MaxY()})
+		}
+		return e.MinX() - x
+	}
+
+	if x > e.MaxX() {
+		if y < e.MinY() {
+			return distance(p.XY(), [2]float64{e.MaxX(), e.MinY()})
+		}
+		if y > e.MaxY() {
+			return distance(p.XY(), e.Max())
+		}
+		return x - e.MaxX()
+	}
+
+	if y < e.MinY() {
+		return e.MinY() - y
+	}
+
+	return y - e.MaxY()
 }
 
 type NearestNeighborIterator struct {
 	p         geom.Pointer
 	kdTree    *KdTree
 	df        DistanceFunc
-	currentIt *HeapEntry
-	nodeHeap  KdNodeHeap
-	bboxHeap  KdNodeHeap
+	currentIt *heapEntry
+	nodeHeap  kdNodeHeap
+	bboxHeap  kdNodeHeap
 }
 
 /*
-The nearest neighbor iterator creates an iterator that returns the neighboring points in descending
+NewNearestNeighborIterator creates an iterator that returns the neighboring points in descending
 order. Retrieving all the results will occur in O(n log(n)) time. Results are calculated in a lazy
 fashion so retrieving the nearest point or the nearest handful should still be quite efficient.
 
@@ -99,9 +121,9 @@ Algorithm:
 
 The iterator design here was taken from: https://ewencp.org/blog/golang-iterators/index.html
 
-To use this:
+To use this iterator:
 
-	nnit := NewNearestNeighborIterator(from, kdt, EuclideanDistance)
+	nnit := NewNearestNeighborIterator(geom.Point{0,0}, myKdTree, EuclideanDistance)
 
 	for nnit.Next() {
 		n, d := nnit.Value()
@@ -110,11 +132,11 @@ To use this:
 
 */
 func NewNearestNeighborIterator(p geom.Pointer, kdTree *KdTree, df DistanceFunc) *NearestNeighborIterator {
-	var result NearestNeighborIterator
-
-	result.p = p
-	result.kdTree = kdTree
-	result.df = df
+	result := NearestNeighborIterator{
+		p:      p,
+		kdTree: kdTree,
+		df:     df,
+	}
 
 	result.pushNode(kdTree.root)
 
@@ -122,48 +144,46 @@ func NewNearestNeighborIterator(p geom.Pointer, kdTree *KdTree, df DistanceFunc)
 }
 
 /*
-Iterates to the next nearest neighbor. True is returned if there is another nearest neighbor,
+Next iterates to the next nearest neighbor. True is returned if there is another nearest neighbor,
 otherwise false is returned.
 */
-func (this *NearestNeighborIterator) Next() bool {
-	done := false
-
-	for !done {
-		if this.nodeHeap.Len() == 0 && this.bboxHeap.Len() == 0 {
-			done = true
-			this.currentIt = nil
-		} else if this.nodeHeap.Len() > 0 && ((this.bboxHeap.Len() > 0 && this.nodeHeap[0].d <= this.bboxHeap[0].d) ||
-			this.bboxHeap.Len() == 0) {
-			this.currentIt = heap.Pop(&this.nodeHeap).(*HeapEntry)
-			done = true
-		} else {
-			parent := heap.Pop(&this.bboxHeap).(*HeapEntry).node
-
-			this.pushNode(parent.Left())
-			this.pushNode(parent.Right())
+func (nni *NearestNeighborIterator) Next() bool {
+	for {
+		if nni.nodeHeap.Len() == 0 && nni.bboxHeap.Len() == 0 {
+			nni.currentIt = nil
+			break
 		}
+		if nni.nodeHeap.Len() > 0 && ((nni.bboxHeap.Len() > 0 && nni.nodeHeap[0].d <= nni.bboxHeap[0].d) ||
+			nni.bboxHeap.Len() == 0) {
+			he := (heap.Pop(&nni.nodeHeap).(heapEntry))
+			nni.currentIt = &he
+			break
+		}
+
+		parent := heap.Pop(&nni.bboxHeap).(heapEntry).node
+
+		nni.pushNode(parent.Left())
+		nni.pushNode(parent.Right())
 	}
 
-	return this.currentIt != nil
+	return nni.currentIt != nil
 }
 
-/*
-Pushes the specified node onto both the bboxHeap and nodeHeap.
-*/
-func (this *NearestNeighborIterator) pushNode(n *KdNode) {
-	if n != nil {
-		// push the bounding box distance onto the bbox heap
-		d := this.df(this.p, &n.bbox)
-		heap.Push(&this.bboxHeap, &HeapEntry{n, d})
-		// push the point distance onto the node heap
-		d = this.df(this.p, geom.NewExtent(n.p.XY()))
-		heap.Push(&this.nodeHeap, &HeapEntry{n, d})
+// pushNode pushes the specified node onto both the bboxHeap and nodeHeap.
+func (nni *NearestNeighborIterator) pushNode(n *KdNode) {
+	if n == nil {
+		return
 	}
+
+	// push the bounding box distance onto the bbox heap
+	d := nni.df(nni.p, &n.bbox)
+	heap.Push(&nni.bboxHeap, &heapEntry{n, d})
+	// push the point distance onto the node heap
+	d = nni.df(nni.p, geom.NewExtent(n.p.XY()))
+	heap.Push(&nni.nodeHeap, &heapEntry{n, d})
 }
 
-/*
-Returns the geometry pointer and distance for the current neighbor.
-*/
-func (this *NearestNeighborIterator) Value() (geom.Pointer, float64) {
-	return this.currentIt.node.P(), this.currentIt.d
+// Value returns the geometry pointer and distance for the current neighbor.
+func (nni *NearestNeighborIterator) Value() (geom.Pointer, float64) {
+	return nni.currentIt.node.P(), nni.currentIt.d
 }

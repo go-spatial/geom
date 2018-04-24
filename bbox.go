@@ -82,12 +82,12 @@ func (e *Extent) MinY() float64 {
 	return e[1]
 }
 
-// Min is the lower left coordinate
+// Min returns the (MinX, MinY) values
 func (e *Extent) Min() [2]float64 {
 	return [2]float64{e[0], e[1]}
 }
 
-// Max is the upper right coordinate
+// Max returns the (MaxX, MaxY) values
 func (e *Extent) Max() [2]float64 {
 	return [2]float64{e[2], e[3]}
 }
