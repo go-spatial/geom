@@ -31,7 +31,36 @@ type Tile struct {
 	SRID uint64
 }
 
+func NewTileLatLon(z uint, lat, lon, buffer float64, srid uint64) *Tile {
+	x := Lon2Tile(z, lon)
+	y := Lat2Tile(z, lat)
+
+	return &Tile{
+		z:      z,
+		x:      x,
+		y:      y,
+		Buffer: buffer,
+		SRID:   srid,
+	}
+}
+
 func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
+
+func Lat2Tile(zoom uint, lat float64) (y uint) {
+	lat_rad := lat * math.Pi / 180
+
+	y = uint(math.Exp2(float64(zoom)) *
+		(1.0 - math.Log(
+			math.Tan(lat_rad)+(1/math.Cos(lat_rad))) / 2.0))
+
+	return
+}
+
+func Lon2Tile(zoom uint, lon float64) (x uint) {
+
+	x = uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
+	return
+}
 
 // Tile2Lon will return the west most longitude
 func Tile2Lon(x, z uint) float64 { return float64(x)/math.Exp2(float64(z))*360.0 - 180.0 }
