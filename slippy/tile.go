@@ -182,3 +182,32 @@ func (t *Tile) BufferedExtent() (bufferedExtent *geom.Extent, srid uint64) {
 	)
 	return bufferedExtent, t.SRID
 }
+
+// TODO (ear7h): sibling support
+// RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
+func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
+	// handle ancestors and self
+	if zoom <= t.z {
+		mag := t.z - zoom
+		arg := NewTile(zoom, t.x>>mag, t.y>>mag, t.Buffer, t.SRID)
+		return f(arg)
+	}
+
+	// handle descendants
+	mag := zoom - t.z
+	delta := uint(math.Exp2(float64(mag)))
+
+	leastX := t.x << mag
+	leastY := t.y << mag
+
+	for x := leastX; x < leastX+delta; x++ {
+		for y := leastY; y < leastY+delta; y++ {
+			err := f(NewTile(zoom, x, y, 0, geom.WebMercator))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
