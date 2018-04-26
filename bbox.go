@@ -82,6 +82,16 @@ func (e *Extent) MinY() float64 {
 	return e[1]
 }
 
+// Min returns the (MinX, MinY) values
+func (e *Extent) Min() [2]float64 {
+	return [2]float64{e[0], e[1]}
+}
+
+// Max returns the (MaxX, MaxY) values
+func (e *Extent) Max() [2]float64 {
+	return [2]float64{e[2], e[3]}
+}
+
 // TODO (gdey): look at how to have this function take into account the dpi.
 func (e *Extent) XSpan() float64 {
 	if e == nil {
