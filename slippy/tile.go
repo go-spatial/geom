@@ -51,7 +51,9 @@ func Lat2Tile(zoom uint, lat float64) (y uint) {
 
 	y = uint(math.Exp2(float64(zoom)) *
 		(1.0 - math.Log(
-			math.Tan(lat_rad)+(1/math.Cos(lat_rad))) / 2.0))
+			math.Tan(lat_rad) +
+				(1 / math.Cos(lat_rad))) / math.Pi)) /
+		2.0
 
 	return
 }

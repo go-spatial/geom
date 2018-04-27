@@ -112,6 +112,82 @@ func TestNewTile(t *testing.T) {
 
 }
 
+func TestNewTileLatLon(t *testing.T) {
+	type tcase struct {
+		z, x, y  uint
+		lat, lon float64
+		buffer   float64
+		srid     uint64
+	}
+	fn := func(t *testing.T, tc tcase) {
+
+		// Test the new functions.
+		tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon, tc.buffer, tc.srid)
+		{
+			gz, gx, gy := tile.ZXY()
+			if gz != tc.z {
+				t.Errorf("z, expected %v got %v", tc.z, gz)
+			}
+			if gx != tc.x {
+				t.Errorf("x, expected %v got %v", tc.x, gx)
+			}
+			if gy != tc.y {
+				t.Errorf("y, expected %v got %v", tc.y, gy)
+			}
+			if tile.Buffer != tc.buffer {
+				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
+			}
+			if tile.SRID != tc.srid {
+				t.Errorf("srid, expected %v got %v", tc.srid, tile.SRID)
+			}
+		}
+
+	}
+	tests := map[string]tcase{
+		"zero":{
+			z:      0,
+			x:      0,
+			y:      0,
+			lat: 0,
+			lon: 0,
+			buffer: 64,
+			srid:   geom.WebMercator,
+		},
+		"center": {
+			z:      8,
+			x:      128,
+			y:      128,
+			lat: 0,
+			lon: 0,
+			buffer: 64,
+			srid:   geom.WebMercator,
+		},
+		"arbitrary zoom 2": {
+			z:      2,
+			x:      2,
+			y:      3,
+			lat: -70,
+			lon: 20,
+			buffer: 64,
+			srid:   geom.WebMercator,
+		},
+		"arbitrary zoom 16": {
+			z:      16,
+			x:      11436,
+			y:      26461,
+			lat: 32.705,
+			lon: -117.176,
+			buffer: 64,
+			srid:   geom.WebMercator,
+		},
+	}
+
+	for k, tc := range tests {
+		tc := tc
+		t.Run(k, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
 func TestRangeFamilyAt(t *testing.T) {
 	type coord struct {
 		z, x, y uint
