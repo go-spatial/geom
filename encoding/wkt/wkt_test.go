@@ -33,7 +33,7 @@ func TestEncode(t *testing.T) {
 	tests := map[string]map[string]tcase{
 		"Point": {
 			"empty nil": {
-				Err: ErrUnknownGeometry{nil},
+				Err: geom.ErrUnknownGeometry{nil},
 			},
 			"empty": {
 				Geom: (*geom.Point)(nil),
