@@ -9,5 +9,7 @@ We should only vendor things needed for the CI system. As a library, we will not
 
 The following code has been Vendored into the source tree:
 
+
 * https://github.com/dhconnelly/rtreego [BSD 3 License](https://github.com/dhconnelly/rtreego/blob/master/LICENSE)
+	We are keeping this internal, so that we can build an rtree implementation that uses geom types as it's base, but is build ontop of this.
 
