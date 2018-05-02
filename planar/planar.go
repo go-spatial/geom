@@ -10,10 +10,12 @@ const Rad = math.Pi / 180
 type PointLineDistanceFunc func(line [2][2]float64, point [2]float64) float64
 
 // PerpendicularDistance  provides the distance between a line and a point in Euclidean space.
+// ref: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
 func PerpendicularDistance(line [2][2]float64, point [2]float64) float64 {
 
 	deltaX := line[1][0] - line[0][0]
 	deltaY := line[1][1] - line[0][1]
+
 	denom := math.Abs((deltaY * point[0]) - (deltaX * point[1]) + (line[1][0] * line[0][1]) - (line[1][1] * line[0][0]))
 	num := math.Sqrt(math.Pow(deltaY, 2) + math.Pow(deltaX, 2))
 	if num == 0 {
