@@ -38,6 +38,10 @@ func TestSlope(t *testing.T) {
 			b:       0,
 			defined: true,
 		},
+		{
+			line:    [2][2]float64{{1, 7}, {1, 17}},
+			defined: false,
+		},
 	}
 	for i := range tests {
 		tc := tests[i]
