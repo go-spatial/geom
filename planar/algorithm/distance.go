@@ -23,22 +23,6 @@ func PointDistance2(p1 Pointer, p2 Pointer) float64 {
 	return v1*v1 + v2*v2
 }
 
-// XY returns an array of 2D coordinates
-func (p Point) XY() [2]float64 {
-	return p
-}
-
-// SetXY sets a pair of coordinates
-func (p *Point) SetXY(xy [2]float64) (err error) {
-	if p == nil {
-		return ErrNilPoint
-	}
-
-	p[0] = xy[0]
-	p[1] = xy[1]
-	return
-}
-
 /*
 distanceToLineSegment calculates the distance from point p to line segment
 v, w.
