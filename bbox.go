@@ -143,6 +143,16 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	e.Add(extent)
 }
 
+// AddPointer expands the specified envelop to contain p.
+func (e *Extent) AddPointer(p Pointer) {
+	xy := p.XY()
+
+	(*e)[0] = math.Min(xy[0], (*e)[0])
+	(*e)[1] = math.Min(xy[1], (*e)[1])
+	(*e)[2] = math.Max(xy[0], (*e)[2])
+	(*e)[3] = math.Max(xy[1], (*e)[3])
+}
+
 // AsPolygon will return the extent as a Polygon
 func (e *Extent) AsPolygon() Polygon { return Polygon{e.Vertices()} }
 
