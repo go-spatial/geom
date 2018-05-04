@@ -143,17 +143,23 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	e.Add(extent)
 }
 
-// AddPointer expands the specified envelop to contain p.
-func (e *Extent) AddPointer(p Pointer) {
-	if e == nil {
-		return
+func (e *Extent) AddPointers(pts ...Pointer) {
+	for i := range pts {
+		e.AddPoints(pts[i].XY())
 	}
-	xy := p.XY()
+}
 
-	(*e)[0] = math.Min(xy[0], (*e)[0])
-	(*e)[1] = math.Min(xy[1], (*e)[1])
-	(*e)[2] = math.Max(xy[0], (*e)[2])
-	(*e)[3] = math.Max(xy[1], (*e)[3])
+// AddPointer expands the specified envelop to contain p.
+func (e *Extent) AddGeometry(g Geometry) error {
+	points, err := GetCoordinates(g)
+	if err != nil {
+		return err
+	}
+
+	for i := range points {
+		e.AddPointers(points[i])
+	}
+	return nil
 }
 
 // AsPolygon will return the extent as a Polygon
