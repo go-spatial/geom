@@ -145,6 +145,9 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 
 // AddPointer expands the specified envelop to contain p.
 func (e *Extent) AddPointer(p Pointer) {
+	if e == nil {
+		return
+	}
 	xy := p.XY()
 
 	(*e)[0] = math.Min(xy[0], (*e)[0])
