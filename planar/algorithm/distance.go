@@ -7,7 +7,7 @@ import (
 )
 
 // Distance returns the euclidean distance between two points.
-func PointDistance(p1 Pointer, p2 Pointer) float64 {
+func PointDistance(p1 geom.Pointer, p2 geom.Pointer) float64 {
 	return math.Sqrt(PointDistance2(p1, p2))
 }
 
@@ -17,7 +17,7 @@ Distance returns the euclidean distance between two points squared.
 This can be a useful optimization in some routines where d^2 is good
 enough.
 */
-func PointDistance2(p1 Pointer, p2 Pointer) float64 {
+func PointDistance2(p1 geom.Pointer, p2 geom.Pointer) float64 {
 	v1 := p1.XY()[0] - p2.XY()[0]
 	v2 := p1.XY()[1] - p2.XY()[1]
 	return v1*v1 + v2*v2
@@ -32,9 +32,9 @@ Taken from: https://stackoverflow.com/questions/849211/shortest-distance-between
 func DistanceToLineSegment(p geom.Pointer, v geom.Pointer, w geom.Pointer) float64 {
 
 	// note that this is intentionally the distance^2, not distance.
-	l2 := geom.PointDistance2(v, w)
+	l2 := PointDistance2(v, w)
 	if l2 == 0 {
-		return geom.PointDistance(p, v)
+		return PointDistance(p, v)
 	}
 
 	px := p.XY()[0]
@@ -46,5 +46,5 @@ func DistanceToLineSegment(p geom.Pointer, v geom.Pointer, w geom.Pointer) float
 
 	t := ((px-vx)*(wx-vx) + (py-vy)*(wy-vy)) / l2
 	t = math.Max(0, math.Min(1, t))
-	return geom.PointDistance(p, geom.Point{vx + t*(wx-vx), vy + t*(wy-vy)})
+	return PointDistance(p, geom.Point{vx + t*(wx-vx), vy + t*(wy-vy)})
 }

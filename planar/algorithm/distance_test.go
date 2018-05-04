@@ -1,6 +1,7 @@
 package algorithm
 
 import (
+	"math"
 	"strconv"
 	"testing"
 
@@ -50,13 +51,13 @@ func TestPointDistance(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		d := geom.PointDistance(tc.point1, tc.point2)
+		d := PointDistance(tc.point1, tc.point2)
 		if d != tc.expected {
 			t.Errorf("error, expected %v got %v", tc.expected, d)
 			return
 		}
 
-		d = geom.PointDistance2(tc.point1, tc.point2)
+		d = PointDistance2(tc.point1, tc.point2)
 		if math.Abs(d-tc.expected*tc.expected) > 1e-6 {
 			t.Errorf("error, expected %v got %v", tc.expected*tc.expected, d)
 			return
