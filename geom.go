@@ -133,3 +133,79 @@ func GetCoordinates(g Geometry) (pts []Point, err error) {
 	err = getCoordinates(g, &pts)
 	return pts, err
 }
+
+// extractLines is a helper function for ExtractLines to avoid too many
+// array copies and still provide a convenient interface to the user.
+func extractLines(g Geometry, lines *[]Line) error {
+	switch gg := g.(type) {
+
+	default:
+
+		return ErrUnknownGeometry
+
+	case Pointer:
+
+		return nil
+
+	case MultiPointer:
+
+		return nil
+
+	case LineStringer:
+
+		v := gg.Verticies()
+		for i := 0; i < len(v) - 1; i++ {
+			*lines = append(*lines, Line{v[i], v[i + 1]})
+		}
+		return nil
+
+	case MultiLineStringer:
+
+		for _, ls := range gg.LineStrings() {
+			if err := extractLines(LineString(ls), lines); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case Polygoner:
+
+		for _, ls := range gg.LinearRings() {
+			if err := extractLines(LineString(ls), lines); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case MultiPolygoner:
+
+		for _, p := range gg.Polygons() {
+			if err := extractLines(Polygon(p), lines); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case Collectioner:
+
+		for _, child := range gg.Geometries() {
+			if err := extractLines(child, lines); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	}
+}
+
+/*
+ExtractLines extracts all linear components from a geometry (line segements). 
+If the geometry contains no line segements (e.g. empty geometry or 
+point), then an empty array will be returned.
+
+Duplicate lines will not be removed.
+*/
+func ExtractLines(g Geometry) (lines []Line, err error) {
+	err = extractLines(g, &lines)
+	return lines, err
+}
