@@ -13,6 +13,8 @@ http://www.eclipse.org/org/documents/edl-v10.php.
 package quadedge
 
 import (
+	"fmt"
+
 	"github.com/go-spatial/geom/cmp"
 )
 
@@ -69,6 +71,8 @@ func MakeEdge(o Vertex, d Vertex) *QuadEdge {
 	base := q0
 	base.setOrig(o)
 	base.setDest(d)
+	base.rot.setOrig(o)
+	base.rot.setDest(d)
 	return base
 }
 
@@ -392,13 +396,16 @@ public LineSegment toLineSegment()
 */
 
 /*
-Converts this edge to a WKT two-point <tt>LINESTRING</tt> indicating
+String Converts this edge to a WKT two-point LINESTRING indicating
 the geometry of this edge.
 
-@return a String representing this edge's geometry
-public String toString() {
-    Coordinate p0 = vertex.getCoordinate();
-    Coordinate p1 = dest().getCoordinate();
-    return WKTWriter.toLineString(p0, p1);
-}
+Unlike JTS, if IsLive() is false, a deleted string is returned.
+
+return a String representing this edge's geometry
 */
+func (qe *QuadEdge) String() string {
+	if qe.IsLive() == false {
+		return fmt.Sprintf("<deleted %v>", qe.Orig())
+	}
+	return fmt.Sprintf("LINESTRING (%v %v, %v %v)", qe.Orig().X(), qe.Orig().Y(), qe.Dest().X(), qe.Dest().Y())
+}

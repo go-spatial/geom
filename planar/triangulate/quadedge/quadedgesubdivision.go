@@ -15,6 +15,7 @@ package quadedge
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
@@ -204,19 +205,32 @@ func (qes *QuadEdgeSubdivision) Delete(e *QuadEdge) {
 	eRot := e.Rot()
 	eRotSym := e.Rot().Sym()
 
-	// this is inefficient on an array, but this method should be called
-	// infrequently
-	newArray := make([]*QuadEdge, 0, len(qes.quadEdges))
-	for _, ele := range qes.quadEdges {
-		if ele != e && ele != eSym && ele != eRot && ele != eRotSym {
-			newArray = append(newArray, ele)
-		}
-	}
-
 	e.Delete()
 	eSym.Delete()
 	eRot.Delete()
 	eRotSym.Delete()
+
+	// this is inefficient on an array, but this method should be called
+	// infrequently
+	newArray := make([]*QuadEdge, 0, len(qes.quadEdges))
+	for _, ele := range qes.quadEdges {
+		if ele.IsLive() {
+			newArray = append(newArray, ele)
+
+			if ele.next.IsLive() == false {
+				log.Fatal("a dead edge is still linked: %v", ele)
+			}
+		}
+	}
+	qes.quadEdges = newArray
+
+	if qes.startingEdge.IsLive() == false {
+		if len(qes.quadEdges) > 0 {
+			qes.startingEdge = qes.quadEdges[0]
+		} else {
+			qes.startingEdge = nil
+		}
+	}
 }
 
 /*
@@ -292,34 +306,42 @@ func (qes *QuadEdgeSubdivision) Locate(v Vertex) (*QuadEdge, error) {
 	return qes.locator.Locate(v)
 }
 
-// 	/**
-// 	 * Locates the edge between the given vertices, if it exists in the
-// 	 * subdivision.
-// 	 *
-// 	 * @param p0 a coordinate
-// 	 * @param p1 another coordinate
-// 	 * @return the edge joining the coordinates, if present
-// 	 * or null if no such edge exists
-// 	 */
-// 	public QuadEdge locate(Coordinate p0, Coordinate p1) {
-// 		// find an edge containing one of the points
-// 		QuadEdge e = locator.locate(new Vertex(p0));
-// 		if (e == null)
-// 			return null;
+/*
+Locates the edge between the given vertices, if it exists in the
+subdivision.
 
-// 		// normalize so that p0 is origin of base edge
-// 		QuadEdge base = e;
-// 		if (e.dest().getCoordinate().equals2D(p0))
-// 			base = e.sym();
-// 		// check all edges around origin of base edge
-// 		QuadEdge locEdge = base;
-// 		do {
-// 			if (locEdge.dest().getCoordinate().equals2D(p1))
-// 				return locEdge;
-// 			locEdge = locEdge.oNext();
-// 		} while (locEdge != base);
-// 		return null;
-// 	}
+p0 a coordinate
+p1 another coordinate
+Return the edge joining the coordinates, if present or null if no such edge 
+exists
+*/
+func (qes *QuadEdgeSubdivision) LocateSegment(p0 Vertex, p1 Vertex) (*QuadEdge, error) {
+	// find an edge containing one of the points
+	e, err := qes.locator.Locate(p0);
+	if err != nil || e == nil {
+		return nil, err
+	}
+
+	// normalize so that p0 is origin of base edge
+	base := e;
+	if (e.Dest().EqualsTolerance(p0, qes.tolerance)) {
+		base = e.Sym();
+	}
+	// check all edges around origin of base edge
+	locEdge := base;
+	done := false
+	for !done {
+		if locEdge.Dest().EqualsTolerance(p1, qes.tolerance) {
+			return locEdge, nil
+		}
+		locEdge = locEdge.ONext();
+
+		if locEdge == base {
+			done = true
+		}
+	}
+	return nil, nil
+}
 
 /**
  * Inserts a new site into the Subdivision, connecting it to the vertices of
@@ -572,6 +594,9 @@ func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
 	qes.visitedKey++
 
 	var edges []*QuadEdge
+	if qes.startingEdge == nil {
+		return edges
+	}
 	var stack edgeStack
 	stack.push(qes.startingEdge)
 
@@ -636,7 +661,10 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 	// visited flag is used to record visited edges of triangles
 	// setVisitedAll(false);
 	var stack *edgeStack = new(edgeStack)
-	stack.push(qes.startingEdge)
+	log.Printf("startingEdge: %v", qes.startingEdge)
+	if qes.startingEdge != nil {
+		stack.push(qes.startingEdge)
+	}
 
 	visitedEdges := make(edgeSet)
 
@@ -647,7 +675,7 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 			if triEdges != nil {
 				triVisitor(triEdges)
 			}
-		}
+		} 
 	}
 }
 
@@ -666,10 +694,12 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 	triEdges := make([]*QuadEdge, 0, 3)
 	curr := edge
 	var isFrame bool
-	var done bool
-	for !done {
+	for true {
 		triEdges = append(triEdges, curr)
 
+		if curr.IsLive() == false {
+			log.Fatal("traversing dead edge")
+		}
 		if qes.isFrameEdge(curr) {
 			isFrame = true
 		}
@@ -686,7 +716,7 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 		curr = curr.LNext()
 
 		if curr == edge {
-			done = true
+			break
 		}
 	}
 
@@ -942,3 +972,6 @@ func (qes *QuadEdgeSubdivision) GetTriangles() (geom.MultiPolygon, error) {
 //   }
 
 // }
+
+
+

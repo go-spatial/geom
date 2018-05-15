@@ -40,6 +40,10 @@ func (xy PointByXY) Less(i, j int) bool { return cmp.XYLessPoint(xy[i], xy[j]) }
 func (xy PointByXY) Swap(i, j int)      { xy[i], xy[j] = xy[j], xy[i] }
 func (xy PointByXY) Len() int           { return len(xy) }
 
+func NewDelaunayTriangulationBuilder(tolerance float64) *DelaunayTriangulationBuilder {
+	return &DelaunayTriangulationBuilder{tolerance: tolerance}
+}
+
 /*
 extractUniqueCoordinates extracts the unique points from the given Geometry.
 
@@ -176,23 +180,23 @@ func (dtb *DelaunayTriangulationBuilder) create() bool {
 	return true
 }
 
-/**
- * Gets the {@link QuadEdgeSubdivision} which models the computed triangulation.
- *
- * @return the subdivision containing the triangulation
-public QuadEdgeSubdivision getSubdivision()
-{
-	create();
-	return subdiv;
-}
+/*
+Gets the QuadEdgeSubdivision which models the computed triangulation.
+
+Returns the subdivision containing the triangulation or nil if it has
+not been created.
 */
+func (dtb *DelaunayTriangulationBuilder) GetSubdivision() *quadedge.QuadEdgeSubdivision {
+	dtb.create();
+	return dtb.subdiv;
+}
 
 /*
 GetEdges gets the edges of the computed triangulation as a MultiLineString.
 
 returns the edges of the triangulation
 */
-func (dtb *DelaunayTriangulationBuilder) getEdges() geom.MultiLineString {
+func (dtb *DelaunayTriangulationBuilder) GetEdges() geom.MultiLineString {
 	if !dtb.create() {
 		return geom.MultiLineString{}
 	}
@@ -201,7 +205,7 @@ func (dtb *DelaunayTriangulationBuilder) getEdges() geom.MultiLineString {
 
 /*
 GetTriangles Gets the faces of the computed triangulation as a
-GeometryCollection Polygons.
+MultiPolygon.
 
 Unlike JTS, this method returns a MultiPolygon. I found not all viewers like
 displaying collections. -JRS
