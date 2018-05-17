@@ -459,6 +459,19 @@ func (qes *QuadEdgeSubdivision) IsOnEdge(e *QuadEdge, p geom.Pointer) bool {
 }
 
 /*
+IsOnSegment Tests whether a point lies on a segment, up to a tolerance
+determined by the subdivision tolerance.
+
+Returns true if the vertex lies on the edge
+*/
+func (qes *QuadEdgeSubdivision) IsOnLine(l geom.Line, p geom.Pointer) bool {
+	dist := planar.DistanceToLineSegment(p, geom.Point(l[0]), geom.Point(l[1]))
+
+	// heuristic (hack?)
+	return dist < qes.edgeCoincidenceTolerance
+}
+
+/*
 IsVertexOfEdge tests whether a {@link Vertex} is the start or end vertex of a
 QuadEdge, up to the subdivision tolerance distance.
 

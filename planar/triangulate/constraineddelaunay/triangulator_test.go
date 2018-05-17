@@ -4,6 +4,7 @@ package constraineddelaunay
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strconv"
 	"testing"
 
@@ -14,13 +15,13 @@ import (
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
 
-func TestFindContainingTriangle(t *testing.T) {
+func TestFindIntersectingTriangle(t *testing.T) {
 	type tcase struct {
 		// provided for readability
 		inputWKT string
 		// this can be removed if/when geom has a WKT decoder.
-    // A simple website for performing conversions:
-    // https://rodic.fr/blog/online-conversion-between-geometric-formats/
+	    // A simple website for performing conversions:
+	    // https://rodic.fr/blog/online-conversion-between-geometric-formats/
 		inputWKB      string
 		searchFrom		geom.Line
 		expectedEdge  string
@@ -42,7 +43,7 @@ func TestFindContainingTriangle(t *testing.T) {
 		uut.tolerance = 1e-6
 		uut.insertSites(g)
 
-		tri, err := uut.findContainingTriangle(triangulate.NewSegment(tc.searchFrom))
+		tri, err := uut.findIntersectingTriangle(triangulate.NewSegment(tc.searchFrom))
 		if err != nil {
 			t.Fatalf("error, expected nil got %v", err)
 			return
@@ -71,6 +72,12 @@ func TestFindContainingTriangle(t *testing.T) {
 			inputWKB:      `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
 			searchFrom: geom.Line{{10,10}, {0, 0}},
 			expectedEdge: `[10 10] -> [10 0]`,
+		},
+		{
+			inputWKT:      `MULTIPOINT (10 10, 10 20, 20 20, 20 10, 20 0, 10 0, 0 0, 0 10, 0 20)`,
+			inputWKB:      `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
+			searchFrom: geom.Line{{10,10}, {10, 20}},
+			expectedEdge: `[10 10] -> [10 20]`,
 		},
 	}
 
@@ -152,6 +159,60 @@ func TestDeleteEdge(t *testing.T) {
 	}
 }
 
+func TestIntersection(t *testing.T) {
+	type tcase struct {
+		l1		triangulate.Segment
+		l2		triangulate.Segment
+		intersection		quadedge.Vertex
+		expectedError error
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		uut := new(Triangulator)
+		uut.tolerance = 1e-2
+		v, err := uut.intersection(tc.l1, tc.l2)
+		if err != tc.expectedError {
+			t.Errorf("error intersecting line segments, expected %v got %v", tc.expectedError, err)
+			return
+		}
+
+		if v.Equals(tc.intersection) == false {
+			t.Errorf("error validating intersection, expected %v got %v", tc.intersection, v)
+		}
+	}
+	testcases := []tcase{
+		{
+			l1:      triangulate.NewSegment(geom.Line{{0, 1}, {2, 3}}),
+			l2:      triangulate.NewSegment(geom.Line{{1, 1}, {0, 2}}),
+			intersection: quadedge.Vertex{0.5, 1.5},
+			expectedError: nil,
+		},
+		{
+			l1:      triangulate.NewSegment(geom.Line{{0, 1}, {2, 4}}),
+			l2:      triangulate.NewSegment(geom.Line{{1, 1}, {0, 2}}),
+			intersection: quadedge.Vertex{0.4, 1.6},
+			expectedError: nil,
+		},
+		{
+			l1:      triangulate.NewSegment(geom.Line{{0, 1}, {2, 3}}),
+			l2:      triangulate.NewSegment(geom.Line{{1, 1}, {2, 2}}),
+			intersection: quadedge.Vertex{0, 0},
+			expectedError: ErrLinesDoNotIntersect,
+		},
+		{
+			l1:      triangulate.NewSegment(geom.Line{{3, 5}, {3, 6}}),
+			l2:      triangulate.NewSegment(geom.Line{{1, 4.995}, {4, 4.995}}),
+			intersection: quadedge.Vertex{3, 5},
+			expectedError: nil,
+		},
+	}
+
+	for i, tc := range testcases {
+		tc := tc
+		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+	}
+}
+
 /*
 TestTriangulation test cases test for small constrained triangulations and 
 edge cases
@@ -167,6 +228,9 @@ func TestTriangulation(t *testing.T) {
 		expectedEdges string
 		expectedTris  string
 	}
+
+	// to change the flags on the default logger
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	fn := func(t *testing.T, tc tcase) {
 		bytes, err := hex.DecodeString(tc.inputWKB)
@@ -225,18 +289,48 @@ func TestTriangulation(t *testing.T) {
 		{
 			// a horizontal rectangle w/ one diagonal line. The diagonal line
 			// should be maintained and the top/bottom re-triangulated.
-			inputWKT:      `MULTILINESTRING ((0 0,0 1,1 1.1,2 1,2 0,1 -0.1,0 0),(0 0,2 1))`,
+			inputWKT:      `MULTILINESTRING((0 0,0 1,1 1.1,2 1,2 0,1 0.1,0 0),(0 1,2 0))`,
 			inputWKB:      `010500000002000000010200000007000000000000000000000000000000000000000000000000000000000000000000f03f000000000000f03f9a9999999999f13f0000000000000040000000000000f03f00000000000000400000000000000000000000000000f03f9a9999999999b93f000000000000000000000000000000000102000000020000000000000000000000000000000000f03f00000000000000400000000000000000`,
 			expectedEdges: `MULTILINESTRING ((1 1.1,2 1),(0 1,1 1.1),(0 0,0 1),(0 0,2 0),(2 0,2 1),(1 1.1,2 0),(0 1,2 0),(1 0.1,2 0),(0 1,1 0.1),(0 0,1 0.1))`,
 			expectedTris: `MULTIPOLYGON (((0 1,0 0,1 0.1,0 1)),((0 1,1 0.1,2 0,0 1)),((0 1,2 0,1 1.1,0 1)),((1 1.1,2 0,2 1,1 1.1)),((0 0,2 0,1 0.1,0 0)))`,
 		},
 		{
-			// a horizontal rectangle w/ one diagonal line. The diagonal line
+			// an egg shape with one horizontal line. The horizontal line
 			// should be maintained and the top/bottom re-triangulated.
 			inputWKT:      `MULTILINESTRING((0 0,-0.1 0.5,0 1,0.5 1.2,1 1.3,1.5 1.2,2 1,2.1 0.5,2 0,1.5 -0.2,1 -0.3,0.5 -0.2,0 0),(-0.1 0.5,2.1 0.5))`,
 			inputWKB:      `01050000000200000001020000000d000000000000000000000000000000000000009a9999999999b9bf000000000000e03f0000000000000000000000000000f03f000000000000e03f333333333333f33f000000000000f03fcdccccccccccf43f000000000000f83f333333333333f33f0000000000000040000000000000f03fcdcccccccccc0040000000000000e03f00000000000000400000000000000000000000000000f83f9a9999999999c9bf000000000000f03f333333333333d3bf000000000000e03f9a9999999999c9bf000000000000000000000000000000000102000000020000009a9999999999b9bf000000000000e03fcdcccccccccc0040000000000000e03f`,
 			expectedEdges: `MULTILINESTRING ((1.5 1.2,2 1),(1 1.3,1.5 1.2),(0.5 1.2,1 1.3),(0 1,0.5 1.2),(-0.1 0.5,0 1),(-0.1 0.5,0 0),(0 0,0.5 -0.2),(0.5 -0.2,1 -0.3),(1 -0.3,1.5 -0.2),(1.5 -0.2,2 0),(2 0,2.1 0.5),(2 1,2.1 0.5),(1.5 1.2,2.1 0.5),(1 1.3,2.1 0.5),(-0.1 0.5,2.1 0.5),(-0.1 0.5,1 1.3),(-0.1 0.5,0.5 1.2),(1.5 -0.2,2.1 0.5),(-0.1 0.5,1.5 -0.2),(0.5 -0.2,1.5 -0.2),(-0.1 0.5,0.5 -0.2))`,
 			expectedTris: `MULTIPOLYGON (((0 1,-0.1 0.5,0.5 1.2,0 1)),((0.5 1.2,-0.1 0.5,1 1.3,0.5 1.2)),((1 1.3,-0.1 0.5,2.1 0.5,1 1.3)),((1 1.3,2.1 0.5,1.5 1.2,1 1.3)),((1.5 1.2,2.1 0.5,2 1,1.5 1.2)),((1 -0.3,1.5 -0.2,0.5 -0.2,1 -0.3)),((0.5 -0.2,1.5 -0.2,-0.1 0.5,0.5 -0.2)),((0.5 -0.2,-0.1 0.5,0 0,0.5 -0.2)),((-0.1 0.5,1.5 -0.2,2.1 0.5,-0.1 0.5)),((2.1 0.5,1.5 -0.2,2 0,2.1 0.5)))`,
+		},
+		{
+			// a triangle with a line intersecting the top vertex. Where the 
+			// line intersects the vertex, the line should be broken into two
+			// pieces and triangulated properly.
+			inputWKT:      `MULTILINESTRING((0 0,-0.1 0.5,0 1,0.5 1.2,1 1.3,1.5 1.2,2 1,2.1 0.5,2 0,1.5 -0.2,1 -0.3,0.5 -0.2,0 0),(-0.1 0.5,2.1 0.5))`,
+			inputWKB:      `01050000000200000001020000000400000000000000000000000000000000000000000000000000f03f000000000000f03f00000000000000400000000000000000000000000000000000000000000000000102000000020000000000000000000000000000000000f03f0000000000000040000000000000f03f`,
+			expectedEdges: `MULTILINESTRING ((1 1,2 1),(0 1,1 1),(0 0,0 1),(0 0,2 0),(2 0,2 1),(1 1,2 0),(0 0,1 1))`,
+			expectedTris: `MULTIPOLYGON (((0 1,0 0,1 1,0 1)),((1 1,0 0,2 0,1 1)),((1 1,2 0,2 1,1 1)))`,
+		},
+		{
+			// a figure eight with a duplicate constrained line.
+			inputWKT:      `MULTIPOLYGON (((0 0,0 1,1 1,1 0,0 0,0 -1,1 -1,1 0,0 0)))`,
+			inputWKB:      `01060000000100000001030000000100000009000000000000000000000000000000000000000000000000000000000000000000f03f000000000000f03f000000000000f03f000000000000f03f0000000000000000000000000000000000000000000000000000000000000000000000000000f0bf000000000000f03f000000000000f0bf000000000000f03f000000000000000000000000000000000000000000000000`,
+			expectedEdges: `MULTILINESTRING ((0 1,1 1),(0 0,0 1),(0 -1,0 0),(0 -1,1 -1),(1 -1,1 0),(1 0,1 1),(0 1,1 0),(0 0,1 0),(0 0,1 -1))`,
+			expectedTris: `MULTIPOLYGON (((0 1,0 0,1 0,0 1)),((0 1,1 0,1 1,0 1)),((0 -1,1 -1,0 0,0 -1)),((0 0,1 -1,1 0,0 0)))`,
+		},
+		{
+			// A constraint line that overlaps with another edge
+			inputWKT:      `MULTIPOLYGON (((0 0,1 1,2 1,3 0,3 1,0 1,0 0)))`,
+			inputWKB:      `0106000000010000000103000000010000000700000000000000000000000000000000000000000000000000f03f000000000000f03f0000000000000040000000000000f03f000000000000084000000000000000000000000000000840000000000000f03f0000000000000000000000000000f03f00000000000000000000000000000000`,
+			expectedEdges: `MULTILINESTRING ((2 1,3 1),(1 1,2 1),(0 1,1 1),(0 0,0 1),(0 0,3 0),(3 0,3 1),(2 1,3 0),(0 0,2 1),(0 0,1 1))`,
+			expectedTris: `MULTIPOLYGON (((0 1,0 0,1 1,0 1)),((1 1,0 0,2 1,1 1)),((2 1,0 0,3 0,2 1)),((2 1,3 0,3 1,2 1)))`,
+		},
+		{
+			// bow-tie
+			inputWKT:      `MULTIPOLYGON (((0 0,1 1,1 0,0 1,0 0)))`,
+			inputWKB:      `0106000000010000000103000000010000000500000000000000000000000000000000000000000000000000f03f000000000000f03f000000000000f03f00000000000000000000000000000000000000000000f03f00000000000000000000000000000000`,
+			expectedEdges: `MULTILINESTRING ((0 1,1 1),(0 0,0 1),(0 0,1 0),(1 0,1 1),(0.5 0.5,1 0),(0.5 0.5,1 1),(0 1,0.5 0.5),(0 0,0.5 0.5))`,
+			expectedTris: `MULTIPOLYGON (((0 1,0 0,0.5 0.5,0 1)),((0 1,0.5 0.5,1 1,0 1)),((1 1,0.5 0.5,1 0,1 1)),((0 0,1 0,0.5 0.5,0 0)))`,
 		},
 	}
 

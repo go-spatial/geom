@@ -138,14 +138,10 @@ func (seg *Segment) GetEnd() quadedge.Vertex {
     }
      */
 
-    /**
-     * Gets a <tt>LineSegment</tt> modelling this segment.
-     * 
-     * @return a LineSegment
-    public LineSegment getLineSegment() {
-        return ls;
-    }
-     */
+// GetLineSegment gets a Line modelling this segment.
+func (seg *Segment) GetLineSegment() geom.Line {
+    return seg.ls;
+}
 
     /**
      * Gets the external data associated with this segment
