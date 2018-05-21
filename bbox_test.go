@@ -143,6 +143,36 @@ func TestExtentAddPoints(t *testing.T) {
 	}
 }
 
+func TestExtentAddGeometry(t *testing.T) {
+	type tcase struct {
+		bb       *geom.Extent
+		g        geom.Geometry
+		expected *geom.Extent
+	}
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+		bb := tc.bb
+		err := bb.AddGeometry(tc.g)
+		if err != nil {
+			t.Errorf("failed, expected nil got %+v", err)
+		}
+		if !cmp.GeomExtent(tc.expected, bb) {
+			t.Errorf("failed, expected %+v got %+v", tc.expected, bb)
+		}
+	}
+	tests := map[string]tcase{
+		"point expanded by LineString": {
+			bb:       &geom.Extent{1.0, 2.0, 1.0, 2.0},
+			g:        &geom.LineString{{0.0, 3.0}, {4.0, 5.0}, {3.0, -1.0}},
+			expected: &geom.Extent{0, -1, 4, 5},
+		},
+	}
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
 func TestExtentContains(t *testing.T) {
 	type tcase struct {
 		mm       geom.MinMaxer
