@@ -144,12 +144,12 @@ func TestNewTileLatLon(t *testing.T) {
 
 	}
 	tests := map[string]tcase{
-		"zero":{
+		"zero": {
 			z:      0,
 			x:      0,
 			y:      0,
-			lat: 0,
-			lon: 0,
+			lat:    0,
+			lon:    0,
 			buffer: 64,
 			srid:   geom.WebMercator,
 		},
@@ -157,8 +157,8 @@ func TestNewTileLatLon(t *testing.T) {
 			z:      8,
 			x:      128,
 			y:      128,
-			lat: 0,
-			lon: 0,
+			lat:    0,
+			lon:    0,
 			buffer: 64,
 			srid:   geom.WebMercator,
 		},
@@ -166,8 +166,8 @@ func TestNewTileLatLon(t *testing.T) {
 			z:      2,
 			x:      2,
 			y:      3,
-			lat: -70,
-			lon: 20,
+			lat:    -70,
+			lon:    20,
 			buffer: 64,
 			srid:   geom.WebMercator,
 		},
@@ -175,8 +175,8 @@ func TestNewTileLatLon(t *testing.T) {
 			z:      16,
 			x:      11436,
 			y:      26461,
-			lat: 32.705,
-			lon: -117.176,
+			lat:    32.705,
+			lon:    -117.176,
 			buffer: 64,
 			srid:   geom.WebMercator,
 		},
@@ -234,14 +234,14 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"parent 1": {
-			tile: slippy.NewTile(1, 0, 0, 0, geom.WebMercator),
+			tile:   slippy.NewTile(1, 0, 0, 0, geom.WebMercator),
 			zoomAt: 0,
 			expected: []coord{
 				{0, 0, 0},
 			},
 		},
 		"parent 2": {
-			tile: slippy.NewTile(3, 3, 5, 0, geom.WebMercator),
+			tile:   slippy.NewTile(3, 3, 5, 0, geom.WebMercator),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 1},

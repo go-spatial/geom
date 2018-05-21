@@ -49,19 +49,16 @@ func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
 func Lat2Tile(zoom uint, lat float64) (y uint) {
 	lat_rad := lat * math.Pi / 180
 
-	y = uint(math.Exp2(float64(zoom)) *
-		(1.0 - math.Log(
-			math.Tan(lat_rad) +
-				(1 / math.Cos(lat_rad))) / math.Pi)) /
+	return uint(math.Exp2(float64(zoom))*
+		(1.0-math.Log(
+			math.Tan(lat_rad)+
+				(1/math.Cos(lat_rad)))/math.Pi)) /
 		2.0
 
-	return
 }
 
 func Lon2Tile(zoom uint, lon float64) (x uint) {
-
-	x = uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
-	return
+	return uint(math.Exp2(float64(zoom)) * (lon + 180.0) / 360.0)
 }
 
 // Tile2Lon will return the west most longitude
