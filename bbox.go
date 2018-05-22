@@ -6,7 +6,7 @@ import (
 
 // Extenter represents an interface that returns a boundbox.
 type Extenter interface {
-	Extent() (extent [4]float64)
+	Extent() (extent Extent)
 }
 
 type MinMaxer interface {
