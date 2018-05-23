@@ -106,7 +106,7 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 type featureType GeoJSONType
 
 func (_ featureType) MarshalJSON() ([]byte, error) {
-	return []byte(`"Feature"`), nil
+	return []byte(FeatureType), nil
 }
 
 type Feature struct {
@@ -120,7 +120,7 @@ type Feature struct {
 
 // featureCollectionType allows the GeoJSON type for Feature to be automatically set during json Marshalling
 // which avoids the user from accidentally setting the incorrect GeoJSON type.
-type featureCollectionType struct{}
+type featureCollectionType GeoJSONType
 
 func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
 	return []byte(FeatureCollectionType), nil
@@ -225,6 +225,13 @@ func (geo *Geometry) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		geo.Geometry = f
+	case FeatureCollectionType:
+		fc := FeatureCollection{}
+		err = json.Unmarshal(b, &fc)
+		if err != nil {
+			return err
+		}
+		geo.Geometry = fc
 	default:
 		return encoding.ErrInvalidGeoJSON{b}
 	}
