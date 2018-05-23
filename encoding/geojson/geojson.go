@@ -106,7 +106,7 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 type featureType GeoJSONType
 
 func (_ featureType) MarshalJSON() ([]byte, error) {
-	return []byte(FeatureType), nil
+	return []byte(`"Feature"`), nil
 }
 
 type Feature struct {
@@ -123,7 +123,7 @@ type Feature struct {
 type featureCollectionType GeoJSONType
 
 func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
-	return []byte(FeatureCollectionType), nil
+	return []byte(`"FeatureCollection"`), nil
 }
 
 type FeatureCollection struct {

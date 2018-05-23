@@ -17,7 +17,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
+		// t.Parallel()
 
 		f := geojson.Feature{
 			Geometry: geojson.Geometry{tc.geom},
