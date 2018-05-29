@@ -12,31 +12,10 @@ import (
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
 
-/*
-
-TODO:
-
-* Start w/ basic constraint implementation (no intersections)
-  // Start at the origin point
-  // Search around the origin point for the containing triangle. To determine containment, check two line segments for intersection, if they intersect, it is contained.
-  // assert for now if the intersected line segment is a constraint
-  // assert for now if we fall on an existing edge
-  // Create methods OpposedTriangle and OpposedVertex (?)
-  // Loop through finding opposed triangles removing edges, keep a set of all edges that will need to be revisited.
-
-* When constraints are introduced:
-  + if there is an intersection between line segments
-  	+ Calculate the intersection and divide each line segment to use that point
-  	+ The inserted segment should then be inserted again as two different segments, recurse
-* Edge conditions:
-  + a constrained edge that lies on top of an existing edge
-  + a constrained edge that lies on top of another constrained edge
-
-*/
-
 var ErrInvalidPointClassification = errors.New("invalid point classification")
 var ErrLinesDoNotIntersect = errors.New("line segments do not intersect")
 // these errors indicate a problem with the algorithm.
+var ErrUnableToUpdateVertexIndex = errors.New("unable to update vertex index")
 var ErrUnexpectedDeadNode = errors.New("unexpected dead node")
 var ErrUnsupportedCoincidentEdges = errors.New("unsupported coincident edges")
 
@@ -55,6 +34,9 @@ type Triangulator struct {
 	constraints map[triangulate.Segment]bool
 	subdiv     *quadedge.QuadEdgeSubdivision
 	tolerance float64
+	// run validation after many modification operations. This is expensive, 
+	// but very useful when debugging.
+	validate bool
 	// maintain an index of vertices to quad edges. Each vertex will point to
 	// one quad edge that has the vertex as an origin. The other quad edges 
 	// that point to this vertex can be reached from there.
@@ -112,7 +94,6 @@ This method makes no effort to ensure the resulting changes are a valid
 triangulation.
 */
 func (tri *Triangulator) createTriangle(a, b, c quadedge.Vertex) error {
-	log.Printf("a: %v b: %v c: %v", a, b, c)
 	if err := tri.createSegment(triangulate.NewSegment(geom.Line{a, b})); err != nil {
 		return err
 	}
@@ -135,7 +116,7 @@ deletion.
 
 It is invalid to call this method on the last edge that links to a vertex.
 */
-func (tri *Triangulator) deleteEdge(e *quadedge.QuadEdge) {
+func (tri *Triangulator) deleteEdge(e *quadedge.QuadEdge) error {
 
 	toRemove := make(map[*quadedge.QuadEdge]bool, 4)
 
@@ -149,30 +130,20 @@ func (tri *Triangulator) deleteEdge(e *quadedge.QuadEdge) {
 	toRemove[eRot] = true
 	toRemove[eRotSym] = true
 
-	updateVertexIndex := func(v quadedge.Vertex) {
-		ve := tri.vertexIndex[v]
-		if toRemove[ve] {
-			log.Printf("Removing from vertex index: %v", ve)
-			for testEdge := ve.ONext(); ; testEdge = testEdge.ONext() {
-				if testEdge == ve {
-					log.Fatal("unable to update vertex index")
-				}
-				if toRemove[testEdge] == false {
-					log.Printf("Replacing %v with %v", ve, testEdge)
-					tri.vertexIndex[v] = testEdge
-					break
-				}
-			}
-		}
-	}
-
 	// remove this edge from the vertex index.
-	updateVertexIndex(e.Orig())
-	updateVertexIndex(e.Dest())
+	if err := tri.removeEdgesFromVertexIndex(toRemove, e.Orig()); err != nil {
+		return err
+	}
+	if err := tri.removeEdgesFromVertexIndex(toRemove, e.Dest()); err != nil {
+		return err
+	}
 	quadedge.Splice(e.OPrev(), e)
 	quadedge.Splice(eSym.OPrev(), eSym)
 
+	// TODO: this call is horribly inefficient and should be optimized.
 	tri.subdiv.Delete(e)
+
+	return nil
 }
 
 /*
@@ -193,7 +164,6 @@ func (tri *Triangulator) findIntersectingTriangle(s triangulate.Segment) (*Trian
 	}
 
 	left := qe
-	log.Printf("s: %v", s)
 
 	// walk around all the triangles that share qe.Orig()
 	for true {
@@ -206,8 +176,6 @@ func (tri *Triangulator) findIntersectingTriangle(s triangulate.Segment) (*Trian
 		lc := s.GetEnd().Classify(left.Orig(), left.Dest())
 		rc := s.GetEnd().Classify(right.Orig(), right.Dest())
 
-		log.Printf("left: %v right: %v", left, right)		
-		log.Printf("lc: %v rc: %v", lc, rc)
 		if (lc == quadedge.RIGHT && rc == quadedge.LEFT) || lc == quadedge.BETWEEN || lc == quadedge.DESTINATION || lc == quadedge.BEYOND {
 			// if s is between the two edges, we found our triangle.
 			return &Triangle{left}, nil
@@ -264,6 +232,11 @@ func (tri *Triangulator) InsertSegments(g geom.Geometry) error {
 	return nil
 }
 
+/*
+insertSites inserts all of the vertices found in g into a Delaunay 
+triangulation. Other steps will modify the Delaunay Triangulation to create
+the constrained Delaunay triangulation.
+*/
 func (tri *Triangulator) insertSites(g geom.Geometry) error {
 	tri.builder = triangulate.NewDelaunayTriangulationBuilder(tri.tolerance)
 	err := tri.builder.SetSites(g)
@@ -288,6 +261,13 @@ func (tri *Triangulator) insertSites(g geom.Geometry) error {
 	return nil
 }
 
+/*
+insertConstraints modifies the triangulation by incrementally using the
+line segements in g as constraints in the triangulation. After this step
+the triangulation is no longer a proper Delaunay triangulation, but the
+constraints are guaranteed. Some constraints may need to be split (think
+about the case when two constraints intersect).
+*/
 func (tri *Triangulator) insertConstraints(g geom.Geometry) error {
 	tri.constraints = make(map[triangulate.Segment]bool)
 
@@ -308,14 +288,12 @@ func (tri *Triangulator) insertConstraints(g geom.Geometry) error {
 		tri.constraints[seg] = true
 	}
 
-	log.Printf("tri.constraints: %v", tri.constraints)
 	for seg := range constraints {
-		err := tri.insertEdgeCDT(&seg)
-		if err != nil {
+		if err := tri.insertEdgeCDT(&seg); err != nil {
 			return fmt.Errorf("error adding constraint: %v", err)
 		}
 		if err = tri.Validate(); err != nil {
-			log.Fatalf("validate failed: %v", err)
+			return err
 		}
 	}
 
@@ -344,7 +322,6 @@ func (tri *Triangulator) intersection(l1, l2 triangulate.Segment) (quadedge.Vert
 	s := l2.GetEnd().Sub(q)
 
 	rs := r.CrossProduct(s)
-	log.Printf("rs: %v", rs)
 
 	if rs == 0 {
 		return quadedge.Vertex{}, ErrLinesDoNotIntersect
@@ -361,7 +338,6 @@ func (tri *Triangulator) intersection(l1, l2 triangulate.Segment) (quadedge.Vert
 	utolerance := tri.tolerance / s.Magn()
 	ulow := -utolerance
 	uhigh := 1 + utolerance
-	log.Printf("t: %v u: %v", t, u)
 
 	if t < tlow || t > thigh || u < ulow || u > uhigh {
 		return quadedge.Vertex{}, ErrLinesDoNotIntersect
@@ -383,11 +359,20 @@ func (tri *Triangulator) IsConstraint(e *quadedge.QuadEdge) bool {
 	return ok
 }
 
-// Procedure InsertEdgeCDT(T:CDT, ab:Edge)
-func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
-	log.Printf("ab: %v", *ab)
-	log.Print(tri.subdiv.DebugDumpEdges())
+/*
+insertEdgeCDT attempts to follow the pseudo code in Domiter.
 
+Procedure InsertEdgeCDT(T:CDT, ab:Edge)
+
+There are some deviations that are also mentioned inline in the comments
+
+ - Some aparrent typos that are resolved to give consistent results
+ - Modifications to work with the planar subdivision representation of
+   a triangulation (QuadEdge)
+ - Modification to support the case when two constrained edges intersect
+   at more than the end points.
+*/
+func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 
 	qe, err := tri.LocateSegment(ab.GetStart(), ab.GetEnd())
 	if qe != nil && err != nil {
@@ -427,20 +412,14 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("t: %v", t)
-		log.Printf("v: %v", v)
-		log.Printf("tseq: %v", tseq)
-		log.Printf("vseq: %v", vseq)
+
 		shared, err := t.sharedEdge(tseq)
 		if err != nil {
 			return err
 		}
-		log.Printf("shared: %v", shared)
 
 		c := vseq.Classify(ab.GetStart(), ab.GetEnd())
-		cv := v.Classify(ab.GetStart(), ab.GetEnd())
-		log.Printf("c: %v", c)
-		log.Printf("cv: %v", cv)
+
 		// should we remove the edge shared between t & tseq?
 		flagEdgeForRemoval := false
 
@@ -469,7 +448,7 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 			if err != nil {
 				return err
 			}
-			log.Printf("Intersection: %v", iv)
+
 			// split the constrained edge we interesect
 			if err := tri.splitEdge(shared, iv); err != nil {
 				return err
@@ -479,14 +458,15 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 			if err != nil {
 				return err
 			}
+
 			// create a new edge for the rest of this segment and recursively
 			// insert the new edge.
 			vb := triangulate.NewSegment(geom.Line{iv, ab.GetEnd()})
 			tri.insertEdgeCDT(&vb)
+
 			// the current insertion will stop at the interesction point
 			b = iv
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), iv})		
-			//flagEdgeForRemoval = true
 		
 		// If vseq above the edge ab then
 		case c == quadedge.LEFT:
@@ -506,21 +486,10 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 			pl = appendNonRepeat(pl, vseq)
 			flagEdgeForRemoval = true
 
-		// // NOTE: You may be able to use this same mechanism to handle edges that overlap/intersect
-		// // Else vseq on the edge ab
-		// case c == quadedge.BETWEEN:
-		// 	log.Printf("Between: %v", vseq)
-		// 	// InsertEdgeCDT(T, vseqb)
-		// 	vseqb := triangulate.NewSegment(geom.Line{vseq, ab.GetEnd()})
-		// 	tri.insertEdgeCDT(&vseqb)
-		// 	// a:=vseq -- Should this be b:=vseq!? -JRS
-		// 	b = vseq
-		// 	*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
 		case c == quadedge.DESTINATION:
 			flagEdgeForRemoval = true
 
 		default:
-			log.Printf("c: %v", c)
 			return ErrInvalidPointClassification
 		}
 
@@ -534,7 +503,6 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 	}
 	// EndWhile
 
-	log.Printf("removalList: %v", removalList)
 	// remove the previously marked edges
 	// TODO Inefficient
 	for i := range(removalList) {
@@ -542,29 +510,22 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 	}
 
 	// TriangulatePseudoPolygon(PU,ab,T)
-	log.Printf("pu: %v", pu)
-	tri.triangulatePseudoPolygon(pu, *ab)
+	if err := tri.triangulatePseudoPolygon(pu, *ab); err != nil {
+		return err
+	}
 	// TriangulatePseudoPolygon(PL,ab,T)
-	log.Printf("pl: %v", pl)
-	tri.triangulatePseudoPolygon(pl, *ab)
-
-	log.Print(tri.subdiv.DebugDumpEdges())
-
-	if err := tri.Validate(); err != nil {
-		log.Fatalf("validate failed: %v", err)
+	if err := tri.triangulatePseudoPolygon(pl, *ab); err != nil {
+		return err
 	}
 
-	// Reconstitute the triangle adjacencies of T
-	// bt, err := tri.findIntersectingTriangle(triangulate.NewSegment(geom.Line{ab.GetEnd(), ab.GetStart()}))
-	// if err != nil {
-	// 	return err
-	// }
+	if err := tri.Validate(); err != nil {
+		return err
+	}
 
-	// // Add edge ab to T
-	// log.Printf("at.qe.Sym(): %v", at.qe.Sym())
-	// log.Printf("bt.qe.OPrev(): %v", bt.qe.OPrev())
-	// quadedge.Connect(at.qe.Sym(), bt.qe.OPrev())
-	tri.createSegment(*ab)
+	// Add edge ab to T
+	if err := tri.createSegment(*ab); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -600,7 +561,7 @@ func (tri *Triangulator) LocateSegment(v1 quadedge.Vertex, v2 quadedge.Vertex) (
 	start := qe
 	for true {
 		if qe == nil || qe.IsLive() == false {
-			log.Fatalf("unexpected dead node: %v", qe)
+			log.Printf("unexpected dead node: %v", qe)
 			return nil, fmt.Errorf("nil or dead qe when locating segment %v %v", v1, v2)
 		}
 		if v2.Equals(qe.Dest()) {
@@ -617,13 +578,48 @@ func (tri *Triangulator) LocateSegment(v1 quadedge.Vertex, v2 quadedge.Vertex) (
 }
 
 /*
-removeConstraintEdge removes any constraints that share the same Orig() and Dest() as the edge provided. If there are none, no changes are made.
+removeConstraintEdge removes any constraints that share the same Orig() and 
+Dest() as the edge provided. If there are none, no changes are made.
 */
 func (tri *Triangulator) removeConstraintEdge(e *quadedge.QuadEdge) {
 	delete(tri.constraints, triangulate.NewSegment(geom.Line{e.Orig(), e.Dest()}))
 	delete(tri.constraints, triangulate.NewSegment(geom.Line{e.Dest(), e.Orig()}))
 }
 
+/*
+removeEdgesFromVertexIndex will remove a set of QuadEdges from the vertex index
+for the specified vertex. If the operation cannot be completed an error will be
+returned and the index will not be modified.
+
+The vertex index maps from a vertex to an arbitrary QuadEdges. This method is
+helpful in modifying the index after an edge has been deleted.
+
+toRemove - a set of QuadEdges that should be removed from the index. These
+QuadEdges don't necessarily have to link to the provided vertex.
+v - The vertex to modify in the index.
+*/
+func (tri *Triangulator) removeEdgesFromVertexIndex(toRemove map[*quadedge.QuadEdge]bool, v quadedge.Vertex) error {
+	ve := tri.vertexIndex[v]
+	if toRemove[ve] {
+		for testEdge := ve.ONext(); ; testEdge = testEdge.ONext() {
+			if testEdge == ve {
+				// if we made it all the way around the vertex without finding 
+				// a valid edge to reference from this vertex
+				return ErrUnableToUpdateVertexIndex
+			}
+			if toRemove[testEdge] == false {
+				tri.vertexIndex[v] = testEdge
+				return nil
+			}
+		}
+	}
+	// this should happen if the vertex doesn't need to be updated.
+	return nil
+}
+
+/*
+splitEdge splits the given edge at the vertex v.
+*/
 func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) error {
 	constraint := tri.IsConstraint(e)
 
@@ -711,6 +707,9 @@ reports the first error.
 This is most useful when testing/debugging.
 */
 func (tri *Triangulator) Validate() error {
+	if tri.validate == false {
+		return nil
+	}
 	err := tri.subdiv.Validate()
 	if err != nil {
 		return err

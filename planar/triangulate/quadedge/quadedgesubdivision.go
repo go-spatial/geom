@@ -674,7 +674,6 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 	// visited flag is used to record visited edges of triangles
 	// setVisitedAll(false);
 	var stack *edgeStack = new(edgeStack)
-	log.Printf("startingEdge: %v", qes.startingEdge)
 	if qes.startingEdge != nil {
 		stack.push(qes.startingEdge)
 	}

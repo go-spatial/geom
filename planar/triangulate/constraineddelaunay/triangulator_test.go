@@ -3,7 +3,6 @@ package constraineddelaunay
 
 import (
 	"encoding/hex"
-	"fmt"
 	"log"
 	"strconv"
 	"testing"
@@ -24,7 +23,7 @@ func TestFindIntersectingTriangle(t *testing.T) {
 	    // https://rodic.fr/blog/online-conversion-between-geometric-formats/
 		inputWKB      string
 		searchFrom		geom.Line
-		expectedEdge  string
+		expectedTriangle  string
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -41,16 +40,21 @@ func TestFindIntersectingTriangle(t *testing.T) {
 
 		uut := new(Triangulator)
 		uut.tolerance = 1e-6
+		// perform self consistency validation while building the 
+		// triangulation.
+		uut.validate = true
 		uut.insertSites(g)
 
+		// find the triangle
 		tri, err := uut.findIntersectingTriangle(triangulate.NewSegment(tc.searchFrom))
 		if err != nil {
 			t.Fatalf("error, expected nil got %v", err)
 			return
 		}
-		qeStr := fmt.Sprintf("%v -> %v", tri.qe.Orig(), tri.qe.Dest())
-		if qeStr != tc.expectedEdge {
-			t.Fatalf("error, expected %v got %v", tc.expectedEdge, qeStr)
+
+		qeStr := tri.String()
+		if qeStr != tc.expectedTriangle {
+			t.Fatalf("error, expected %v got %v", tc.expectedTriangle, qeStr)
 		}
 
 	}
@@ -59,25 +63,25 @@ func TestFindIntersectingTriangle(t *testing.T) {
 			inputWKT:      `MULTIPOINT (10 10, 10 20, 20 20, 20 10, 20 0, 10 0, 0 0, 0 10, 0 20)`,
 			inputWKB:      `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
 			searchFrom: geom.Line{{0,0}, {10, 10}},
-			expectedEdge: `[0 0] -> [0 10]`,
+			expectedTriangle: `[[0 0],[0 10],[10 0]]`,
 		},
 		{
 			inputWKT:      `MULTIPOINT (10 10, 10 20, 20 20, 20 10, 20 0, 10 0, 0 0, 0 10, 0 20)`,
 			inputWKB:      `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
 			searchFrom: geom.Line{{10,0}, {0, 20}},
-			expectedEdge: `[10 0] -> [0 10]`,
+			expectedTriangle: `[[10 0],[0 10],[10 10]]`,
 		},
 		{
 			inputWKT:      `MULTIPOINT (10 10, 10 20, 20 20, 20 10, 20 0, 10 0, 0 0, 0 10, 0 20)`,
 			inputWKB:      `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
 			searchFrom: geom.Line{{10,10}, {0, 0}},
-			expectedEdge: `[10 10] -> [10 0]`,
+			expectedTriangle: `[[10 10],[10 0],[0 10]]`,
 		},
 		{
 			inputWKT:      `MULTIPOINT (10 10, 10 20, 20 20, 20 10, 20 0, 10 0, 0 0, 0 10, 0 20)`,
 			inputWKB:      `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
 			searchFrom: geom.Line{{10,10}, {10, 20}},
-			expectedEdge: `[10 10] -> [10 20]`,
+			expectedTriangle: `[[10 10],[10 20],[20 10]]`,
 		},
 	}
 
@@ -112,6 +116,9 @@ func TestDeleteEdge(t *testing.T) {
 
 		uut := new(Triangulator)
 		uut.tolerance = 1e-6
+		// perform self consistency validation while building the 
+		// triangulation.
+		uut.validate = true
 		uut.InsertSegments(g)
 		e, err := uut.LocateSegment(quadedge.Vertex(tc.deleteMe[0]), quadedge.Vertex(tc.deleteMe[1]))
 		if err != nil {
@@ -125,7 +132,9 @@ func TestDeleteEdge(t *testing.T) {
 			return
 		}
 
-		uut.deleteEdge(e)
+		if err = uut.deleteEdge(e); err != nil {
+			t.Errorf("error deleting edge, expected nil got %v", err)
+		}
 		err = uut.Validate()
 		if err != nil {
 			t.Errorf("error validating triangulation after delete, expected nil got %v", err)

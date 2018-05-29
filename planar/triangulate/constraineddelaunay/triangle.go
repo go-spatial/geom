@@ -5,7 +5,6 @@ package constraineddelaunay
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
@@ -106,7 +105,6 @@ func (tri *Triangle) opposedVertex(other *Triangle) (quadedge.Vertex, error) {
 	if err != nil {
 		return quadedge.Vertex{}, err
 	}
-	log.Printf("ae: %v", ae)
 
 	// using the matching edge in triangle a, find the opposed vertex in b.
 	return ae.Sym().ONext().Dest(), nil
@@ -156,56 +154,6 @@ func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 
 	// return the matching edge in triangle a
 	return ae, nil
-}
-
-/*
-sharedVertexLeft returns the left vertex that is shared by both triangles.
-       + l
-      /|\
-     / | \
-    /  |  \
-   + a | b +
-    \  |  /
-     \ | /
-      \|/
-       + r
-
-If this method is called as a.sharedVertexLeft(b), the result will be vertex 
-l.
-*/
-func (tri *Triangle) sharedVertexLeft(other *Triangle) (quadedge.Vertex, error) {
-	ae, err := tri.sharedEdge(other)
-	if err != nil {
-		return quadedge.Vertex{}, err
-	}
-
-	// using the matching edge in triangle a, find the opposed vertex in b.
-	return ae.Orig(), nil
-}
-
-/*
-sharedVertexRight returns the right vertex that is shared by both triangles.
-       + l
-      /|\
-     / | \
-    /  |  \
-   + a | b +
-    \  |  /
-     \ | /
-      \|/
-       + r
-
-If this method is called as a.sharedVertexRight(b), the result will be vertex 
-r.
-*/
-func (tri *Triangle) sharedVertexRight(other *Triangle) (quadedge.Vertex, error) {
-	ae, err := tri.sharedEdge(other)
-	if err != nil {
-		return quadedge.Vertex{}, err
-	}
-
-	// using the matching edge in triangle a, find the opposed vertex in b.
-	return ae.Dest(), nil
 }
 
 func (tri *Triangle) String() string {
