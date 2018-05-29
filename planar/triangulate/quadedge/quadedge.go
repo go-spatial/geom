@@ -149,6 +149,8 @@ edge is the one for which the origin and destination coordinates are ordered
 according to the standard Point ordering.
 
 Returns the primary quadedge
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) GetPrimary() *QuadEdge {
 	v1 := qe.Orig()
@@ -178,11 +180,11 @@ public Object getData() {
 */
 
 /*
-Marks this quadedge as being deleted.
-This does not free the memory used by
-this quadedge quartet, but indicates
-that this edge no longer participates
-in a subdivision.
+Delete marks this quadedge as being deleted. This does not free the memory
+used by this quadedge quartet, but indicates that this edge no longer
+participates in a subdivision.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) Delete() {
 	qe.rot = nil
@@ -192,12 +194,18 @@ func (qe *QuadEdge) Delete() {
 IsLive tests whether this edge has been deleted.
 
 Returns true if this edge has not been deleted.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) IsLive() bool {
 	return qe.rot != nil
 }
 
-// SetNext sets the connected edge
+/*
+SetNext sets the connected edge
+
+If qe is nil a panic will occur.
+*/
 func (qe *QuadEdge) SetNext(next *QuadEdge) {
 	qe.next = next
 }
@@ -208,99 +216,121 @@ QuadEdge Algebra
 */
 
 /*
-Gets the dual of this edge, directed from its right to its left.
+Rot gets the dual of this edge, directed from its right to its left.
 
-@return the rotated edge
+Return the rotated edge
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) Rot() *QuadEdge {
 	return qe.rot
 }
 
 /*
-Gets the dual of this edge, directed from its left to its right.
+InvRot gets the dual of this edge, directed from its left to its right.
 
-@return the inverse rotated edge.
+Return the inverse rotated edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) InvRot() *QuadEdge {
 	return qe.rot.Sym()
 }
 
 /*
-Gets the edge from the destination to the origin of this edge.
+Sym gets the edge from the destination to the origin of this edge.
 
-@return the sym of the edge
+Return the sym of the edge
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) Sym() *QuadEdge {
 	return qe.rot.rot
 }
 
 /*
-Gets the next CCW edge around the origin of this edge.
+ONext gets the next CCW edge around the origin of this edge.
 
-@return the next linked edge.
+Return the next linked edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) ONext() *QuadEdge {
 	return qe.next
 }
 
 /*
-Gets the next CW edge around (from) the origin of this edge.
+OPrev gets the next CW edge around (from) the origin of this edge.
 
-@return the previous edge.
+Return the previous edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) OPrev() *QuadEdge {
 	return qe.rot.next.rot
 }
 
 /*
-Gets the next CCW edge around (into) the destination of this edge.
+DNext gets the next CCW edge around (into) the destination of this edge.
 
-@return the next destination edge.
+Return the next destination edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) DNext() *QuadEdge {
 	return qe.Sym().ONext().Sym()
 }
 
 /*
-Gets the next CW edge around (into) the destination of this edge.
+DPrev gets the next CW edge around (into) the destination of this edge.
 
-@return the previous destination edge.
+Return the previous destination edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) DPrev() *QuadEdge {
 	return qe.InvRot().ONext().InvRot()
 }
 
 /*
-Gets the CCW edge around the left face following this edge.
+LNext gets the CCW edge around the left face following this edge.
 
-@return the next left face edge.
+Return the next left face edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) LNext() *QuadEdge {
 	return qe.InvRot().ONext().Rot()
 }
 
 /*
-Gets the CCW edge around the left face before this edge.
+LPrev gets the CCW edge around the left face before this edge.
 
-@return the previous left face edge.
+Return the previous left face edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) LPrev() *QuadEdge {
 	return qe.next.Sym()
 }
 
 /*
-Gets the edge around the right face ccw following this edge.
+RNext gets the edge around the right face ccw following this edge.
 
-@return the next right face edge.
+Return the next right face edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) RNext() *QuadEdge {
 	return qe.rot.next.InvRot()
 }
 
 /*
-Gets the edge around the right face ccw before this edge.
+RPrev gets the edge around the right face ccw before this edge.
 
-@return the previous right face edge.
+Return the previous right face edge.
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) RPrev() *QuadEdge {
 	return qe.Sym().ONext()
@@ -314,6 +344,8 @@ Data Access
 SetOrig sets the vertex for this edge's origin
 
 o - the origin vertex
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) setOrig(o Vertex) {
 	qe.vertex = o
@@ -323,24 +355,30 @@ func (qe *QuadEdge) setOrig(o Vertex) {
 SetDest sets the vertex for this edge's destination
 
 d - the destination vertex
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) setDest(d Vertex) {
 	qe.Sym().setOrig(d)
 }
 
 /*
-Gets the vertex for the edge's origin
+Orig gets the vertex for the edge's origin
 
-returns the origin vertex
+Returns the origin vertex
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) Orig() Vertex {
 	return qe.vertex
 }
 
 /*
-dest Gets the vertex for the edge's destination
+Dest gets the vertex for the edge's destination
 
-returns the destination vertex
+Returns the destination vertex
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) Dest() Vertex {
 	return qe.Sym().Orig()
@@ -402,6 +440,8 @@ the geometry of this edge.
 Unlike JTS, if IsLive() is false, a deleted string is returned.
 
 return a String representing this edge's geometry
+
+If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) String() string {
 	if qe.IsLive() == false {

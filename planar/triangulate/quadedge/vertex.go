@@ -108,7 +108,7 @@ func (u Vertex) CrossProduct(v Vertex) float64 {
 }
 
 /*
-Computes the inner or dot product
+Dot computes the inner or dot product
 
 @param v a vertex
 @return returns the dot product u.v
@@ -161,7 +161,9 @@ func (u Vertex) Normalize() Vertex {
 	return u.Divide(u.Magn())
 }
 
-/* returns k X v (cross product). this is a vector perpendicular to v */
+/*
+Cross returns k X v (cross product). this is a vector perpendicular to v
+*/
 func (u Vertex) Cross() Vertex {
 	return Vertex{u.Y(), -u.X()}
 }

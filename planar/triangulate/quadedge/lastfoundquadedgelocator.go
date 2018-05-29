@@ -29,11 +29,18 @@ type LastFoundQuadEdgeLocator struct {
 func NewLastFoundQuadEdgeLocator(subdiv *QuadEdgeSubdivision) *LastFoundQuadEdgeLocator {
 	var lf LastFoundQuadEdgeLocator
 
+	if subdiv == nil {
+		return nil
+	}
+
 	lf.subdiv = subdiv
 	lf.init()
 	return &lf
 }
 
+/*
+If lf is nil a panic will occur.
+*/
 func (lf *LastFoundQuadEdgeLocator) init() {
 	lf.lastEdge = lf.findEdge()
 }

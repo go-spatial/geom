@@ -41,7 +41,7 @@ func TestSegmentDummy(t *testing.T) {
 	}
 	testcases := []tcase{
 		{
-			line:      geom.Line{{1,2},{3,4}},
+			line: geom.Line{{1, 2}, {3, 4}},
 		},
 	}
 

@@ -17,11 +17,11 @@ import (
 )
 
 /*
-Algorithms for computing values and predicates associated with triangles.
-For some algorithms extended-precision implementations are provided, which are
-more robust (i.e. they produce correct answers in more cases). Also, some more
-robust formulations of some algorithms are provided, which utilize
-normalization to the origin.
+TrianglePredicate contains algorithms for computing values and predicates
+associated with triangles. For some algorithms extended-precision
+implementations are provided, which are more robust (i.e. they produce correct
+answers in more cases). Also, some more robust formulations of some algorithms
+are provided, which utilize normalization to the origin.
 
 Author Martin Davis
 Ported to Go by Jason R. Surratt
@@ -57,12 +57,11 @@ var TrianglePredicate trianglePredicate
 */
 
 /*
-Tests if a point is inside the circle defined by
-the triangle with vertices a, b, c (oriented counter-clockwise).
-This test uses simple
-double-precision arithmetic, and thus is not 100% robust.
-However, by using normalization to the origin
-it provides improved robustness and increased performance.
+IsInCircleNormalized Tests if a point is inside the circle defined by the
+triangle with vertices a, b, c (oriented counter-clockwise). This test uses
+simple double-precision arithmetic, and thus is not 100% robust. However, by
+using normalization to the origin it provides improved robustness and
+increased performance.
 
 Based on code by J.R.Shewchuk.
 
@@ -105,9 +104,9 @@ func (_ trianglePredicate) IsInCircleNormalized(a geom.Pointer, b geom.Pointer, 
 */
 
 /*
-Tests if a point is inside the circle defined by
-the triangle with vertices a, b, c (oriented counter-clockwise).
-This method uses more robust computation.
+IsInCircleRobust Tests if a point is inside the circle defined by the triangle
+with vertices a, b, c (oriented counter-clockwise). This method uses more
+robust computation.
 
 a - a vertex of the triangle
 b - a vertex of the triangle

@@ -17,8 +17,8 @@ import (
 )
 
 /*
-Computes a Delaunay Triangulation of a set of {@link Vertex}es, using an
-incremental insertion algorithm.
+IncrementalDelaunayTriangulator computes a Delaunay Triangulation of a set of
+{@link Vertex}es, using an incremental insertion algorithm.
 
 Author Martin Davis
 Ported to Go by Jason R. Surratt
@@ -37,6 +37,8 @@ vertices - a Collection of Vertex
 Returns ErrLocateFailure if the location algorithm fails to converge in a
 reasonable number of iterations. If this occurs the triangulator is left in
 an unknown state with 0 or more of the vertices inserted.
+
+If idt is nil a panic will occur.
 */
 func (idt *IncrementalDelaunayTriangulator) InsertSites(vertices []quadedge.Vertex) error {
 	for _, v := range vertices {
@@ -50,13 +52,15 @@ func (idt *IncrementalDelaunayTriangulator) InsertSites(vertices []quadedge.Vert
 }
 
 /*
-Inserts a new point into a subdivision representing a Delaunay
+InsertSite inserts a new point into a subdivision representing a Delaunay
 triangulation, and fixes the affected edges so that the result is still a
 Delaunay triangulation.
 
 Returns a tuple with a quadedge containing the inserted vertex and an error
 code. If there is an error then the vertex will not be inserted and the
 triangulator will still be in a consistent state.
+
+If idt is nil a panic will occur.
 */
 func (idt *IncrementalDelaunayTriangulator) InsertSite(v quadedge.Vertex) (*quadedge.QuadEdge, error) {
 

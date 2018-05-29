@@ -6,10 +6,14 @@ import (
 	"github.com/go-spatial/geom/encoding/wkt"
 )
 
-// DebugDumpEdges returns a string with the WKT representation of the
-// edges. On error, an error string is returned.
-//
-// This is intended for debug purposes only.
+/*
+DebugDumpEdges returns a string with the WKT representation of the
+edges. On error, an error string is returned.
+
+This is intended for debug purposes only.
+
+If qes is nil a panic will occur.
+*/
 func (qes *QuadEdgeSubdivision) DebugDumpEdges() string {
 	edges := qes.GetEdgesAsMultiLineString()
 	edgesWKT, err := wkt.Encode(edges)
@@ -19,8 +23,12 @@ func (qes *QuadEdgeSubdivision) DebugDumpEdges() string {
 	return edgesWKT
 }
 
-// hasCCWNeighbor returns true if n has at least one neighbor that is < 180deg
-// angle and is counter clockwise.
+/*
+hasCCWNeighbor returns true if n has at least one neighbor that is < 180deg
+angle and is counter clockwise.
+
+If qes is nil a panic will occur.
+*/
 func (qes *QuadEdgeSubdivision) hasCCWNeighbor(e *QuadEdge) bool {
 	n := e
 	// if we haven't checked this edge already
@@ -44,6 +52,8 @@ func (qes *QuadEdgeSubdivision) hasCCWNeighbor(e *QuadEdge) bool {
 Validate runs a self consistency checks and reports the first error.
 
 This is not part of the original JTS code.
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) Validate() error {
 	// collect a set of all edges
@@ -70,6 +80,8 @@ validateONext validates that each QuadEdge's ONext() goes to the next edge that
 shares an origin point in CCW order.
 
 This is not part of the original JTS code.
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) validateONext() error {
 
