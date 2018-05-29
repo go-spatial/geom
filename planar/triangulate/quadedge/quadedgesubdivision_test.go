@@ -65,11 +65,20 @@ func TestQuadEdgeSubdivisionDelete(t *testing.T) {
 
 		uut.Delete(e2)
 		uut.Validate()
+		uut.DebugDumpEdges();
 
 		edges := uut.GetEdgesAsMultiLineString()
 		edgesWKT, err := wkt.Encode(edges)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
+		}
+
+		qe, err := uut.LocateSegment(tc.a, tc.b)
+		if err != nil {
+			t.Errorf("expected nil got %v", err)
+		}
+		if qe.Orig().Equals(tc.a) == false || qe.Dest().Equals(tc.b) == false {
+			t.Errorf("expected true got false")
 		}
 
 		if edgesWKT != tc.expected {
