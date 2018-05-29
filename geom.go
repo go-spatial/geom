@@ -136,7 +136,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 
 	default:
 
-		return ErrUnknownGeometry
+		return ErrUnknownGeometry{g}
 
 	case Pointer:
 
