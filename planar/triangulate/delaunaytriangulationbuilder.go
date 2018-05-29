@@ -187,8 +187,8 @@ Returns the subdivision containing the triangulation or nil if it has
 not been created.
 */
 func (dtb *DelaunayTriangulationBuilder) GetSubdivision() *quadedge.QuadEdgeSubdivision {
-	dtb.create();
-	return dtb.subdiv;
+	dtb.create()
+	return dtb.subdiv
 }
 
 /*

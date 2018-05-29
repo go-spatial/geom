@@ -134,7 +134,7 @@ Returns the scaled vector
 This is not part of the original JTS code.
 */
 func (u Vertex) Divide(c float64) Vertex {
-    return Vertex{u.X() / c, u.Y() / c}
+	return Vertex{u.X() / c, u.Y() / c}
 }
 
 // Sum u + v and return the new Vertex
@@ -158,7 +158,7 @@ Normalize scales the vector so the length is one.
 This is not part of the original JTS code.
 */
 func (u Vertex) Normalize() Vertex {
-    return u.Divide(u.Magn())
+	return u.Divide(u.Magn())
 }
 
 /* returns k X v (cross product). this is a vector perpendicular to v */

@@ -154,8 +154,8 @@ func extractLines(g Geometry, lines *[]Line) error {
 	case LineStringer:
 
 		v := gg.Verticies()
-		for i := 0; i < len(v) - 1; i++ {
-			*lines = append(*lines, Line{v[i], v[i + 1]})
+		for i := 0; i < len(v)-1; i++ {
+			*lines = append(*lines, Line{v[i], v[i+1]})
 		}
 		return nil
 
@@ -199,8 +199,8 @@ func extractLines(g Geometry, lines *[]Line) error {
 }
 
 /*
-ExtractLines extracts all linear components from a geometry (line segements). 
-If the geometry contains no line segements (e.g. empty geometry or 
+ExtractLines extracts all linear components from a geometry (line segements).
+If the geometry contains no line segements (e.g. empty geometry or
 point), then an empty array will be returned.
 
 Duplicate lines will not be removed.

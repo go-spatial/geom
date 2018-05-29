@@ -236,4 +236,3 @@ func TestQuadEdgeSubdivisionLocate(t *testing.T) {
 		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
 	}
 }
-

@@ -104,12 +104,12 @@ func TestVertexEqualsTolerance(t *testing.T) {
 
 func TestVertexIsInCircle(t *testing.T) {
 	type tcase struct {
-		v1        Vertex
-		expected  bool
+		v1       Vertex
+		expected bool
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		r := tc.v1.IsInCircle(Vertex{0, 0}, Vertex{2,0}, Vertex{1, 1})
+		r := tc.v1.IsInCircle(Vertex{0, 0}, Vertex{2, 0}, Vertex{1, 1})
 		if r != tc.expected {
 			t.Errorf("error, expected %v got %v", tc.expected, r)
 			return
@@ -128,8 +128,8 @@ func TestVertexIsInCircle(t *testing.T) {
 
 func TestVertexMarshalJSON(t *testing.T) {
 	type tcase struct {
-		v1        Vertex
-		expected  string
+		v1       Vertex
+		expected string
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -154,7 +154,7 @@ func TestVertexMarshalJSON(t *testing.T) {
 
 func TestVertexScalar(t *testing.T) {
 	type tcase struct {
-		v        Vertex
+		v      Vertex
 		scalar float64
 		times  Vertex
 	}
@@ -183,4 +183,3 @@ func TestVertexScalar(t *testing.T) {
 		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
 	}
 }
-

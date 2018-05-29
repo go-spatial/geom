@@ -1,4 +1,3 @@
-
 package quadedge
 
 import (
@@ -28,7 +27,7 @@ func (qes *QuadEdgeSubdivision) hasCCWNeighbor(e *QuadEdge) bool {
 	for true {
 		ccw := n.ONext()
 		// this will only work if the angles between edges are < 180deg
-		// if both edges are frame edges then the CCW rule may not 
+		// if both edges are frame edges then the CCW rule may not
 		// be easily detectable. (think angles > 180deg)
 		if n.Orig().IsCCW(n.Dest(), ccw.Dest()) == true {
 			return true
@@ -40,7 +39,6 @@ func (qes *QuadEdgeSubdivision) hasCCWNeighbor(e *QuadEdge) bool {
 	}
 	return false
 }
-
 
 /*
 Validate runs a self consistency checks and reports the first error.
@@ -67,8 +65,6 @@ func (qes *QuadEdgeSubdivision) Validate() error {
 	return qes.validateONext()
 }
 
-
-
 /*
 validateONext validates that each QuadEdge's ONext() goes to the next edge that
 shares an origin point in CCW order.
@@ -88,14 +84,14 @@ func (qes *QuadEdgeSubdivision) validateONext() error {
 				if n.Orig().Equals(e.Orig()) == false {
 					return fmt.Errorf("edge in ONext() doesn't share an origin: between %v and %v", e, n)
 				}
-				// this isn't a perfect check for CCW, but it should work well 
+				// this isn't a perfect check for CCW, but it should work well
 				// enough in most cases and shouldn't produce false positives.
 				if (qes.isFrameEdge(n) == false || qes.isFrameEdge(ccw) == false) && n.Orig().IsCCW(n.Dest(), ccw.Dest()) == false && qes.hasCCWNeighbor(n) == true {
 					return fmt.Errorf("edges are not CCW, expected %v to be CCW of %v", ccw, n)
 				}
 				edgeSet[n] = true
 				n = ccw
-				if (n == e) {
+				if n == e {
 					break
 				}
 			}
@@ -104,4 +100,3 @@ func (qes *QuadEdgeSubdivision) validateONext() error {
 
 	return nil
 }
-

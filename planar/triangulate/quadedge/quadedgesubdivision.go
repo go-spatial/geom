@@ -312,29 +312,29 @@ subdivision.
 
 p0 a coordinate
 p1 another coordinate
-Return the edge joining the coordinates, if present or null if no such edge 
+Return the edge joining the coordinates, if present or null if no such edge
 exists
 */
 func (qes *QuadEdgeSubdivision) LocateSegment(p0 Vertex, p1 Vertex) (*QuadEdge, error) {
 	// find an edge containing one of the points
-	e, err := qes.locator.Locate(p0);
+	e, err := qes.locator.Locate(p0)
 	if err != nil || e == nil {
 		return nil, err
 	}
 
 	// normalize so that p0 is origin of base edge
-	base := e;
-	if (e.Dest().EqualsTolerance(p0, qes.tolerance)) {
-		base = e.Sym();
+	base := e
+	if e.Dest().EqualsTolerance(p0, qes.tolerance) {
+		base = e.Sym()
 	}
 	// check all edges around origin of base edge
-	locEdge := base;
+	locEdge := base
 	done := false
 	for !done {
 		if locEdge.Dest().EqualsTolerance(p1, qes.tolerance) {
 			return locEdge, nil
 		}
-		locEdge = locEdge.ONext();
+		locEdge = locEdge.ONext()
 
 		if locEdge == base {
 			done = true
@@ -687,7 +687,7 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 			if triEdges != nil {
 				triVisitor(triEdges)
 			}
-		} 
+		}
 	}
 }
 
@@ -984,6 +984,3 @@ func (qes *QuadEdgeSubdivision) GetTriangles() (geom.MultiPolygon, error) {
 //   }
 
 // }
-
-
-

@@ -1,5 +1,3 @@
-
-
 package constraineddelaunay
 
 import (
@@ -9,12 +7,11 @@ import (
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
 
-
 var ErrInvalidVertex = errors.New("invalid vertex")
 var ErrNoMatchingEdgeFound = errors.New("no matching edge found")
 
 /*
-Triangle provides operations on a triangle within a 
+Triangle provides operations on a triangle within a
 quadedge.QuadEdgeSubdivision.
 
 This is outside the quadedge package to avoid making changes to the original
@@ -26,7 +23,7 @@ type Triangle struct {
 }
 
 /*
-IntersectsPoint returns true if the vertex intersects the given triangle. This 
+IntersectsPoint returns true if the vertex intersects the given triangle. This
 includes falling on an edge.
 */
 func (tri *Triangle) IntersectsPoint(v quadedge.Vertex) bool {
@@ -111,7 +108,7 @@ func (tri *Triangle) opposedVertex(other *Triangle) (quadedge.Vertex, error) {
 }
 
 /*
-sharedEdge returns the edge that is shared by both a and b. The edge is 
+sharedEdge returns the edge that is shared by both a and b. The edge is
 returned with triangle a on the left.
 
        + l
@@ -138,7 +135,7 @@ func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 				foundMatch = true
 				break
 			}
-			be = be.RNext();
+			be = be.RNext()
 		}
 
 		if foundMatch {
