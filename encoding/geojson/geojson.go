@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding"
 )
 
 type GeoJSONType string
@@ -16,6 +17,8 @@ const (
 	PolygonType            GeoJSONType = "Polygon"
 	MultiPolygonType       GeoJSONType = "MultiPolygon"
 	GeometryCollectionType GeoJSONType = "GeometryCollection"
+	FeatureType            GeoJSONType = "Feature"
+	FeatureCollectionType  GeoJSONType = "FeatureCollection"
 )
 
 type Geometry struct {
@@ -103,8 +106,9 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 type featureType struct{}
 
 func (_ featureType) MarshalJSON() ([]byte, error) {
-	return []byte(`"Feature"`), nil
+	return []byte(`"` + FeatureType + `"`), nil
 }
+func (fc *featureType) UnmarshalJSON(b []byte) error { return nil }
 
 type Feature struct {
 	Type featureType `json:"type"`
@@ -120,8 +124,9 @@ type Feature struct {
 type featureCollectionType struct{}
 
 func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
-	return []byte(`"FeatureCollection"`), nil
+	return []byte(`"` + FeatureCollectionType + `"`), nil
 }
+func (fc *featureCollectionType) UnmarshalJSON(b []byte) error { return nil }
 
 type FeatureCollection struct {
 	Type     featureCollectionType `json:"type"`
@@ -140,4 +145,95 @@ func closePolygon(p geom.Polygon) {
 			p[i] = append(p[i], p[i][0])
 		}
 	}
+}
+
+func (geo *Geometry) UnmarshalJSON(b []byte) error {
+	var geojsonMap map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &geojsonMap); err != nil {
+		return err
+	}
+
+	var geomType GeoJSONType
+	if err = json.Unmarshal(*geojsonMap["type"], &geomType); err != nil {
+		return err
+	}
+	switch geomType {
+	case PointType:
+		var pt geom.Point
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &pt); err != nil {
+			return err
+		}
+		geo.Geometry = pt
+		return nil
+	case PolygonType:
+		var poly geom.Polygon
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &poly); err != nil {
+			return err
+		}
+		geo.Geometry = poly
+		return nil
+	case LineStringType:
+		var ls geom.LineString
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &ls); err != nil {
+			return err
+		}
+		geo.Geometry = ls
+		return nil
+	case MultiPointType:
+		var mp geom.MultiPoint
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
+			return err
+		}
+		geo.Geometry = mp
+		return nil
+	case MultiLineStringType:
+		var ml geom.MultiLineString
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &ml); err != nil {
+			return err
+		}
+		geo.Geometry = ml
+		return nil
+	case MultiPolygonType:
+		var mp geom.MultiPolygon
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
+			return err
+		}
+		geo.Geometry = mp
+		return nil
+	case GeometryCollectionType:
+		gc := geom.Collection{}
+		var rawMessageForGeometries []*json.RawMessage
+		if err = json.Unmarshal(*geojsonMap["geometries"], &rawMessageForGeometries); err != nil {
+			return err
+		}
+		geoms := make([]geom.Geometry, len(rawMessageForGeometries))
+		for i, v := range rawMessageForGeometries {
+			var g Geometry
+			err = json.Unmarshal(*v, &g)
+			if err != nil {
+				return err
+			}
+			geoms[i] = g.Geometry
+		}
+		gc.SetGeometries(geoms)
+		geo.Geometry = gc
+		return nil
+	case FeatureType:
+		f := Feature{}
+		if err = json.Unmarshal(b, &f); err != nil {
+			return err
+		}
+		geo.Geometry = f
+		return nil
+	case FeatureCollectionType:
+		fc := FeatureCollection{}
+		if err = json.Unmarshal(b, &fc); err != nil {
+			return err
+		}
+		geo.Geometry = fc
+		return nil
+	default:
+		return encoding.ErrInvalidGeoJSON{b}
+	}
+	return nil
 }
