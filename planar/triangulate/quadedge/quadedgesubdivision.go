@@ -23,12 +23,13 @@ import (
 var ErrLocateFailure = errors.New("failure locating edge")
 
 /*
-A class that contains the QuadEdges representing a planar subdivision that
-models a triangulation. The subdivision is constructed using the quadedge
-algebra defined in the class QuadEdge. All metric calculations are done in the
-Vertex class. In addition to a triangulation, subdivisions support extraction
-of Voronoi diagrams. This is easily accomplished, since the Voronoi diagram is
-the dual of the Delaunay triangulation.
+QuadEdgeSubdivision is a class that contains the QuadEdges representing a
+planar subdivision that models a triangulation. The subdivision is constructed
+using the quadedge algebra defined in the class QuadEdge. All metric
+calculations are done in the Vertex class. In addition to a triangulation,
+subdivisions support extraction of Voronoi diagrams. This is easily
+accomplished, since the Voronoi diagram is the dual of the Delaunay
+triangulation.
 
 Subdivisions can be provided with a tolerance value. Inserted vertices which
 are closer than this value to vertices already in the subdivision will be
@@ -77,9 +78,9 @@ var EDGE_COINCIDENCE_TOL_FACTOR float64 = 1000
 // 	}
 
 /*
-Creates a new instance of a quad-edge subdivision based on a frame triangle
-that encloses a supplied bounding box. A new super-bounding box that
-contains the triangle is computed and stored.
+NewQuadEdgeSubdivision creates a new instance of a quad-edge subdivision based
+on a frame triangle that encloses a supplied bounding box. A new
+super-bounding box that contains the triangle is computed and stored.
 
 env - the bounding box to surround
 tolerance - the tolerance value for determining if two sites are equal
@@ -95,6 +96,11 @@ func NewQuadEdgeSubdivision(env geom.Extent, tolerance float64) *QuadEdgeSubdivi
 	return &qes
 }
 
+/*
+createFrame creates the frame of a triangulation around the given extent.
+
+If qes is nil a panic will occur.
+*/
 func (qes *QuadEdgeSubdivision) createFrame(env geom.Extent) {
 	deltaX := env.XSpan()
 	deltaY := env.YSpan()
@@ -112,6 +118,11 @@ func (qes *QuadEdgeSubdivision) createFrame(env geom.Extent) {
 	qes.frameEnv = *geom.NewExtent(qes.frameVertex[0], qes.frameVertex[1], qes.frameVertex[2])
 }
 
+/*
+initSubdiv initializes a subdivision from the frame.
+
+If qes is nil a panic will occur.
+*/
 func (qes *QuadEdgeSubdivision) initSubdiv() *QuadEdge {
 	// build initial subdivision from frame
 	ea := qes.MakeEdge(qes.frameVertex[0], qes.frameVertex[1])
@@ -124,19 +135,22 @@ func (qes *QuadEdgeSubdivision) initSubdiv() *QuadEdge {
 }
 
 /*
-Gets the vertex-equality tolerance value
-used in this subdivision
+GetTolerance gets the vertex-equality tolerance value used in this subdivision
 
 return the tolerance value
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetTolerance() float64 {
 	return qes.tolerance
 }
 
 /*
-Gets the envelope of the Subdivision (including the frame).
+GetEnvelope gets the envelope of the Subdivision (including the frame).
 
-@return the envelope
+Return the envelope
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetEnvelope() geom.Extent {
 	// returns a deep copy to avoid modification by caller
@@ -148,6 +162,8 @@ GetEdges gets the collection of base {@link QuadEdge}s (one for every pair of
 vertices which is connected).
 
 return a collection of QuadEdges
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetEdges() []*QuadEdge {
 	return qes.quadEdges
@@ -168,6 +184,8 @@ func (qes *QuadEdgeSubdivision) GetEdges() []*QuadEdge {
 MakeEdge creates a new quadedge, recording it in the edges list.
 
 return a new quadedge
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) MakeEdge(o Vertex, d Vertex) *QuadEdge {
 	q := MakeEdge(o, d)
@@ -180,9 +198,9 @@ Connect creates a new QuadEdge connecting the destination of a to the origin
 of b, in such a way that all three have the same left face after the connection
 is complete. The quadedge is recorded in the edges list.
 
-@param a
-@param b
-@return a quadedge
+Return a quadedge
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) Connect(a *QuadEdge, b *QuadEdge) *QuadEdge {
 	q := Connect(a, b)
@@ -191,10 +209,12 @@ func (qes *QuadEdgeSubdivision) Connect(a *QuadEdge, b *QuadEdge) *QuadEdge {
 }
 
 /*
-Deletes a quadedge from the subdivision. Linked quadedges are updated to
+Delete a quadedge from the subdivision. Linked quadedges are updated to
 reflect the deletion.
 
 e - the quadedge to delete
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) Delete(e *QuadEdge) {
 	Splice(e, e.OPrev())
@@ -220,10 +240,10 @@ func (qes *QuadEdgeSubdivision) Delete(e *QuadEdge) {
 }
 
 /*
-Locates an edge of a triangle which contains a location specified by a Vertex
-v. The edge returned has the property that either v is on e, or e is an edge
-of a triangle containing v. The search starts from startEdge amd proceeds on
-the general direction of v.
+LocateFromEdge locates an edge of a triangle which contains a location
+specified by a Vertex v. The edge returned has the property that either v is
+on e, or e is an edge of a triangle containing v. The search starts from
+startEdge amd proceeds on the general direction of v.
 
 This locate algorithm relies on the subdivision being Delaunay. For
 non-Delaunay subdivisions, this may loop for ever.
@@ -235,6 +255,8 @@ v
 
 If the location algorithm fails to converge in a reasonable number of
 iterations a ErrLocateFailure will be returned.
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*QuadEdge, error) {
 	iter := 0
@@ -281,45 +303,56 @@ func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*
 }
 
 /*
-Finds a quadedge of a triangle containing a location
-specified by a {@link Vertex}, if one exists.
+Locate Finds a quadedge of a triangle containing a location specified by a Vertex, if one exists.
 
 v - the vertex to locate
 Return a quadedge on the edge of a triangle which touches or contains the
 location or nil if no such triangle exists
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) Locate(v Vertex) (*QuadEdge, error) {
 	return qes.locator.Locate(v)
 }
 
-// 	/**
-// 	 * Locates the edge between the given vertices, if it exists in the
-// 	 * subdivision.
-// 	 *
-// 	 * @param p0 a coordinate
-// 	 * @param p1 another coordinate
-// 	 * @return the edge joining the coordinates, if present
-// 	 * or null if no such edge exists
-// 	 */
-// 	public QuadEdge locate(Coordinate p0, Coordinate p1) {
-// 		// find an edge containing one of the points
-// 		QuadEdge e = locator.locate(new Vertex(p0));
-// 		if (e == null)
-// 			return null;
+/*
+LocateSegment locates the edge between the given vertices, if it exists in the
+subdivision.
 
-// 		// normalize so that p0 is origin of base edge
-// 		QuadEdge base = e;
-// 		if (e.dest().getCoordinate().equals2D(p0))
-// 			base = e.sym();
-// 		// check all edges around origin of base edge
-// 		QuadEdge locEdge = base;
-// 		do {
-// 			if (locEdge.dest().getCoordinate().equals2D(p1))
-// 				return locEdge;
-// 			locEdge = locEdge.oNext();
-// 		} while (locEdge != base);
-// 		return null;
-// 	}
+p0 a coordinate
+p1 another coordinate
+Return the edge joining the coordinates, if present or null if no such edge
+exists
+
+If qes is nil a panic will occur.
+*/
+func (qes *QuadEdgeSubdivision) LocateSegment(p0 Vertex, p1 Vertex) (*QuadEdge, error) {
+	// find an edge containing one of the points
+	e, err := qes.locator.Locate(p0)
+	if err != nil || e == nil {
+		return nil, err
+	}
+
+	// normalize so that p0 is origin of base edge
+	base := e
+	if e.Dest().EqualsTolerance(p0, qes.tolerance) {
+		base = e.Sym()
+	}
+	// check all edges around origin of base edge
+	locEdge := base
+	done := false
+	for !done {
+		if locEdge.Dest().EqualsTolerance(p1, qes.tolerance) {
+			return locEdge, nil
+		}
+		locEdge = locEdge.ONext()
+
+		if locEdge == base {
+			done = true
+		}
+	}
+	return nil, nil
+}
 
 /**
  * Inserts a new site into the Subdivision, connecting it to the vertices of
@@ -364,6 +397,8 @@ vertex.
 
 e - the edge to test
 return true if the edge is connected to the frame triangle
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) isFrameEdge(e *QuadEdge) bool {
 	if qes.isFrameVertex(e.Orig()) || qes.isFrameVertex(e.Dest()) {
@@ -407,6 +442,8 @@ isFrameVertex tests whether a vertex is a vertex of the outer triangle.
 
 v - the vertex to test
 returns true if the vertex is an outer triangle vertex
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) isFrameVertex(v Vertex) bool {
 	if v.Equals(qes.frameVertex[0]) {
@@ -428,6 +465,8 @@ IsOnEdge Tests whether a point lies on a QuadEdge, up to a tolerance
 determined by the subdivision tolerance.
 
 Returns true if the vertex lies on the edge
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) IsOnEdge(e *QuadEdge, p geom.Pointer) bool {
 	dist := planar.DistanceToLineSegment(p, e.Orig(), e.Dest())
@@ -441,6 +480,8 @@ IsVertexOfEdge tests whether a {@link Vertex} is the start or end vertex of a
 QuadEdge, up to the subdivision tolerance distance.
 
 Returns true if the vertex is a endpoint of the edge
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 	if (v.EqualsTolerance(e.Orig(), qes.tolerance)) || (v.EqualsTolerance(e.Dest(), qes.tolerance)) {
@@ -535,10 +576,20 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 type edgeStack []*QuadEdge
 type edgeSet map[*QuadEdge]bool
 
+/*
+push pushes an edge onto the edgeStack
+
+If es is nil a panic will occur.
+*/
 func (es *edgeStack) push(edge *QuadEdge) {
 	*es = append(*es, edge)
 }
 
+/*
+pop pops an edge off the edgeStack
+
+If es is nil a panic will occur.
+*/
 func (es *edgeStack) pop() *QuadEdge {
 	if len(*es) == 0 {
 		return nil
@@ -553,20 +604,23 @@ contains returns true if edge is in the map.
 
 This just isn't natural for me yet...
 if _, ok := es[edge]; ok {
+
+If es is nil a panic will occur.
 */
 func (es *edgeSet) contains(edge *QuadEdge) bool {
 	_, ok := (*es)[edge]
 	return ok
 }
 
-/**
- * Gets all primary quadedges in the subdivision.
-* A primary edge is a {@link QuadEdge}
- * which occupies the 0'th position in its array of associated quadedges.
- * These provide the unique geometric edges of the triangulation.
- *
- * @param includeFrame true if the frame edges are to be included
- * @return a List of QuadEdges
+/*
+GetPrimaryEdges gets all primary quadedges in the subdivision. A primary edge
+is a QuadEdge which occupies the 0'th position in its array of associated
+quadedges. These provide the unique geometric edges of the triangulation.
+
+includeFrame true if the frame edges are to be included
+Return a List of QuadEdges
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
 	qes.visitedKey++
@@ -655,12 +709,10 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 Stores the edges for a visited triangle. Also pushes sym (neighbour) edges
 on stack to visit later.
 
-@param edge
-@param edgeStack
-@param includeFrame
-@return the visited triangle edges
-or null if the triangle should not be visited (for instance, if it is
-        outer)
+Return the visited triangle edges or null if the triangle should not be
+visited (for instance, if it is outer)
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edgeStack, includeFrame bool, visitedEdges edgeSet) []*QuadEdge {
 	triEdges := make([]*QuadEdge, 0, 3)
@@ -750,12 +802,13 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 // 		}
 // 	}
 
-/**
+/*
 Gets the coordinates for each triangle in the subdivision as an array.
 
-@param includeFrame
-         true if the frame triangles should be included
-@return a list of Coordinate[4] representing each triangle
+includeFrame true if the frame triangles should be included
+Return a list of Coordinate[4] representing each triangle
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetTriangleCoordinates(includeFrame bool) ([]geom.Polygon, error) {
 	var visitor TriangleCoordinatesVisitor
@@ -818,6 +871,8 @@ GetEdgesAsMultiLineString gets the geometry for the edges in the subdivision
 as a MultiLineString containing 2-point lines.
 
 returns a MultiLineString
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetEdgesAsMultiLineString() geom.MultiLineString {
 	quadEdges := qes.GetPrimaryEdges(false)
@@ -838,6 +893,8 @@ Unlike JTS, this method returns a MultiPolygon. I found not all viewers like
 displaying collections. -JRS
 
 Returns a MultiPolygon of triangular Polygons
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetTriangles() (geom.MultiPolygon, error) {
 	tris, err := qes.GetTriangleCoordinates(false)

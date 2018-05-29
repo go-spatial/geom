@@ -13,9 +13,9 @@ http://www.eclipse.org/org/documents/edl-v10.php.
 package quadedge
 
 /*
-An interface for classes which locate an edge in a {@link QuadEdgeSubdivision}
-which either contains a given {@link Vertex} V or is an edge of a triangle
-which contains V. Implementors may utilized different strategies for
+QuadEdgeLocator is an interface for classes which locate an edge in a
+QuadEdgeSubdivision which either contains a given Vertex V or is an edge of a
+triangle which contains V. Implementors may utilized different strategies for
 optimizing locating containing edges/triangles.
 
 Author Martin Davis

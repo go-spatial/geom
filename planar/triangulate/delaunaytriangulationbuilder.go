@@ -21,8 +21,8 @@ import (
 )
 
 /*
-A utility class which creates Delaunay Triangulations
-from collections of points and extract the resulting
+DelaunayTriangulationBuilder is a utility class which creates Delaunay
+Triangulations from collections of points and extract the resulting
 triangulation edges or triangles as geometries.
 
 Author Martin Davis
@@ -45,6 +45,8 @@ extractUniqueCoordinates extracts the unique points from the given Geometry.
 
 geom - the geometry to extract from
 Returns a List of the unique Coordinates
+
+If dtb is nil a panic will occur.
 */
 func (dtb *DelaunayTriangulationBuilder) extractUniqueCoordinates(g geom.Geometry) ([]quadedge.Vertex, error) {
 	if g == nil {
@@ -64,6 +66,11 @@ func (dtb *DelaunayTriangulationBuilder) extractUniqueCoordinates(g geom.Geometr
 	return dtb.unique(vertices), nil
 }
 
+/*
+unique returns a list of unique vertices.
+
+If dtb is nil a panic will occur.
+*/
 func (dtb *DelaunayTriangulationBuilder) unique(points []quadedge.Vertex) []quadedge.Vertex {
 	sort.Sort(PointByXY(points))
 
@@ -111,10 +118,12 @@ public static Envelope envelope(Collection coords)
 */
 
 /*
-Sets the sites (vertices) which will be triangulated.
-All vertices of the given geometry will be used as sites.
+SetSites sets the vertices which will be triangulated. All vertices of the
+given geometry will be used as sites.
 
 geom - the geometry from which the sites will be extracted.
+
+If dtb is nil a panic will occur.
 */
 func (dtb *DelaunayTriangulationBuilder) SetSites(g geom.Geometry) error {
 	// remove any duplicate points (they will cause the triangulation to fail)
@@ -151,6 +160,8 @@ public void setTolerance(double tolerance)
 create will create the triangulation.
 
 return true on success, false on failure.
+
+If dtb is nil a panic will occur.
 */
 func (dtb *DelaunayTriangulationBuilder) create() bool {
 	if dtb.subdiv != nil {
@@ -176,21 +187,26 @@ func (dtb *DelaunayTriangulationBuilder) create() bool {
 	return true
 }
 
-/**
- * Gets the {@link QuadEdgeSubdivision} which models the computed triangulation.
- *
- * @return the subdivision containing the triangulation
-public QuadEdgeSubdivision getSubdivision()
-{
-	create();
-	return subdiv;
-}
+/*
+GetSubdivision gets the QuadEdgeSubdivision which models the computed
+triangulation.
+
+Returns the subdivision containing the triangulation or nil if it has
+not been created.
+
+If dtb is nil a panic will occur.
 */
+func (dtb *DelaunayTriangulationBuilder) GetSubdivision() *quadedge.QuadEdgeSubdivision {
+	dtb.create()
+	return dtb.subdiv
+}
 
 /*
 GetEdges gets the edges of the computed triangulation as a MultiLineString.
 
 returns the edges of the triangulation
+
+If dtb is nil a panic will occur.
 */
 func (dtb *DelaunayTriangulationBuilder) getEdges() geom.MultiLineString {
 	if !dtb.create() {
@@ -200,11 +216,12 @@ func (dtb *DelaunayTriangulationBuilder) getEdges() geom.MultiLineString {
 }
 
 /*
-GetTriangles Gets the faces of the computed triangulation as a
-GeometryCollection Polygons.
+GetTriangles Gets the faces of the computed triangulation as a MultiPolygon.
 
 Unlike JTS, this method returns a MultiPolygon. I found not all viewers like
 displaying collections. -JRS
+
+If dtb is nil a panic will occur.
 */
 func (dtb *DelaunayTriangulationBuilder) GetTriangles() (geom.MultiPolygon, error) {
 	if !dtb.create() {

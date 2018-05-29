@@ -61,8 +61,10 @@ func TestQuadEdgeSubdivisionDelete(t *testing.T) {
 		uut.Connect(uut.startingEdge, e1)
 		e2 := uut.MakeEdge(tc.b, tc.c)
 		uut.Connect(e2, e1)
+		uut.Validate()
 
 		uut.Delete(e2)
+		uut.Validate()
 
 		edges := uut.GetEdgesAsMultiLineString()
 		edgesWKT, err := wkt.Encode(edges)
