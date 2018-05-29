@@ -1,9 +1,16 @@
 package simplify
 
 import (
+	"flag"
 	"reflect"
 	"testing"
 )
+
+var ignoreSanityCheck bool
+
+func init() {
+	flag.BoolVar(&ignoreSanityCheck, "ignoreSanityCheck", false, "ignore sanity checks in test cases.")
+}
 
 func TestDouglasPeucker(t *testing.T) {
 	type tcase struct {
@@ -24,6 +31,11 @@ func TestDouglasPeucker(t *testing.T) {
 			t.Errorf("simplified points, expected %v got %v", tc.el, gl)
 			return
 		}
+
+		if ignoreSanityCheck {
+			return
+		}
+
 		// Let's try it with true, it should not matter, as DP does not care.
 		// More sanity checking.
 		gl, _ = tc.dp.Simplify(tc.l, true)
@@ -42,19 +54,6 @@ func TestDouglasPeucker(t *testing.T) {
 			},
 			el: [][2]float64{{0, 0}, {0, 1}, {1, 1}, {1, 0}},
 		},
-		/*
-			This isn't working: I don't if this is a problem or not; we will not be using Haversine
-			for things
-
-			"haversine simple box": {
-				l: [][2]float64{{0, 0}, {0, 1}, {1, 1}, {1, 0}},
-				dp: DouglasPeucker{
-					Tolerance: 0.001,
-					Dist:      spherical.Haversine{}.PerpendicularDistance,
-				},
-				el: [][2]float64{{0, 0}, {0, 1}, {1, 1}, {1, 0}},
-			},
-		*/
 	}
 
 	for name, tc := range tests {
