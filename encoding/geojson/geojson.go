@@ -103,11 +103,12 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 
 // featureType allows the GeoJSON type for Feature to be automatically set during json Marshalling
 // which avoids the user from accidentally setting the incorrect GeoJSON type.
-type featureType GeoJSONType
+type featureType struct{}
 
 func (_ featureType) MarshalJSON() ([]byte, error) {
-	return []byte(`"Feature"`), nil
+	return []byte(`"` + FeatureType + `"`), nil
 }
+func (fc *featureType) UnmarshalJSON(b []byte) error { return nil }
 
 type Feature struct {
 	Type featureType `json:"type"`
@@ -120,11 +121,12 @@ type Feature struct {
 
 // featureCollectionType allows the GeoJSON type for Feature to be automatically set during json Marshalling
 // which avoids the user from accidentally setting the incorrect GeoJSON type.
-type featureCollectionType GeoJSONType
+type featureCollectionType struct{}
 
 func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
-	return []byte(`"FeatureCollection"`), nil
+	return []byte(`"` + FeatureCollectionType + `"`), nil
 }
+func (fc *featureCollectionType) UnmarshalJSON(b []byte) error { return nil }
 
 type FeatureCollection struct {
 	Type     featureCollectionType `json:"type"`
@@ -147,64 +149,61 @@ func closePolygon(p geom.Polygon) {
 
 func (geo *Geometry) UnmarshalJSON(b []byte) error {
 	var geojsonMap map[string]*json.RawMessage
-	err := json.Unmarshal(b, &geojsonMap)
-	if err != nil {
+	if err := json.Unmarshal(b, &geojsonMap); err != nil {
 		return err
 	}
 
 	var geomType GeoJSONType
-	err = json.Unmarshal(*geojsonMap["type"], &geomType)
-	if err != nil {
+	if err = json.Unmarshal(*geojsonMap["type"], &geomType); err != nil {
 		return err
 	}
 	switch geomType {
 	case PointType:
 		var pt geom.Point
-		err = json.Unmarshal(*geojsonMap["coordinates"], &pt)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &pt); err != nil {
 			return err
 		}
 		geo.Geometry = pt
+		return nil
 	case PolygonType:
 		var poly geom.Polygon
-		err = json.Unmarshal(*geojsonMap["coordinates"], &poly)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &poly); err != nil {
 			return err
 		}
 		geo.Geometry = poly
+		return nil
 	case LineStringType:
 		var ls geom.LineString
-		err = json.Unmarshal(*geojsonMap["coordinates"], &ls)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &ls); err != nil {
 			return err
 		}
 		geo.Geometry = ls
+		return nil
 	case MultiPointType:
 		var mp geom.MultiPoint
-		err = json.Unmarshal(*geojsonMap["coordinates"], &mp)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
 			return err
 		}
 		geo.Geometry = mp
+		return nil
 	case MultiLineStringType:
 		var ml geom.MultiLineString
-		err = json.Unmarshal(*geojsonMap["coordinates"], &ml)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &ml); err != nil {
 			return err
 		}
 		geo.Geometry = ml
+		return nil
 	case MultiPolygonType:
 		var mp geom.MultiPolygon
-		err = json.Unmarshal(*geojsonMap["coordinates"], &mp)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
 			return err
 		}
 		geo.Geometry = mp
+		return nil
 	case GeometryCollectionType:
 		gc := geom.Collection{}
 		var rawMessageForGeometries []*json.RawMessage
-		err = json.Unmarshal(*geojsonMap["geometries"], &rawMessageForGeometries)
-		if err != nil {
+		if err = json.Unmarshal(*geojsonMap["geometries"], &rawMessageForGeometries); err != nil {
 			return err
 		}
 		geoms := make([]geom.Geometry, len(rawMessageForGeometries))
@@ -218,20 +217,21 @@ func (geo *Geometry) UnmarshalJSON(b []byte) error {
 		}
 		gc.SetGeometries(geoms)
 		geo.Geometry = gc
+		return nil
 	case FeatureType:
 		f := Feature{}
-		err = json.Unmarshal(b, &f)
-		if err != nil {
+		if err = json.Unmarshal(b, &f); err != nil {
 			return err
 		}
 		geo.Geometry = f
+		return nil
 	case FeatureCollectionType:
 		fc := FeatureCollection{}
-		err = json.Unmarshal(b, &fc)
-		if err != nil {
+		if err = json.Unmarshal(b, &fc); err != nil {
 			return err
 		}
 		geo.Geometry = fc
+		return nil
 	default:
 		return encoding.ErrInvalidGeoJSON{b}
 	}
