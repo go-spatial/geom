@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding"
 )
 
 type GeoJSONType string
@@ -95,7 +94,7 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 		})
 
 	default:
-		return nil, encoding.ErrUnknownGeometry{g}
+		return nil, geom.ErrUnknownGeometry{g}
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding"
 	"github.com/go-spatial/geom/encoding/geojson"
 )
 
@@ -109,7 +108,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 			geom: nil,
 			expectedErr: json.MarshalerError{
 				Type: reflect.TypeOf(geojson.Geometry{}),
-				Err:  encoding.ErrUnknownGeometry{nil},
+				Err:  geom.ErrUnknownGeometry{nil},
 			},
 		},
 	}
