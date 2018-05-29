@@ -154,48 +154,48 @@ func (geo *Geometry) UnmarshalJSON(b []byte) error {
 	}
 
 	var geomType GeoJSONType
-	if err = json.Unmarshal(*geojsonMap["type"], &geomType); err != nil {
+	if err := json.Unmarshal(*geojsonMap["type"], &geomType); err != nil {
 		return err
 	}
 	switch geomType {
 	case PointType:
 		var pt geom.Point
-		if err = json.Unmarshal(*geojsonMap["coordinates"], &pt); err != nil {
+		if err := json.Unmarshal(*geojsonMap["coordinates"], &pt); err != nil {
 			return err
 		}
 		geo.Geometry = pt
 		return nil
 	case PolygonType:
 		var poly geom.Polygon
-		if err = json.Unmarshal(*geojsonMap["coordinates"], &poly); err != nil {
+		if err := json.Unmarshal(*geojsonMap["coordinates"], &poly); err != nil {
 			return err
 		}
 		geo.Geometry = poly
 		return nil
 	case LineStringType:
 		var ls geom.LineString
-		if err = json.Unmarshal(*geojsonMap["coordinates"], &ls); err != nil {
+		if err := json.Unmarshal(*geojsonMap["coordinates"], &ls); err != nil {
 			return err
 		}
 		geo.Geometry = ls
 		return nil
 	case MultiPointType:
 		var mp geom.MultiPoint
-		if err = json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
+		if err := json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
 			return err
 		}
 		geo.Geometry = mp
 		return nil
 	case MultiLineStringType:
 		var ml geom.MultiLineString
-		if err = json.Unmarshal(*geojsonMap["coordinates"], &ml); err != nil {
+		if err := json.Unmarshal(*geojsonMap["coordinates"], &ml); err != nil {
 			return err
 		}
 		geo.Geometry = ml
 		return nil
 	case MultiPolygonType:
 		var mp geom.MultiPolygon
-		if err = json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
+		if err := json.Unmarshal(*geojsonMap["coordinates"], &mp); err != nil {
 			return err
 		}
 		geo.Geometry = mp
@@ -203,14 +203,13 @@ func (geo *Geometry) UnmarshalJSON(b []byte) error {
 	case GeometryCollectionType:
 		gc := geom.Collection{}
 		var rawMessageForGeometries []*json.RawMessage
-		if err = json.Unmarshal(*geojsonMap["geometries"], &rawMessageForGeometries); err != nil {
+		if err := json.Unmarshal(*geojsonMap["geometries"], &rawMessageForGeometries); err != nil {
 			return err
 		}
 		geoms := make([]geom.Geometry, len(rawMessageForGeometries))
 		for i, v := range rawMessageForGeometries {
 			var g Geometry
-			err = json.Unmarshal(*v, &g)
-			if err != nil {
+			if err := json.Unmarshal(*v, &g); err != nil {
 				return err
 			}
 			geoms[i] = g.Geometry
@@ -220,14 +219,14 @@ func (geo *Geometry) UnmarshalJSON(b []byte) error {
 		return nil
 	case FeatureType:
 		f := Feature{}
-		if err = json.Unmarshal(b, &f); err != nil {
+		if err := json.Unmarshal(b, &f); err != nil {
 			return err
 		}
 		geo.Geometry = f
 		return nil
 	case FeatureCollectionType:
 		fc := FeatureCollection{}
-		if err = json.Unmarshal(b, &fc); err != nil {
+		if err := json.Unmarshal(b, &fc); err != nil {
 			return err
 		}
 		geo.Geometry = fc
