@@ -25,6 +25,11 @@ func TestGetCoordinates(t *testing.T) {
 	}
 	testcases := []tcase{
 		{
+			geom:     Extent{},
+			expected: nil,
+			err:      ErrUnknownGeometry{Extent{}},
+		},
+		{
 			geom:     Point{10, 20},
 			expected: []Point{{10, 20}},
 			err:      nil,
@@ -143,6 +148,11 @@ func TestExtractLines(t *testing.T) {
 		}
 	}
 	testcases := []tcase{
+		{
+			geom:     Extent{},
+			expected: nil,
+			err:      ErrUnknownGeometry{Extent{}},
+		},
 		{
 			geom:     Point{10, 20},
 			expected: []Line{},

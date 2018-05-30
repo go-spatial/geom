@@ -49,8 +49,7 @@ func TestDelaunayTriangulation(t *testing.T) {
 			return
 		}
 
-		builder := new(DelaunayTriangulationBuilder)
-		builder.tolerance = 1e-6
+		builder := NewDelaunayTriangulationBuilder(1e-6)
 		builder.SetSites(sites)
 		if builder.create() == false {
 			t.Errorf("error building triangulation, expected true got false")

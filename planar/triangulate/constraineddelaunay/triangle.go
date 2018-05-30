@@ -25,6 +25,8 @@ type Triangle struct {
 /*
 IntersectsPoint returns true if the vertex intersects the given triangle. This
 includes falling on an edge.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangle) IntersectsPoint(v quadedge.Vertex) bool {
 	e := tri.qe
@@ -68,6 +70,8 @@ v1 + a | b +
        +
 
 If this method is called on triangle a with v1 as the vertex, the result will be triangle b.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangle) opposedTriangle(v quadedge.Vertex) (*Triangle, error) {
 	qe := tri.qe
@@ -96,6 +100,8 @@ v1 + a | b + v2
        +
 
 If this method is called as a.opposedVertex(b), the result will be vertex v2.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangle) opposedVertex(other *Triangle) (quadedge.Vertex, error) {
 	ae, err := tri.sharedEdge(other)
@@ -122,6 +128,8 @@ returned with triangle a on the left.
        + r
 
 If this method is called as a.sharedEdge(b), the result will be edge lr.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 	ae := tri.qe
@@ -153,6 +161,11 @@ func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 	return ae, nil
 }
 
+/*
+String returns a string representation of triangle.
+
+If tri is nil a panic will occur.
+*/
 func (tri *Triangle) String() string {
 	str := "["
 	e := tri.qe

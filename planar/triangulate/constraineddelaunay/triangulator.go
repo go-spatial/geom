@@ -58,6 +58,8 @@ func appendNonRepeat(arr []quadedge.Vertex, v quadedge.Vertex) []quadedge.Vertex
 /*
 createSegment creates a segment with vertices a & b, if it doesn't already
 exist. All the vertices must already exist in the triangulator.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) createSegment(s triangulate.Segment) error {
 	qe, err := tri.LocateSegment(s.GetStart(), s.GetEnd())
@@ -93,6 +95,8 @@ must already exist in the triangulator. Any existing edges that make up the tria
 
 This method makes no effort to ensure the resulting changes are a valid
 triangulation.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) createTriangle(a, b, c quadedge.Vertex) error {
 	if err := tri.createSegment(triangulate.NewSegment(geom.Line{a, b})); err != nil {
@@ -116,6 +120,8 @@ reflect the removal. The local vertex index is also updated to reflect the
 deletion.
 
 It is invalid to call this method on the last edge that links to a vertex.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) deleteEdge(e *quadedge.QuadEdge) error {
 
@@ -156,6 +162,8 @@ Tolerance is not considered when determining if vertices are the same.
 Returns a quadedge that has s.GetStart() as the origin and the right face is
 the desired triangle. If the segment falls on an edge, the triangle to the
 right of the segment is returned.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) findIntersectingTriangle(s triangulate.Segment) (*Triangle, error) {
 
@@ -200,6 +208,8 @@ func (tri *Triangulator) findIntersectingTriangle(s triangulate.Segment) (*Trian
 GetEdges gets the edges of the computed triangulation as a MultiLineString.
 
 returns the edges of the triangulation
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) GetEdges() geom.MultiLineString {
 	return tri.builder.GetEdges()
@@ -208,6 +218,8 @@ func (tri *Triangulator) GetEdges() geom.MultiLineString {
 /*
 GetTriangles Gets the faces of the computed triangulation as a
 MultiPolygon.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) GetTriangles() (geom.MultiPolygon, error) {
 	return tri.builder.GetTriangles()
@@ -218,6 +230,8 @@ InsertSegments inserts the line segments in the specified geometry and builds
 a triangulation. The line segments are used as constraints in the
 triangulation. If the geometry is made up solely of points, then no
 constraints will be used.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) InsertSegments(g geom.Geometry) error {
 	err := tri.insertSites(g)
@@ -237,6 +251,8 @@ func (tri *Triangulator) InsertSegments(g geom.Geometry) error {
 insertSites inserts all of the vertices found in g into a Delaunay
 triangulation. Other steps will modify the Delaunay Triangulation to create
 the constrained Delaunay triangulation.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertSites(g geom.Geometry) error {
 	tri.builder = triangulate.NewDelaunayTriangulationBuilder(tri.tolerance)
@@ -268,6 +284,8 @@ line segements in g as constraints in the triangulation. After this step
 the triangulation is no longer a proper Delaunay triangulation, but the
 constraints are guaranteed. Some constraints may need to be split (think
 about the case when two constraints intersect).
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertConstraints(g geom.Geometry) error {
 	tri.constraints = make(map[triangulate.Segment]bool)
@@ -315,6 +333,8 @@ guaranteed that the intersecting point will fall _on_ one of the lines, not in
 the extended region of the line.
 
 Taken from: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) intersection(l1, l2 triangulate.Segment) (quadedge.Vertex, error) {
 	p := l1.GetStart()
@@ -350,6 +370,11 @@ func (tri *Triangulator) intersection(l1, l2 triangulate.Segment) (quadedge.Vert
 	return p.Sum(r.Times(t)), nil
 }
 
+/*
+IsConstraint returns true if e is a constrained edge.
+
+If tri is nil a panic will occur.
+*/
 func (tri *Triangulator) IsConstraint(e *quadedge.QuadEdge) bool {
 
 	_, ok := tri.constraints[triangulate.NewSegment(geom.Line{e.Orig(), e.Dest()})]
@@ -372,6 +397,8 @@ There are some deviations that are also mentioned inline in the comments
    a triangulation (QuadEdge)
  - Modification to support the case when two constrained edges intersect
    at more than the end points.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 
@@ -505,7 +532,6 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment) error {
 	// EndWhile
 
 	// remove the previously marked edges
-	// TODO Inefficient
 	for i := range removalList {
 		tri.deleteEdge(removalList[i])
 	}
@@ -536,6 +562,8 @@ locateEdgeByVertex finds a quad edge that has this vertex as Orig(). This will
 not be a unique edge.
 
 This is looking for an exact match and tolerance will not be considered.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) locateEdgeByVertex(v quadedge.Vertex) (*quadedge.QuadEdge, error) {
 	qe := tri.vertexIndex[v]
@@ -551,6 +579,8 @@ locateEdgeByVertex finds a quad edge that has this vertex as Orig(). This will
 not be a unique edge.
 
 This is looking for an exact match and tolerance will not be considered.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) LocateSegment(v1 quadedge.Vertex, v2 quadedge.Vertex) (*quadedge.QuadEdge, error) {
 	qe := tri.vertexIndex[v1]
@@ -581,6 +611,8 @@ func (tri *Triangulator) LocateSegment(v1 quadedge.Vertex, v2 quadedge.Vertex) (
 /*
 removeConstraintEdge removes any constraints that share the same Orig() and
 Dest() as the edge provided. If there are none, no changes are made.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) removeConstraintEdge(e *quadedge.QuadEdge) {
 	delete(tri.constraints, triangulate.NewSegment(geom.Line{e.Orig(), e.Dest()}))
@@ -598,6 +630,8 @@ helpful in modifying the index after an edge has been deleted.
 toRemove - a set of QuadEdges that should be removed from the index. These
 QuadEdges don't necessarily have to link to the provided vertex.
 v - The vertex to modify in the index.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) removeEdgesFromVertexIndex(toRemove map[*quadedge.QuadEdge]bool, v quadedge.Vertex) error {
 	ve := tri.vertexIndex[v]
@@ -620,6 +654,8 @@ func (tri *Triangulator) removeEdgesFromVertexIndex(toRemove map[*quadedge.QuadE
 
 /*
 splitEdge splits the given edge at the vertex v.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) error {
 	constraint := tri.IsConstraint(e)
@@ -655,9 +691,12 @@ func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) erro
 	return nil
 }
 
-// TriangulatePseudoPolygon
-// Pseudocode taken from Figure 10
-// http://old.cescg.org/CESCG-2004/web/Domiter-Vid/CDT.pdf
+/*
+triangulatePseudoPolygon is taken from the pseudocode TriangulatePseudoPolygon
+from Figure 10 in Domiter.
+
+If tri is nil a panic will occur.
+*/
 func (tri *Triangulator) triangulatePseudoPolygon(p []quadedge.Vertex, ab triangulate.Segment) error {
 	a := ab.GetStart()
 	b := ab.GetEnd()
@@ -706,6 +745,8 @@ validate runs a number of self consistency checks against a triangulation and
 reports the first error.
 
 This is most useful when testing/debugging.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) Validate() error {
 	if tri.validate == false {
@@ -721,6 +762,8 @@ func (tri *Triangulator) Validate() error {
 /*
 validateVertexIndex self consistency checks against a triangulation and the
 subdiv and reports the first error.
+
+If tri is nil a panic will occur.
 */
 func (tri *Triangulator) validateVertexIndex() error {
 	// collect a set of all edges

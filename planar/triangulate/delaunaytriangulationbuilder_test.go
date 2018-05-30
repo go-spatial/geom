@@ -32,6 +32,10 @@ func TestUnique(t *testing.T) {
 		if reflect.DeepEqual(result, tc.expected) == false {
 			t.Errorf("error, expected %v got %v", tc.expected, result)
 		}
+		// This shouldn't exist with no data
+		if uut.GetSubdivision() != nil {
+			t.Errorf("error, expected nil got not nil")
+		}
 	}
 	testcases := []tcase{
 		{

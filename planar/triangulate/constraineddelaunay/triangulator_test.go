@@ -23,6 +23,7 @@ func TestFindIntersectingTriangle(t *testing.T) {
 		inputWKB         string
 		searchFrom       geom.Line
 		expectedTriangle string
+		err error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -46,16 +47,17 @@ func TestFindIntersectingTriangle(t *testing.T) {
 
 		// find the triangle
 		tri, err := uut.findIntersectingTriangle(triangulate.NewSegment(tc.searchFrom))
-		if err != nil {
-			t.Fatalf("error, expected nil got %v", err)
+		if err != tc.err {
+			t.Fatalf("error, expected %v got %v", tc.err, err)
 			return
 		}
 
-		qeStr := tri.String()
-		if qeStr != tc.expectedTriangle {
-			t.Fatalf("error, expected %v got %v", tc.expectedTriangle, qeStr)
+		if tc.err == nil {
+			qeStr := tri.String()
+			if qeStr != tc.expectedTriangle {
+				t.Fatalf("error, expected %v got %v", tc.expectedTriangle, qeStr)
+			}
 		}
-
 	}
 	testcases := []tcase{
 		{
@@ -81,6 +83,13 @@ func TestFindIntersectingTriangle(t *testing.T) {
 			inputWKB:         `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
 			searchFrom:       geom.Line{{10, 10}, {10, 20}},
 			expectedTriangle: `[[10 10],[10 20],[20 10]]`,
+		},
+		{
+			inputWKT:         `MULTIPOINT (10 10, 10 20, 20 20, 20 10, 20 0, 10 0, 0 0, 0 10, 0 20)`,
+			inputWKB:         `010400000009000000010100000000000000000024400000000000002440010100000000000000000024400000000000003440010100000000000000000034400000000000003440010100000000000000000034400000000000002440010100000000000000000034400000000000000000010100000000000000000024400000000000000000010100000000000000000000000000000000000000010100000000000000000000000000000000002440010100000000000000000000000000000000003440`,
+			searchFrom:       geom.Line{{1000, 1000}, {10000, 20000}},
+			expectedTriangle: ``,
+			err: quadedge.ErrLocateFailure,
 		},
 	}
 

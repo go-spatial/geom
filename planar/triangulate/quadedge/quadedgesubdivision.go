@@ -238,7 +238,7 @@ func (qes *QuadEdgeSubdivision) Delete(e *QuadEdge) {
 			newArray = append(newArray, ele)
 
 			if ele.next.IsLive() == false {
-				log.Fatal("a dead edge is still linked: %v", ele)
+				log.Fatalf("a dead edge is still linked: %v", ele)
 			}
 		}
 	}
@@ -282,21 +282,16 @@ func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*
 		iter++
 
 		/*
-			So far it has always been the case that failure to locate indicates an
-			invalid subdivision. So just fail completely. (An alternative would be
-			to perform an exhaustive search for the containing triangle, but this
-			would mask errors in the subdivision topology)
+		So far it has always been the case that failure to locate indicates an
+		invalid subdivision. So just fail completely. (An alternative would be
+		to perform an exhaustive search for the containing triangle, but this
+		would mask errors in the subdivision topology)
 
-			This can also happen if two vertices are located very close together,
-			since the orientation predicates may experience precision failures.
+		This can also happen if two vertices are located very close together,
+		since the orientation predicates may experience precision failures.
 		*/
 		if iter > maxIter {
 			return nil, ErrLocateFailure
-			// String msg = "Locate failed to converge (at edge: " + e + ").
-			// Possible causes include invalid Subdivision topology or very close
-			// sites";
-			// System.err.println(msg);
-			// dumpTriangles();
 		}
 
 		if v.Equals(e.Orig()) || v.Equals(e.Dest()) {

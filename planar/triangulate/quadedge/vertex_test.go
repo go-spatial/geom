@@ -157,6 +157,7 @@ func TestVertexScalar(t *testing.T) {
 		v      Vertex
 		scalar float64
 		times  Vertex
+		divide Vertex
 	}
 
 	fn := func(t *testing.T, tc tcase) {
@@ -166,16 +167,82 @@ func TestVertexScalar(t *testing.T) {
 			return
 		}
 
-		r = tc.v.Cross()
-		c := Vertex{tc.v.Y(), -tc.v.X()}
-		if c.Equals(r) == false {
-			t.Errorf("error, expected %v got %v", c, r)
+		r = tc.v.Divide(tc.scalar)
+		if r.Equals(tc.divide) == false {
+			t.Errorf("error, expected %v got %v", tc.divide, r)
+			return
+		}
+	}
+	testcases := []tcase{
+		{Vertex{1, 2}, 3, Vertex{3, 6}, Vertex{0.3333333333333333, 0.6666666666666666}},
+	}
+
+	for i, tc := range testcases {
+		tc := tc
+		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+func TestVertexUnary(t *testing.T) {
+	type tcase struct {
+		v     Vertex
+		cross  Vertex
+		magn   float64
+		normalize Vertex
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		r := tc.v.Cross()
+		if tc.cross.Equals(r) == false {
+			t.Errorf("error, expected %v got %v", tc.cross, r)
 			return
 		}
 
+		m := tc.v.Magn()
+		if tc.magn != m {
+			t.Errorf("error, expected %v got %v", tc.magn, m)
+			return
+		}
+
+		r = tc.v.Normalize()
+		if tc.normalize.Equals(r) == false {
+			t.Errorf("error, expected %v got %v", tc.normalize, r)
+			return
+		}
 	}
 	testcases := []tcase{
-		{Vertex{1, 2}, 3, Vertex{3, 6}},
+		{Vertex{1, 2}, Vertex{2, -1}, 2.23606797749979, Vertex{0.4472135954999579, 0.8944271909999159}},
+	}
+
+	for i, tc := range testcases {
+		tc := tc
+		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+func TestVertexVertex(t *testing.T) {
+	type tcase struct {
+		v1     Vertex
+		v2	   Vertex
+		dot    float64
+		sum    Vertex
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		s := tc.v1.Dot(tc.v2)
+		if s != tc.dot {
+			t.Errorf("error, expected %v got %v", tc.dot, s)
+			return
+		}
+
+		r := tc.v1.Sum(tc.v2)
+		if r.Equals(tc.sum) == false {
+			t.Errorf("error, expected %v got %v", tc.sum, r)
+			return
+		}
+	}
+	testcases := []tcase{
+		{Vertex{1, 2}, Vertex{3, 4}, 11, Vertex{4, 6}},
 	}
 
 	for i, tc := range testcases {
