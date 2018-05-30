@@ -30,6 +30,8 @@ func TestDelaunayTriangulation(t *testing.T) {
 		// provided for readability
 		inputWKT string
 		// this can be removed if/when geom has a WKT decoder.
+		// A simple website for performing conversions:
+		// https://rodic.fr/blog/online-conversion-between-geometric-formats/
 		inputWKB      string
 		expectedEdges string
 		expectedTris  string
@@ -47,11 +49,17 @@ func TestDelaunayTriangulation(t *testing.T) {
 			return
 		}
 
-		builder := new(DelaunayTriangulationBuilder)
-		builder.tolerance = 1e-6
+		builder := NewDelaunayTriangulationBuilder(1e-6)
 		builder.SetSites(sites)
+		if builder.create() == false {
+			t.Errorf("error building triangulation, expected true got false")
+		}
+		err = builder.subdiv.Validate()
+		if err != nil {
+			t.Errorf("error, expected nil got %v", err)
+		}
 
-		edges := builder.getEdges()
+		edges := builder.GetEdges()
 		edgesWKT, err := wkt.Encode(edges)
 		if err != nil {
 			t.Errorf("error, expected nil got %v", err)

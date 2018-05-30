@@ -100,12 +100,12 @@ func (idt *IncrementalDelaunayTriangulator) InsertSite(v quadedge.Vertex) (*quad
 	// log.Printf("Made Edge: %v -> %v", base.Orig(), base.Dest());
 	quadedge.Splice(base, e)
 	startEdge := base
-	done := false
-	for !done {
+
+	for true {
 		base = idt.subdiv.Connect(e, base.Sym())
 		e = base.OPrev()
 		if e.LNext() == startEdge {
-			done = true
+			break
 		}
 	}
 

@@ -71,6 +71,9 @@ func MakeEdge(o Vertex, d Vertex) *QuadEdge {
 	base := q0
 	base.setOrig(o)
 	base.setDest(d)
+	base.rot.setOrig(o)
+	base.rot.setDest(d)
+
 	return base
 }
 
@@ -432,7 +435,7 @@ public LineSegment toLineSegment()
 */
 
 /*
-Converts this edge to a WKT two-point <tt>LINESTRING</tt> indicating
+String Converts this edge to a WKT two-point LINESTRING indicating
 the geometry of this edge.
 
 Unlike JTS, if IsLive() is false, a deleted string is returned.
