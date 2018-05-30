@@ -73,6 +73,7 @@ func MakeEdge(o Vertex, d Vertex) *QuadEdge {
 	base.setDest(d)
 	base.rot.setOrig(o)
 	base.rot.setDest(d)
+
 	return base
 }
 

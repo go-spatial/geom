@@ -22,7 +22,8 @@ import (
 )
 
 /*
-TestDelaunayTriangulation test cases were taken from JTS.
+TestDelaunayTriangulation test cases were taken from JTS and converted to
+GeoJSON.
 */
 func TestDelaunayTriangulation(t *testing.T) {
 	type tcase struct {

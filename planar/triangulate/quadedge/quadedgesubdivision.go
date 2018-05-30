@@ -490,10 +490,12 @@ func (qes *QuadEdgeSubdivision) IsOnEdge(e *QuadEdge, p geom.Pointer) bool {
 }
 
 /*
-IsOnSegment Tests whether a point lies on a segment, up to a tolerance
+IsOnLine Tests whether a point lies on a segment, up to a tolerance
 determined by the subdivision tolerance.
 
 Returns true if the vertex lies on the edge
+
+If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) IsOnLine(l geom.Line, p geom.Pointer) bool {
 	dist := planar.DistanceToLineSegment(p, geom.Point(l[0]), geom.Point(l[1]))
@@ -503,7 +505,7 @@ func (qes *QuadEdgeSubdivision) IsOnLine(l geom.Line, p geom.Pointer) bool {
 }
 
 /*
-IsVertexOfEdge tests whether a {@link Vertex} is the start or end vertex of a
+IsVertexOfEdge tests whether a Vertex is the start or end vertex of a
 QuadEdge, up to the subdivision tolerance distance.
 
 Returns true if the vertex is a endpoint of the edge
@@ -750,12 +752,14 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 	triEdges := make([]*QuadEdge, 0, 3)
 	curr := edge
 	var isFrame bool
+
 	for true {
 		triEdges = append(triEdges, curr)
 
 		if curr.IsLive() == false {
 			log.Fatal("traversing dead edge")
 		}
+
 		if qes.isFrameEdge(curr) {
 			isFrame = true
 		}
