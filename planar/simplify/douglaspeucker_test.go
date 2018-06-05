@@ -1,6 +1,7 @@
 package simplify
 
 import (
+	"context"
 	"flag"
 	"reflect"
 	"testing"
@@ -20,7 +21,8 @@ func TestDouglasPeucker(t *testing.T) {
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		gl, err := tc.dp.Simplify(tc.l, false)
+		ctx := context.Background()
+		gl, err := tc.dp.Simplify(ctx, tc.l, false)
 		// Douglas Peucker should never return an error.
 		// This is more of a sanity check.
 		if err != nil {
@@ -38,7 +40,7 @@ func TestDouglasPeucker(t *testing.T) {
 
 		// Let's try it with true, it should not matter, as DP does not care.
 		// More sanity checking.
-		gl, _ = tc.dp.Simplify(tc.l, true)
+		gl, _ = tc.dp.Simplify(ctx, tc.l, true)
 
 		if !reflect.DeepEqual(tc.el, gl) {
 			t.Errorf("simplified points (true), expected %v got %v", tc.el, gl)

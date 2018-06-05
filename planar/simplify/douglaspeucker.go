@@ -1,6 +1,7 @@
 package simplify
 
 import (
+	"context"
 	"strings"
 
 	"github.com/go-spatial/geom/planar"
@@ -15,11 +16,11 @@ type DouglasPeucker struct {
 	Dist planar.PointLineDistanceFunc
 }
 
-func (dp DouglasPeucker) Simplify(linestring [][2]float64, isClosed bool) ([][2]float64, error) {
-	return dp.simplify(0, linestring, isClosed)
+func (dp DouglasPeucker) Simplify(ctx context.Context, linestring [][2]float64, isClosed bool) ([][2]float64, error) {
+	return dp.simplify(ctx, 0, linestring, isClosed)
 }
 
-func (dp DouglasPeucker) simplify(depth uint8, linestring [][2]float64, isClosed bool) ([][2]float64, error) {
+func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [][2]float64, isClosed bool) ([][2]float64, error) {
 
 	// helper function for debugging and tracing the code
 	var printf = func(msg string, depth uint8, params ...interface{}) {
@@ -71,7 +72,6 @@ func (dp DouglasPeucker) simplify(depth uint8, linestring [][2]float64, isClosed
 			printf("looking at %v ; d : %v dmax %v ", depth, i, d, dmax)
 		}
 	}
-
 	// If the furtherest point is greater then tolerance, we split at that point, and look again at each
 	// subsections.
 	if dmax > dp.Tolerance {
@@ -81,8 +81,14 @@ func (dp DouglasPeucker) simplify(depth uint8, linestring [][2]float64, isClosed
 			}
 			return linestring, nil
 		}
-		rec1, _ := dp.simplify(depth+1, linestring[0:idx], isClosed)
-		rec2, _ := dp.simplify(depth+1, linestring[idx:], isClosed)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		rec1, _ := dp.simplify(ctx, depth+1, linestring[0:idx], isClosed)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		rec2, _ := dp.simplify(ctx, depth+1, linestring[idx:], isClosed)
 		if debug {
 			printf("returning combined lines: %v %v", depth, rec1, rec2)
 		}

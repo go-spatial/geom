@@ -1,16 +1,15 @@
 package planar
 
-import "github.com/go-spatial/geom"
+import (
+	"context"
 
-// Simplifer is an interface for Simplifying geometries.
-type Simplifer interface {
-	Simplify(linestring [][2]float64, isClosed bool) ([][2]float64, error)
-}
+	"github.com/go-spatial/geom"
+)
 
-func simplifyPolygon(simplifer Simplifer, plg [][][2]float64, isClosed bool) (ret [][][2]float64, err error) {
+func simplifyPolygon(ctx context.Context, simplifer Simplifer, plg [][][2]float64, isClosed bool) (ret [][][2]float64, err error) {
 	ret = make([][][2]float64, len(plg))
 	for i := range plg {
-		ls, err := simplifer.Simplify(plg[i], isClosed)
+		ls, err := simplifer.Simplify(ctx, plg[i], isClosed)
 		if err != nil {
 			return nil, err
 		}
@@ -22,7 +21,7 @@ func simplifyPolygon(simplifer Simplifer, plg [][][2]float64, isClosed bool) (re
 
 // Simplify will simplify the provided geometry using the provided simplifer.
 // If the simplifer is nil, no simplification will be attempted.
-func Simplify(simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error) {
+func Simplify(ctx context.Context, simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error) {
 
 	if simplifer == nil {
 		return geometry, nil
@@ -35,7 +34,7 @@ func Simplify(simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error
 		geos := gg.Geometries()
 		coll := make([]geom.Geometry, len(geos))
 		for i := range geos {
-			geo, err := Simplify(simplifer, geos[i])
+			geo, err := Simplify(ctx, simplifer, geos[i])
 			if err != nil {
 				return nil, err
 			}
@@ -48,7 +47,7 @@ func Simplify(simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error
 		plys := gg.Polygons()
 		mply := make([][][][2]float64, len(plys))
 		for i := range plys {
-			ply, err := simplifyPolygon(simplifer, plys[i], true)
+			ply, err := simplifyPolygon(ctx, simplifer, plys[i], true)
 			if err != nil {
 				return nil, err
 			}
@@ -58,7 +57,7 @@ func Simplify(simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error
 
 	case geom.Polygoner:
 
-		ply, err := simplifyPolygon(simplifer, gg.LinearRings(), true)
+		ply, err := simplifyPolygon(ctx, simplifer, gg.LinearRings(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +65,7 @@ func Simplify(simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error
 
 	case geom.MultiLineStringer:
 
-		mls, err := simplifyPolygon(simplifer, gg.LineStrings(), false)
+		mls, err := simplifyPolygon(ctx, simplifer, gg.LineStrings(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +73,7 @@ func Simplify(simplifer Simplifer, geometry geom.Geometry) (geom.Geometry, error
 
 	case geom.LineStringer:
 
-		ls, err := simplifer.Simplify(gg.Verticies(), false)
+		ls, err := simplifer.Simplify(ctx, gg.Verticies(), false)
 		if err != nil {
 			return nil, err
 		}
