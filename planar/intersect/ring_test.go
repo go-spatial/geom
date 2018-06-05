@@ -1,11 +1,10 @@
-package hitmap
+package intersect
 
 import (
 	"strconv"
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/planar"
 )
 
 func TestRingContains(t *testing.T) {
@@ -20,7 +19,13 @@ func TestRingContains(t *testing.T) {
 		pts        []pt
 	}
 	fn := func(t *testing.T, tc tcase) {
-		ring := NewRing(tc.linestring, planar.Outside)
+		var segs []geom.Line
+		lp := len(tc.linestring) - 1
+		for i := range tc.linestring {
+			segs = append(segs, geom.Line{tc.linestring[lp], tc.linestring[i]})
+			lp = i
+		}
+		ring := NewRing(segs)
 		for i := range tc.pts {
 			i := i
 			t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) {
@@ -109,43 +114,6 @@ func TestRingContains(t *testing.T) {
 				opt(20, 11), opt(20, 12), opt(20, 13), opt(20, 14), opt(20, 15), opt(20, 16), opt(20, 17), opt(20, 18), opt(20, 19), opt(20, 20),
 			},
 		},
-	}
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
-	}
-}
-
-func TestNewFromPolygon(t *testing.T) {
-
-	type tcase struct {
-		polygon geom.Polygon
-		err     error
-	}
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
-		hm, err := NewFromPolygons(nil, tc.polygon.LinearRings())
-		if tc.err != nil {
-			if err == nil {
-				t.Errorf("error, expected %v got nil", tc.err)
-			} else if err.Error() != tc.err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err.Error(), err.Error())
-			}
-			return
-		}
-		if err != nil {
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
-		// Don't want hm to be optimized away.
-		_ = hm
-	}
-	tests := map[string]tcase{
-		"Nil Polygon":                 {polygon: nil},
-		"Basic Polygon":               {polygon: geom.Polygon{}},
-		"With one nil":                {polygon: geom.Polygon{nil}, err: geom.ErrInvalidLineString},
-		"With one empty line":         {polygon: geom.Polygon{[][2]float64{}}, err: geom.ErrInvalidLineString},
-		"With one one non-empty line": {polygon: geom.Polygon{[][2]float64{{10, 10}, {20, 10}, {20, 20}, {10, 20}}}},
 	}
 	for name, tc := range tests {
 		tc := tc

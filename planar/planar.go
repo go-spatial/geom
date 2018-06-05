@@ -2,6 +2,8 @@ package planar
 
 import (
 	"math"
+
+	"github.com/go-spatial/geom/cmp"
 )
 
 const Rad = math.Pi / 180
@@ -37,4 +39,19 @@ func Slope(line [2][2]float64) (m, b float64, defined bool) {
 	m = dy / dx
 	b = line[0][1] - (m * line[0][0])
 	return m, b, true
+}
+
+func IsPointOnLine(pt [2]float64, l1, l2 [2]float64) bool {
+	m, b, defined := Slope([2][2]float64{l1, l2})
+	switch {
+	case !defined:
+		// line is vertical, so if we the y values are the same it's on the line.
+		return cmp.Float(pt[1], l1[1])
+	case m == 0:
+		// line is horizontal, so if the x values are the same it's on the line.
+		return cmp.Float(pt[0], l1[0])
+	default:
+		y := (m * pt[0]) + b
+		return cmp.Float(pt[1], y)
+	}
 }

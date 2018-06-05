@@ -1,40 +1,13 @@
 package hitmap
 
 import (
-	"errors"
+	"log"
+	"math"
 	"sort"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/planar"
 )
-
-var ErrInvalidLineString = errors.New("invalid linestring")
-
-// label is the he label for the triangle. Is in "inside" or "outside".
-// TODO: gdey — would be make more sense to just have a bool here? IsInside or somthing like that?
-type Label uint8
-
-func (l Label) String() string {
-	switch l {
-	case Outside:
-		return "outside"
-	case Inside:
-		return "inside"
-	default:
-		return "unknown"
-	}
-}
-
-const (
-	Unknown Label = iota
-	Outside
-	Inside
-)
-
-type Interface interface {
-	LabelFor(pt [2]float64) Label
-	Extent() [4]float64
-	Area() float64
-}
 
 func asGeomExtent(e [4]float64) *geom.Extent {
 	ee := geom.Extent(e)
@@ -42,8 +15,22 @@ func asGeomExtent(e [4]float64) *geom.Extent {
 
 }
 
+const (
+	Inside  Always = Always(planar.Inside)
+	Outside Always = Always(planar.Outside)
+)
+
+// always will return  the label for the point.
+type Always planar.Label
+
+func (a Always) LabelFor(_ [2]float64) planar.Label { return planar.Label(a) }
+func (a Always) Extent() [4]float64 {
+	return [4]float64{math.Inf(-1), math.Inf(-1), math.Inf(1), math.Inf(1)}
+}
+func (a Always) Area() float64 { return math.Inf(1) }
+
 // PolygonHMSliceByAreaDec will allow you to sort a slice of PolygonHM in decending order
-type ByAreaDec []Interface
+type ByAreaDec []planar.HitMapper
 
 func (hm ByAreaDec) Len() int      { return len(hm) }
 func (hm ByAreaDec) Swap(i, j int) { hm[i], hm[j] = hm[j], hm[i] }
@@ -54,15 +41,15 @@ func (hm ByAreaDec) Less(i, j int) bool {
 
 // OrderedHM will iterate through a set of HitMaps looking for the first one to return
 // inside, if none of the hitmaps return inside it will return outside.
-type OrderedHM []Interface
+type OrderedHM []planar.HitMapper
 
-func (hms OrderedHM) LabelFor(pt [2]float64) Label {
+func (hms OrderedHM) LabelFor(pt [2]float64) planar.Label {
 	for i := range hms {
-		if hms[i].LabelFor(pt) == Inside {
-			return Inside
+		if hms[i].LabelFor(pt) == planar.Inside {
+			return planar.Inside
 		}
 	}
-	return Outside
+	return planar.Outside
 }
 
 // Extent is the accumlative extent of all the extens in the slice.
@@ -80,7 +67,7 @@ func (hms OrderedHM) Area() float64 {
 }
 
 // NewOrderdHM will add the provided hitmaps in reverse order so that the last hit map is always tried first.
-func NewOrderedHM(hms ...Interface) OrderedHM {
+func NewOrderedHM(hms ...planar.HitMapper) OrderedHM {
 	ohm := make(OrderedHM, len(hms))
 	size := len(hms) - 1
 	for i := size; i >= 0; i-- {
@@ -90,35 +77,34 @@ func NewOrderedHM(hms ...Interface) OrderedHM {
 }
 
 // NewHitMap will return a Polygon Hit map, a Ordered Hit Map, or a nil Hit map based on the geomtry type.
-func New(clipbox *geom.Extent, geo geom.Geometry) (Interface, error) {
-	var err error
+func New(clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
+
 	switch g := geo.(type) {
 	case geom.Polygoner:
 
-		ghm, err := NewFromPolygons(clipbox, g.LinearRings())
-		if err != nil {
-			return nil, err
+		plyg := g.LinearRings()
+		if debug {
+			log.Printf("Settup up Polygon Hitmap")
+			log.Printf("Polygon is: %v", plyg)
+			log.Printf("Polygon rings: %v", len(plyg))
 		}
 
-		return ghm, nil
+		return NewFromPolygons(nil, plyg)
 
 	case geom.MultiPolygoner:
 
-		polygons := g.Polygons()
-		ghms := make([]Interface, len(polygons))
-		for i := range polygons {
-			ghms[i], err = NewFromPolygons(clipbox, polygons[i])
-			if err != nil {
-				return nil, err
-			}
+		if debug {
+			log.Printf("Settup up MultiPolygon Hitmap")
 		}
-		sort.Sort(ByAreaDec(ghms))
-		return NewOrderedHM(ghms...), nil
+		return NewFromPolygons(nil, g.Polygons()...)
 
 	case geom.Collectioner:
 
+		if debug {
+			log.Printf("Settup up Collections Hitmap")
+		}
 		geometries := g.Geometries()
-		ghms := make([]Interface, 0, len(geometries))
+		ghms := make([]planar.HitMapper, 0, len(geometries))
 		for i := range geometries {
 			g, err := New(clipbox, geometries[i])
 			if err != nil {
