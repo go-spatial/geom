@@ -14,6 +14,17 @@ func (ls LineString) Points() [][2]float64 {
 }
 */
 
+/*
+Returns true if the first and last vertices are the same
+*/
+func (ls LineString) IsRing() bool {
+	last := len(ls) - 1
+	if len(ls) > 1 && ls[0][0] == ls[last][0] && ls[0][1] == ls[last][1] {
+		return true
+	}
+	return false
+}
+
 // Vertexes returns a slice of XY values
 func (ls LineString) Verticies() [][2]float64 {
 	return ls

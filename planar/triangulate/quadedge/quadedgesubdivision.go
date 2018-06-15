@@ -13,7 +13,6 @@ http://www.eclipse.org/org/documents/edl-v10.php.
 package quadedge
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
@@ -21,7 +20,21 @@ import (
 	"github.com/go-spatial/geom/planar"
 )
 
-var ErrLocateFailure = errors.New("failure locating edge")
+type ErrLocateFailure struct {
+	V  *Vertex
+	QE *QuadEdge
+}
+
+func (e ErrLocateFailure) Error() string {
+	if e.V != nil {
+		return fmt.Sprintf("failure locating vertex: %v", *e.V)
+	}
+	if e.QE != nil {
+		return fmt.Sprintf("failure locating edge: %v", *e.QE)
+	}
+	return fmt.Sprintf("failure locating")
+}
+
 
 /*
 QuadEdgeSubdivision is a class that contains the QuadEdges representing a
@@ -291,7 +304,7 @@ func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*
 		since the orientation predicates may experience precision failures.
 		*/
 		if iter > maxIter {
-			return nil, ErrLocateFailure
+			return nil, ErrLocateFailure{V:&v}
 		}
 
 		if v.Equals(e.Orig()) || v.Equals(e.Dest()) {
@@ -401,7 +414,7 @@ func (qes *QuadEdgeSubdivision) LocateSegment(p0 Vertex, p1 Vertex) (*QuadEdge, 
 // }
 
 /*
-isFrameEdge tests whether a QuadEdge is an edge incident on a frame triangle
+IsFrameEdge tests whether a QuadEdge is an edge incident on a frame triangle
 vertex.
 
 e - the edge to test
@@ -409,8 +422,8 @@ return true if the edge is connected to the frame triangle
 
 If qes is nil a panic will occur.
 */
-func (qes *QuadEdgeSubdivision) isFrameEdge(e *QuadEdge) bool {
-	if qes.isFrameVertex(e.Orig()) || qes.isFrameVertex(e.Dest()) {
+func (qes *QuadEdgeSubdivision) IsFrameEdge(e *QuadEdge) bool {
+	if qes.IsFrameVertex(e.Orig()) || qes.IsFrameVertex(e.Dest()) {
 		return true
 	}
 	return false
@@ -436,25 +449,25 @@ func (qes *QuadEdgeSubdivision) isFrameEdge(e *QuadEdge) bool {
 
 // 		// check other vertex of triangle to left of edge
 // 		Vertex vLeftTriOther = e.lNext().dest();
-// 		if (isFrameVertex(vLeftTriOther))
+// 		if (IsFrameVertex(vLeftTriOther))
 // 			return true;
 // 		// check other vertex of triangle to right of edge
 // 		Vertex vRightTriOther = e.sym().lNext().dest();
-// 		if (isFrameVertex(vRightTriOther))
+// 		if (IsFrameVertex(vRightTriOther))
 // 			return true;
 
 // 		return false;
 // 	}
 
 /*
-isFrameVertex tests whether a vertex is a vertex of the outer triangle.
+IsFrameVertex tests whether a vertex is a vertex of the outer triangle.
 
 v - the vertex to test
 returns true if the vertex is an outer triangle vertex
 
 If qes is nil a panic will occur.
 */
-func (qes *QuadEdgeSubdivision) isFrameVertex(v Vertex) bool {
+func (qes *QuadEdgeSubdivision) IsFrameVertex(v Vertex) bool {
 	if v.Equals(qes.frameVertex[0]) {
 		return true
 	}
@@ -531,7 +544,7 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 //       QuadEdge qe = (QuadEdge) i.next();
 //       Vertex v = qe.orig();
 //       //System.out.println(v);
-//       if (includeFrame || ! isFrameVertex(v))
+//       if (includeFrame || ! IsFrameVertex(v))
 //         vertices.add(v);
 
 //       /**
@@ -541,7 +554,7 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 //        */
 //       Vertex vd = qe.dest();
 //       //System.out.println(vd);
-//       if (includeFrame || ! isFrameVertex(vd))
+//       if (includeFrame || ! IsFrameVertex(vd))
 //         vertices.add(vd);
 //     }
 //     return vertices;
@@ -574,7 +587,7 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 //       //System.out.println(v);
 //       if (! visitedVertices.contains(v)) {
 //       	visitedVertices.add(v);
-//         if (includeFrame || ! isFrameVertex(v)) {
+//         if (includeFrame || ! IsFrameVertex(v)) {
 //         	edges.add(qe);
 //         }
 //       }
@@ -589,7 +602,7 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 //       //System.out.println(vd);
 //       if (! visitedVertices.contains(vd)) {
 //       	visitedVertices.add(vd);
-//         if (includeFrame || ! isFrameVertex(vd)) {
+//         if (includeFrame || ! IsFrameVertex(vd)) {
 //         	edges.add(qd);
 //         }
 //       }
@@ -664,7 +677,7 @@ func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
 		if !visitedEdges.contains(edge) {
 			priQE := edge.GetPrimary()
 
-			if includeFrame || !qes.isFrameEdge(priQE) {
+			if includeFrame || !qes.IsFrameEdge(priQE) {
 				edges = append(edges, priQE)
 			}
 
@@ -748,14 +761,14 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 	curr := edge
 	var isFrame bool
 
-	for true {
+	for {
 		triEdges = append(triEdges, curr)
 
 		if curr.IsLive() == false {
 			log.Fatal("traversing dead edge")
 		}
 
-		if qes.isFrameEdge(curr) {
+		if qes.IsFrameEdge(curr) {
 			isFrame = true
 		}
 

@@ -165,9 +165,15 @@ func extractLines(g Geometry, lines *[]Line) error {
 
 	case Polygoner:
 
-		for _, ls := range gg.LinearRings() {
-			if err := extractLines(LineString(ls), lines); err != nil {
+		for _, v := range gg.LinearRings() {
+			lr := LineString(v)
+			if err := extractLines(lr, lines); err != nil {
 				return err
+			}
+			v := lr.Verticies()
+			if len(v) > 2 && lr.IsRing() == false {
+				// create a connection from last -> first if it doesn't exist
+				*lines = append(*lines, Line{v[len(v) - 1], v[0]})
 			}
 		}
 		return nil

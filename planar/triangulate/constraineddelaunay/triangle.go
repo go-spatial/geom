@@ -1,14 +1,11 @@
 package constraineddelaunay
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
-
-var ErrInvalidVertex = errors.New("invalid vertex")
-var ErrNoMatchingEdgeFound = errors.New("no matching edge found")
 
 /*
 Triangle provides operations on a triangle within a
@@ -19,8 +16,14 @@ JTS port.
 */
 type Triangle struct {
 	// the triangle referenced is to the right of this edge
-	qe *quadedge.QuadEdge
+	Qe *quadedge.QuadEdge
 }
+
+type TriangleByCentroid []Triangle
+
+func (a TriangleByCentroid) Len() int           { return len(a) }
+func (a TriangleByCentroid) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a TriangleByCentroid) Less(i, j int) bool { return cmp.PointLess(a[i].Centroid().XY(), a[j].Centroid().XY()) }
 
 /*
 IntersectsPoint returns true if the vertex intersects the given triangle. This
@@ -29,7 +32,7 @@ includes falling on an edge.
 If tri is nil a panic will occur.
 */
 func (tri *Triangle) IntersectsPoint(v quadedge.Vertex) bool {
-	e := tri.qe
+	e := tri.Qe
 
 	for i := 0; i < 3; i++ {
 		lc := v.Classify(e.Orig(), e.Dest())
@@ -57,6 +60,78 @@ func (tri *Triangle) IntersectsPoint(v quadedge.Vertex) bool {
 	return true
 }
 
+func (tri *Triangle) Centroid() quadedge.Vertex {
+	v1 := tri.Qe.Orig()
+	v2 := tri.Qe.Dest()
+	v3 := tri.Qe.RPrev().Dest()
+
+	return v1.Sum(v2).Sum(v3).Divide(3)
+}
+
+/*
+GetStartEdge returns the 'starting' edge of this triangle. Unless Normalize 
+has been called the edge is arbitrary.
+
+If tri is nil a panic will occur.
+*/
+func (tri *Triangle) GetStartEdge() *quadedge.QuadEdge {
+	return tri.Qe
+}
+
+/*
+IsValid returns true if the specified triangle has three sides that connect.
+
+If tri is nil IsValid will return false.
+*/
+func (tri *Triangle) IsValid() bool {
+	if tri == nil {
+		return false
+	}
+
+	count := 0
+
+	e := tri.Qe
+	for {
+		e = e.RPrev()
+		count++
+		if e.Orig().Equals(tri.Qe.Orig()) {
+			break
+		}
+		if count > 3 {
+			return false
+		}
+	}
+	return count == 3
+}
+
+/*
+Normalize returns a triangle that is represented by the QuadEdge that starts 
+at the "smallest" coordinate.
+
+Because there are multiple ways to represent the same triangle this is 
+necessary if you want to maintain a set or map of triangles.
+
+If tri is nil a panic will occur.
+*/
+func (tri *Triangle) Normalize() *Triangle {
+	v1 := tri.Qe.Orig()
+	v2 := tri.Qe.Dest()
+	v3 := tri.Qe.RPrev().Dest()
+
+	c21 := cmp.PointLess(v2, v1)
+	c31 := cmp.PointLess(v3, v1)
+	c32 := cmp.PointLess(v3, v2)
+
+	if c21 == false && c31 == false {
+		// the original is correct
+		return tri
+	}
+	if c31 && c32 {
+		return &Triangle{tri.Qe.RNext()}
+	}
+	return &Triangle{tri.Qe.RPrev()}
+}
+
 /*
 opposedTriangle returns the triangle opposite to the vertex v.
        +
@@ -74,13 +149,13 @@ If this method is called on triangle a with v1 as the vertex, the result will be
 If tri is nil a panic will occur.
 */
 func (tri *Triangle) opposedTriangle(v quadedge.Vertex) (*Triangle, error) {
-	qe := tri.qe
+	qe := tri.Qe
 	for qe.Orig().Equals(v) == false {
 
 		qe = qe.RNext()
 
-		if qe == tri.qe {
-			return nil, ErrInvalidVertex
+		if qe == tri.Qe {
+			return nil, ErrInvalidVertex{v, tri}
 		}
 	}
 
@@ -132,8 +207,8 @@ If this method is called as a.sharedEdge(b), the result will be edge lr.
 If tri is nil a panic will occur.
 */
 func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
-	ae := tri.qe
-	be := other.qe
+	ae := tri.Qe
+	be := other.Qe
 	foundMatch := false
 
 	// search for the matching edge between both triangles
@@ -154,7 +229,7 @@ func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 
 	if foundMatch == false {
 		// if there wasn't a matching edge
-		return nil, ErrNoMatchingEdgeFound
+		return nil, ErrNoMatchingEdgeFound{tri, other}
 	}
 
 	// return the matching edge in triangle a
@@ -164,17 +239,20 @@ func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 /*
 String returns a string representation of triangle.
 
+If IsValid is false you may get a "triangle" with more or less than three 
+sides.
+
 If tri is nil a panic will occur.
 */
 func (tri *Triangle) String() string {
 	str := "["
-	e := tri.qe
+	e := tri.Qe
 	comma := ""
-	for true {
+	for {
 		str += comma + fmt.Sprintf("%v", e.Orig())
 		comma = ","
 		e = e.RPrev()
-		if e.Orig().Equals(tri.qe.Orig()) {
+		if e.Orig().Equals(tri.Qe.Orig()) {
 			break
 		}
 	}
