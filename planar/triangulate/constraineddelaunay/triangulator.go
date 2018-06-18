@@ -18,7 +18,7 @@ var ErrMismatchedLengths = errors.New("the arguments lengths do not match")
 // these errors indicate a problem with the algorithm.
 var ErrUnableToUpdateVertexIndex = errors.New("unable to update vertex index")
 var ErrUnexpectedDeadNode = errors.New("unexpected dead node")
-var ErrUnsupportedCoincidentEdges = errors.New("unsupported coincident edges")
+var ErrCoincidentEdges = errors.New("coincident edges")
 
 /*
 Triangulator provides methods for performing a constrained delaunay
@@ -82,6 +82,10 @@ exist. All the vertices must already exist in the triangulator.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) createSegment(s triangulate.Segment, data interface{}) error {
+	if s.GetStart().Equals(s.GetEnd()) {
+		return fmt.Errorf("segment must not have the same start/end (%v/%v)", s.GetStart(), s.GetEnd())
+	}
+
 	qe, err := tri.LocateSegment(s.GetStart(), s.GetEnd())
 	
 	if _, ok := err.(quadedge.ErrLocateFailure); err != nil && !ok {
@@ -94,13 +98,13 @@ func (tri *Triangulator) createSegment(s triangulate.Segment, data interface{}) 
 	}
 
 	ct, err := tri.findIntersectingTriangle(s)
-	if err != nil {
+	if err != nil && err != ErrCoincidentEdges {
 		return err
 	}
 	from := ct.Qe.Sym()
 
 	ct, err = tri.findIntersectingTriangle(triangulate.NewSegment(geom.Line{s.GetEnd(), s.GetStart()}))
-	if err != nil {
+	if err != nil && err != ErrCoincidentEdges {
 		return err
 	}
 	to := ct.Qe.OPrev()
@@ -122,6 +126,7 @@ triangulation.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) createTriangle(a, b, c quadedge.Vertex) error {
+	log.Printf("createTriangle");
 	if err := tri.createSegment(triangulate.NewSegment(geom.Line{a, b}), nil); err != nil {
 		return err
 	}
@@ -188,6 +193,51 @@ right of the segment is returned.
 
 If tri is nil a panic will occur.
 */
+func (tri *Triangulator) findCoincidentEdge(s triangulate.Segment) (*quadedge.QuadEdge, error) {
+
+	start, err := tri.locateEdgeByVertex(s.GetStart())
+	if err != nil {
+		return nil, err
+	}
+
+	qe := start
+
+	// walk around all the edges that share qe.Orig()
+	for {
+		qe = qe.OPrev()
+
+		if qe.IsLive() == false {
+			return nil, ErrUnexpectedDeadNode
+		}
+
+		lc := s.GetEnd().Classify(qe.Orig(), qe.Dest())
+
+		if lc == quadedge.BETWEEN || lc == quadedge.DESTINATION || lc == quadedge.BEYOND {
+			// if s is between the two edges, we found edge
+			return qe, nil
+		}
+
+		if qe == start {
+			// if we've walked all the way around the vertex.
+			break
+		}
+	}
+
+	return nil, fmt.Errorf("no coincident edge: %v", s)
+}
+
+/*
+findIntersectingTriangle finds the triangle that shares the vertex s.GetStart()
+and intersects at least part of the edge that extends from s.GetStart().
+
+Tolerance is not considered when determining if vertices are the same.
+
+Returns a quadedge that has s.GetStart() as the origin and the right face is
+the desired triangle. If the segment falls on an edge, the triangle to the
+right of the segment is returned.
+
+If tri is nil a panic will occur.
+*/
 func (tri *Triangulator) findIntersectingTriangle(s triangulate.Segment) (*Triangle, error) {
 
 	qe, err := tri.locateEdgeByVertex(s.GetStart())
@@ -212,16 +262,12 @@ func (tri *Triangulator) findIntersectingTriangle(s triangulate.Segment) (*Trian
 			// if s is between the two edges, we found our triangle.
 			return &Triangle{left}, nil
 		} else if lc != quadedge.RIGHT && lc != quadedge.LEFT && rc != quadedge.LEFT && rc != quadedge.RIGHT {
-			return nil, ErrUnsupportedCoincidentEdges
+			return &Triangle{left}, ErrCoincidentEdges
 		}
 		// } else if lc != quadedge.RIGHT && lc != quadedge.LEFT {
-		// 	return nil, fmt.Errorf("incident edges are not supported: %v", s)
-		// 	//return &Triangle{left}, nil
+		// 	return &Triangle{left}, nil
 		// } else if rc != quadedge.LEFT && rc != quadedge.RIGHT {
-		// 	return nil, fmt.Errorf("incident edges are not supported: %v", s)
-		// 	// if s falls on lc or rc, then throw an error (for now)
-		// 	// TODO: Handle this case
-		// 	//return &Triangle{right}, nil
+		// 	return &Triangle{right}, nil
 		// }
 		left = right
 
@@ -385,12 +431,15 @@ func (tri *Triangulator) insertConstraints(g geom.Geometry, data interface{}) er
 
 	for seg := range constraints {
 		tmp := seg.DeepCopy()
-		// // find locations where the constrained edges intersect and insert new // sites at the intersections.
-		// if err := tri.insertIntersectionSites(&tmp); err != nil {
-		// 	return fmt.Errorf("error adding constraint: %v", err)
-		// }
-		// log.Printf("=== insertIntersectionSites complete %v", tri.subdiv.DebugDumpEdges())
-		// tmp = seg.DeepCopy()
+		// find locations where the constrained edges intersect and insert new // sites at the intersections.
+		if err := tri.insertIntersectionSites(&tmp); err != nil {
+			return fmt.Errorf("error adding constraint: %v", err)
+		}
+		log.Printf("=== insertIntersectionSites complete %v", tri.subdiv.DebugDumpEdges())
+		if err = tri.Validate(); err != nil {
+			return err
+		}
+		tmp = seg.DeepCopy()
 		if err := tri.insertEdgeCDT(&tmp, data); err != nil {
 			return fmt.Errorf("error adding constraint: %v", err)
 		}
@@ -470,6 +519,72 @@ func (tri *Triangulator) IsConstraint(e *quadedge.QuadEdge) bool {
 }
 
 /*
+insertCoincidentEdge inserts an edge that shares a vertex a with another edge 
+that is coincident with ab.
+
+If tri is nil a panic will occur.
+*/
+func (tri *Triangulator) insertCoincidentEdge(ab *triangulate.Segment, data interface{}) error {
+	log.Printf("insertCoincidentEdge %v", ab)
+
+	// find the coincident edge
+	ce, err := tri.findCoincidentEdge(*ab)
+	if err != nil {
+		return err
+	}
+
+	c := ce.Dest().Classify(ab.GetStart(), ab.GetEnd())
+
+	switch {
+	// ab should always be longer than c
+	case c == quadedge.BETWEEN:
+		addDataToEdge(ce, data)
+		vb := triangulate.NewSegment(geom.Line{ce.Dest(), ab.GetEnd()})
+		tri.insertEdgeCDT(&vb, data)
+
+	default:
+		return fmt.Errorf("invalid point classification: %v", c)
+	}
+
+	return nil
+}
+
+/*
+insertCoincidentEdge inserts an edge that shares a vertex a with another edge 
+that is coincident with ab.
+
+If tri is nil a panic will occur.
+*/
+func (tri *Triangulator) insertCoincidentEdgeSites(ab *triangulate.Segment) error {
+
+	// find the coincident edge
+	ce, err := tri.findCoincidentEdge(*ab)
+	if err != nil {
+		return err
+	}
+
+	c := ce.Dest().Classify(ab.GetStart(), ab.GetEnd())
+
+	switch {
+	case c == quadedge.BEYOND:
+		// split the coincident edge where ab ends
+		if err := tri.splitEdge(ce, ab.GetEnd()); err != nil {
+			return err
+		}
+
+	case c == quadedge.BETWEEN:
+		// continue inserting sites where ce ends
+		vb := triangulate.NewSegment(geom.Line{ce.Dest(), ab.GetEnd()})
+		tri.insertIntersectionSites(&vb)
+
+	default:
+		return fmt.Errorf("invalid point classification: %v", c)
+	}
+
+	return nil
+}
+
+/*
 insertEdgeCDT attempts to follow the pseudo code in Domiter.
 
 Procedure InsertEdgeCDT(T:CDT, ab:Edge)
@@ -500,7 +615,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 	// Precondition: a,b in T and ab not in T
 	// Find the triangle t ∈ T that contains a and is cut by ab
 	t, err := tri.findIntersectingTriangle(*ab)
-	if err != nil {
+	if err == ErrCoincidentEdges {
+		return tri.insertCoincidentEdge(ab, data)
+	} else if err != nil {
 		return err
 	}
 	log.Printf("ab: %v t: %v", ab, t)
@@ -540,35 +657,55 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 		// should we remove the edge shared between t & tseq?
 		flagEdgeForRemoval := false
 
+		abOnOrig := tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Orig())
+		abOnDest := tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Dest())
+
 		switch {
 
-		// case c == quadedge.BETWEEN:
-		// 	log.Printf("vseq: %v", vseq)
-		// 	log.Printf("shared: %v", shared)
-		// 	log.Printf("ab: %v", shared)
-		// 	log.Printf("subdiv: %v", tri.subdiv.DebugDumpEdges())
-		// 	log.Printf("tolerance: %v", tri.tolerance)
-		// 	// InsertEdgeCDT(T, vseqb)
-		// 	vb := triangulate.NewSegment(geom.Line{vseq, ab.GetEnd()})
-		// 	tri.insertEdgeCDT(&vb, data)
-		// 	// a:=vseq -- Should this be b:=vseq!? -JRS
-		// 	*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), vseq})
-
-		case tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Orig()):
+		case abOnOrig:
 			// InsertEdgeCDT(T, vseqb)
 			vb := triangulate.NewSegment(geom.Line{shared.Orig(), ab.GetEnd()})
-			tri.insertEdgeCDT(&vb, data)
+			if err := tri.insertEdgeCDT(&vb, data); err != nil {
+				return err
+			}
 			// a:=vseq -- Should this be b:=vseq!? -JRS
 			b = shared.Orig()
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
 
-		case tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Dest()):
+		case abOnDest:
 			// InsertEdgeCDT(T, vseqb)
 			vb := triangulate.NewSegment(geom.Line{shared.Dest(), ab.GetEnd()})
-			tri.insertEdgeCDT(&vb, data)
+			if err := tri.insertEdgeCDT(&vb, data); err != nil {
+				return err
+			}
 			// a:=vseq -- Should this be b:=vseq!? -JRS
 			b = shared.Dest()
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
+
+		case c == quadedge.BETWEEN:
+			log.Printf("vseq: %v", vseq)
+			log.Printf("shared: %v", shared)
+			log.Printf("ab: %v", ab)
+			log.Printf("subdiv: %v", tri.subdiv.DebugDumpEdges())
+			log.Printf("tolerance: %v", tri.tolerance)
+
+			// if tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Orig()) {
+			// 	b = shared.Orig()
+			// } else if tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Dest()) {
+			// 	b = shared.Dest()
+			// }
+
+			// InsertEdgeCDT(T, vseqb)
+			vb := triangulate.NewSegment(geom.Line{vseq, ab.GetEnd()})
+			if err := tri.insertEdgeCDT(&vb, data); err != nil {
+				return err
+			}
+
+			b = vseq
+			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
+			log.Printf("new ab: %v", *ab)
+			flagEdgeForRemoval = true
+
 
 		// if the constrained edge is passing through another constrained edge
 		case tri.IsConstraint(shared):
@@ -632,29 +769,27 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 	}
 	// EndWhile
 
-	// remove the previously marked edges
-	for i := range removalList {
-		tri.deleteEdge(removalList[i])
-	}
+	if ab.GetStart().Equals(ab.GetEnd()) == false {
+		// remove the previously marked edges
+		for i := range removalList {
+			tri.deleteEdge(removalList[i])
+		}
 
-	// TriangulatePseudoPolygon(PU,ab,T)
-	if err := tri.triangulatePseudoPolygon(pu, *ab); err != nil {
-		return err
-	}
-	// TriangulatePseudoPolygon(PL,ab,T)
-	if err := tri.triangulatePseudoPolygon(pl, *ab); err != nil {
-		return err
-	}
+		// TriangulatePseudoPolygon(PU,ab,T)
+		if err := tri.triangulatePseudoPolygon(pu, *ab); err != nil {
+			return err
+		}
+		// TriangulatePseudoPolygon(PL,ab,T)
+		if err := tri.triangulatePseudoPolygon(pl, *ab); err != nil {
+			return err
+		}
 
-	if err := tri.Validate(); err != nil {
-		return err
+		// Add edge ab to T
+		if err := tri.createSegment(*ab, data); err != nil {
+			return err
+		}
+		tri.constraints[*ab] = true
 	}
-
-	// Add edge ab to T
-	if err := tri.createSegment(*ab, data); err != nil {
-		return err
-	}
-	tri.constraints[*ab] = true
 
 	return nil
 }
@@ -676,7 +811,9 @@ func (tri *Triangulator) insertIntersectionSites(ab *triangulate.Segment) error 
 	// Precondition: a,b in T and ab not in T
 	// Find the triangle t ∈ T that contains a and is cut by ab
 	t, err := tri.findIntersectingTriangle(*ab)
-	if err != nil {
+	if err == ErrCoincidentEdges {
+		return tri.insertCoincidentEdgeSites(ab)
+	} else if err != nil {
 		return err
 	}
 
@@ -732,7 +869,7 @@ func (tri *Triangulator) insertIntersectionSites(ab *triangulate.Segment) error 
 
 			// the current insertion will stop at the interesction point
 			b = iv
-			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), iv})
+			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
 
 		} else {
 			c := vseq.Classify(ab.GetStart(), ab.GetEnd())
@@ -771,10 +908,6 @@ func (tri *Triangulator) insertIntersectionSites(ab *triangulate.Segment) error 
 		t = tseq
 	}
 	// EndWhile
-
-	if err := tri.Validate(); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -896,6 +1029,10 @@ the constraints can also nullify the Delaunay properties.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) error {
+	if e.Orig().Equals(v) || e.Dest().Equals(v) {
+		return nil
+	}
+
 	constraint := tri.IsConstraint(e)
 	log.Printf("splitEdge e: %v v: %v", e, v)
 
@@ -956,11 +1093,17 @@ func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) erro
 		if err := tri.createSegment(triangulate.NewSegment(geom.Line{v, e1.RNext().Orig()}), nil); err != nil {
 			return err
 		}
+		if t1.IsValid() == false {
+			return fmt.Errorf("t1 is still invalid: %v", &t1)
+		}
 	}
 	if t2.IsValid() == false {
 		log.Printf("adding: %v", geom.Line{v, e2.RNext().Orig()})
 		if err := tri.createSegment(triangulate.NewSegment(geom.Line{v, e2.RNext().Orig()}), nil); err != nil {
 			return err
+		}
+		if t2.IsValid() == false {
+			return fmt.Errorf("t2 is still invalid: %v", &t2)
 		}
 	}
 
@@ -977,6 +1120,7 @@ from Figure 10 in Domiter.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) triangulatePseudoPolygon(p []quadedge.Vertex, ab triangulate.Segment) error {
+	log.Printf("triangulatePseudoPolygon(%v, %v)", p, ab)
 
 	// triangulatePseudoPolygon([[0.2 0.3] [0 0]], {[[0 1] [1 0.5]] <nil>})
 	a := ab.GetStart()
@@ -1011,7 +1155,7 @@ func (tri *Triangulator) triangulatePseudoPolygon(p []quadedge.Vertex, ab triang
 	}
 
 	// If P is not empty then
-	if len(p) > 0 {
+	if len(p) > 0 && a.Equals(c) == false && b.Equals(c) == false {
 		// Add triangle with vertices a, b, c into T
 		if err := tri.createTriangle(a, c, b); err != nil {
 			return err
@@ -1033,8 +1177,11 @@ func (tri *Triangulator) Validate() error {
 	if tri.validate == false {
 		return nil
 	}
-	err := tri.subdiv.Validate()
-	if err != nil {
+	
+	if err := tri.subdiv.Validate(); err != nil {
+		return err
+	}
+	if err := tri.validateTriangles(); err != nil {
 		return err
 	}
 	return tri.validateVertexIndex()
@@ -1079,6 +1226,37 @@ func (tri *Triangulator) validateVertexIndex() error {
 	for v, _ := range vertexSet {
 		if _, ok := tri.vertexIndex[v]; ok == false {
 			return fmt.Errorf("vertex index is missing a vertex: %v", v)
+		}
+	}
+
+	return nil
+}
+
+/*
+validateTriangles is a self consistency check that ensures all triangles are 
+valid.
+
+If tri is nil a panic will occur.
+*/
+func (tri *Triangulator) validateTriangles() error {
+	// collect a set of all edges
+	edges := tri.subdiv.GetPrimaryEdges(true)
+	for i := range edges {
+		e := edges[i]
+		t := Triangle{e}
+		if t.IsValid() == false {
+			for k, v := range tri.vertexIndex {
+				log.Printf("k: %v v: %v", k, v)
+				e := v
+				for {
+					log.Printf("%v", e)
+					e = e.ONext()
+					if e == v {
+						break
+					}
+				}
+			}
+			return fmt.Errorf("Triangle is invalid: %v", &t)
 		}
 	}
 
