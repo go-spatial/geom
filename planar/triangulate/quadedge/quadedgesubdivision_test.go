@@ -77,6 +77,12 @@ func TestQuadEdgeSubdivisionDelete(t *testing.T) {
 		if err != nil {
 			t.Errorf("expected nil got %v", err)
 		}
+		
+		_, err = uut.LocateSegment(Vertex{100,1000}, tc.b)
+		if err == nil {
+			t.Errorf("expected %v got %v", ErrLocateFailure, err)
+		}
+
 		if qe.Orig().Equals(tc.a) == false || qe.Dest().Equals(tc.b) == false {
 			t.Errorf("expected true got false")
 		}
@@ -164,6 +170,12 @@ func TestQuadEdgeSubdivisionIsOnEdge(t *testing.T) {
 		onEdge := uut.IsOnEdge(e1, tc.p)
 
 		if onEdge != tc.expected {
+			t.Fatalf("expected %v got %v", tc.expected, onEdge)
+		}
+
+		onLine := uut.IsOnLine(geom.Line{tc.e1, tc.e2}, tc.p)
+
+		if onLine != tc.expected {
 			t.Fatalf("expected %v got %v", tc.expected, onEdge)
 		}
 	}

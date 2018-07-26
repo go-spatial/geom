@@ -120,11 +120,21 @@ func (u Vertex) Dot(v Vertex) float64 {
 /*
 Times computes the scalar product c(v)
 
-@param v a vertex
-@return returns the scaled vector
+Return the scaled vector
 */
 func (u Vertex) Times(c float64) Vertex {
 	return Vertex{u.X() * c, u.Y() * c}
+}
+
+/*
+Divide computes the scalar division v / c
+
+Returns the scaled vector
+
+This is not part of the original JTS code.
+*/
+func (u Vertex) Divide(c float64) Vertex {
+	return Vertex{u.X() / c, u.Y() / c}
 }
 
 // Sum u + v and return the new Vertex
@@ -140,6 +150,15 @@ func (u Vertex) Sub(v Vertex) Vertex {
 // Magn returns the magnitude of the vector
 func (u Vertex) Magn() float64 {
 	return math.Sqrt(u.X()*u.X() + u.Y()*u.Y())
+}
+
+/*
+Normalize scales the vector so the length is one.
+
+This is not part of the original JTS code.
+*/
+func (u Vertex) Normalize() Vertex {
+	return u.Divide(u.Magn())
 }
 
 /*

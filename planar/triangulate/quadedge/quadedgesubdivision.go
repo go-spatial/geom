@@ -15,6 +15,7 @@ package quadedge
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
@@ -224,19 +225,32 @@ func (qes *QuadEdgeSubdivision) Delete(e *QuadEdge) {
 	eRot := e.Rot()
 	eRotSym := e.Rot().Sym()
 
-	// this is inefficient on an array, but this method should be called
-	// infrequently
-	newArray := make([]*QuadEdge, 0, len(qes.quadEdges))
-	for _, ele := range qes.quadEdges {
-		if ele != e && ele != eSym && ele != eRot && ele != eRotSym {
-			newArray = append(newArray, ele)
-		}
-	}
-
 	e.Delete()
 	eSym.Delete()
 	eRot.Delete()
 	eRotSym.Delete()
+
+	// this is inefficient on an array, but this method should be called
+	// infrequently
+	newArray := make([]*QuadEdge, 0, len(qes.quadEdges))
+	for _, ele := range qes.quadEdges {
+		if ele.IsLive() {
+			newArray = append(newArray, ele)
+
+			if ele.next.IsLive() == false {
+				log.Fatalf("a dead edge is still linked: %v", ele)
+			}
+		}
+	}
+	qes.quadEdges = newArray
+
+	if qes.startingEdge.IsLive() == false {
+		if len(qes.quadEdges) > 0 {
+			qes.startingEdge = qes.quadEdges[0]
+		} else {
+			qes.startingEdge = nil
+		}
+	}
 }
 
 /*
@@ -268,21 +282,16 @@ func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*
 		iter++
 
 		/*
-			So far it has always been the case that failure to locate indicates an
-			invalid subdivision. So just fail completely. (An alternative would be
-			to perform an exhaustive search for the containing triangle, but this
-			would mask errors in the subdivision topology)
+		So far it has always been the case that failure to locate indicates an
+		invalid subdivision. So just fail completely. (An alternative would be
+		to perform an exhaustive search for the containing triangle, but this
+		would mask errors in the subdivision topology)
 
-			This can also happen if two vertices are located very close together,
-			since the orientation predicates may experience precision failures.
+		This can also happen if two vertices are located very close together,
+		since the orientation predicates may experience precision failures.
 		*/
 		if iter > maxIter {
 			return nil, ErrLocateFailure
-			// String msg = "Locate failed to converge (at edge: " + e + ").
-			// Possible causes include invalid Subdivision topology or very close
-			// sites";
-			// System.err.println(msg);
-			// dumpTriangles();
 		}
 
 		if v.Equals(e.Orig()) || v.Equals(e.Dest()) {
@@ -476,7 +485,22 @@ func (qes *QuadEdgeSubdivision) IsOnEdge(e *QuadEdge, p geom.Pointer) bool {
 }
 
 /*
-IsVertexOfEdge tests whether a {@link Vertex} is the start or end vertex of a
+IsOnLine Tests whether a point lies on a segment, up to a tolerance
+determined by the subdivision tolerance.
+
+Returns true if the vertex lies on the edge
+
+If qes is nil a panic will occur.
+*/
+func (qes *QuadEdgeSubdivision) IsOnLine(l geom.Line, p geom.Pointer) bool {
+	dist := planar.DistanceToLineSegment(p, geom.Point(l[0]), geom.Point(l[1]))
+
+	// heuristic (hack?)
+	return dist < qes.edgeCoincidenceTolerance
+}
+
+/*
+IsVertexOfEdge tests whether a Vertex is the start or end vertex of a
 QuadEdge, up to the subdivision tolerance distance.
 
 Returns true if the vertex is a endpoint of the edge
@@ -626,6 +650,9 @@ func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
 	qes.visitedKey++
 
 	var edges []*QuadEdge
+	if qes.startingEdge == nil {
+		return edges
+	}
 	var stack edgeStack
 	stack.push(qes.startingEdge)
 
@@ -690,7 +717,9 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 	// visited flag is used to record visited edges of triangles
 	// setVisitedAll(false);
 	var stack *edgeStack = new(edgeStack)
-	stack.push(qes.startingEdge)
+	if qes.startingEdge != nil {
+		stack.push(qes.startingEdge)
+	}
 
 	visitedEdges := make(edgeSet)
 
@@ -718,9 +747,13 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 	triEdges := make([]*QuadEdge, 0, 3)
 	curr := edge
 	var isFrame bool
-	var done bool
-	for !done {
+
+	for true {
 		triEdges = append(triEdges, curr)
+
+		if curr.IsLive() == false {
+			log.Fatal("traversing dead edge")
+		}
 
 		if qes.isFrameEdge(curr) {
 			isFrame = true
@@ -738,7 +771,7 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 		curr = curr.LNext()
 
 		if curr == edge {
-			done = true
+			break
 		}
 	}
 
