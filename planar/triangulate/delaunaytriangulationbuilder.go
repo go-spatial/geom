@@ -40,6 +40,10 @@ func (xy PointByXY) Less(i, j int) bool { return cmp.XYLessPoint(xy[i], xy[j]) }
 func (xy PointByXY) Swap(i, j int)      { xy[i], xy[j] = xy[j], xy[i] }
 func (xy PointByXY) Len() int           { return len(xy) }
 
+func NewDelaunayTriangulationBuilder(tolerance float64) *DelaunayTriangulationBuilder {
+	return &DelaunayTriangulationBuilder{tolerance: tolerance}
+}
+
 /*
 extractUniqueCoordinates extracts the unique points from the given Geometry.
 
@@ -208,7 +212,7 @@ returns the edges of the triangulation
 
 If dtb is nil a panic will occur.
 */
-func (dtb *DelaunayTriangulationBuilder) getEdges() geom.MultiLineString {
+func (dtb *DelaunayTriangulationBuilder) GetEdges() geom.MultiLineString {
 	if !dtb.create() {
 		return geom.MultiLineString{}
 	}

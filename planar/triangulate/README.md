@@ -7,9 +7,10 @@ porting are:
 * Stay true to JTS's implementation, but make the necessary changes to stay 
   go-ish and fit nicely within the geom package.
 * Only implement what is needed as it is needed.
-* When possible, keep modifications to the functionality segregated into 
+* When reasonable, keep modifications to the functionality segregated into 
   different directories. This will help minimize the cost of porting more of 
-  JTS's functionality or porting JTS's future changes.
+  JTS's functionality or porting JTS's future changes. When it isn't 
+  reasonable, make a specific note of the difference in the comments.
 
 To make porting easier, the original Java code will be kept in the source 
 files until the specific function has been ported at which time the Java 
