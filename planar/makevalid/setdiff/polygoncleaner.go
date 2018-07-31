@@ -19,13 +19,20 @@ var ErrNoExternalTriangle = errors.New("no external triangle found")
 var ErrExtractingGeomFailed = errors.New("extracting geometry failed")
 
 /*
-* Maintain the source of each constraint when building the triangulation. Maybe with the data pointer? A single constraint may come from multiple sources.
-* Build a boolean OddEven inside/outside map for each input linear ring
-* Determine the final triangle class (inside/outside) using boolean logic on the inside/outside map. This should enable intersection, union, etc.
-* As listed in "2012 - Automatically repairing invalid polygons with a constrained triangulation", use a stack to push/pop line strings each time an intersection is found. 
+X Maintain the source of each constraint when building the triangulation. Maybe with the data pointer? A single constraint may come from multiple sources.
+X Build a boolean OddEven inside/outside map for each input linear ring
+X Determine the final triangle class (inside/outside) using boolean logic on the inside/outside map. This should enable intersection, union, etc.
+X As listed in "2012 - Automatically repairing invalid polygons with a constrained triangulation", use a stack to push/pop line strings each time an intersection is found. 
   + The first/last line string is the exterior, all others are interiors. 
   + If a linestring is mirrored it is degenerate and can be erased
   + If the linestring is closed, create a ring out of it.
+
+* Get all tests working and commit
+* Add a function for adding sites when constrained edges interesect.
+  + Run before insertEdgeCDT
+  + Traverse the triangulation in a similar fashion to insertEdgeCDT
+  + If an intersection is found, insert a new site, then recrusively continue searching for more intersections
+  + Inserting a new site should just greedily add the best edges around the site. Don't be too concerned with maintaining the Delaunay rules, because we can't
 */
 
 type ringReference struct {

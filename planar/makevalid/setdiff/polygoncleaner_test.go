@@ -110,6 +110,7 @@ func TestPolygonMakeValid(t *testing.T) {
 			expectedWKT: `POLYGON ((0 2,0 -1,1.5 -0.25,3 -1,2 1,1.5 0.5,0 2))`,
 			expectedInside: "inside: [[0 -1],[0 2],[1 0]]\ninside: [[0 -1],[1 0],[1.5 -0.25]]\ninside: [[0 2],[1.5 0.5],[1 0]]\ninside: [[1 0],[1.5 0.5],[2 0]]\ninside: [[1 0],[2 0],[1.5 -0.25]]\ninside: [[1.5 -0.25],[2 0],[3 -1]]\ninside: [[1.5 0.5],[2 1],[2 0]]\ninside: [[2 0],[2 1],[3 -1]]",
 		},
+		// Re-enable after the similar test in triangulator_test (line ~370) is re-enabled.
 		// {
 		// 	// Overlapping multipolygon w/ hole. Should produce a single 
 		// 	// polygon with a smaller hole
