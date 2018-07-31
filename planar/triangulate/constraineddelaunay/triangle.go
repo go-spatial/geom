@@ -150,6 +150,7 @@ If tri is nil a panic will occur.
 */
 func (tri *Triangle) opposedTriangle(v quadedge.Vertex) (*Triangle, error) {
 	qe := tri.Qe
+
 	for qe.Orig().Equals(v) == false {
 
 		qe = qe.RNext()

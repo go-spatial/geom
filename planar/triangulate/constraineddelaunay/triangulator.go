@@ -98,6 +98,7 @@ func (tri *Triangulator) createSegment(s triangulate.Segment, data interface{}) 
 	}
 
 	ct, err := tri.findIntersectingTriangle(s)
+
 	if err != nil && err != ErrCoincidentEdges {
 		return err
 	}
@@ -111,6 +112,7 @@ func (tri *Triangulator) createSegment(s triangulate.Segment, data interface{}) 
 
 	qe = quadedge.Connect(from, to)
 	addDataToEdge(qe, data)
+
 	// since we aren't adding any vertices we don't need to modify the vertex
 	// index.
 	return nil
@@ -706,7 +708,6 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 			log.Printf("new ab: %v", *ab)
 			flagEdgeForRemoval = true
 
-
 		// if the constrained edge is passing through another constrained edge
 		case tri.IsConstraint(shared):
 			// find the point of intersection
@@ -720,6 +721,7 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 			if err := tri.splitEdge(shared, iv); err != nil {
 				return err
 			}
+			tri.deleteEdge(shared)
 			tseq, err = t.opposedTriangle(v)
 			if err != nil {
 				return err
@@ -1106,7 +1108,6 @@ func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) erro
 			return fmt.Errorf("t2 is still invalid: %v", &t2)
 		}
 	}
-
 
 	// since we aren't adding any vertices we don't need to modify the vertex
 	// index.

@@ -80,7 +80,7 @@ func TestQuadEdgeSubdivisionDelete(t *testing.T) {
 		
 		_, err = uut.LocateSegment(Vertex{100,1000}, tc.b)
 		if err == nil {
-			t.Errorf("expected %v got %v", ErrLocateFailure{}, err)
+			t.Errorf("expected %v got %v", ErrLocateFailure, err)
 		}
 
 		if qe.Orig().Equals(tc.a) == false || qe.Dest().Equals(tc.b) == false {

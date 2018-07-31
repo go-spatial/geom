@@ -48,6 +48,7 @@ func TestFindIntersectingTriangle(t *testing.T) {
 
 		// find the triangle
 		tri, err := uut.findIntersectingTriangle(triangulate.NewSegment(tc.searchFrom))
+
 		if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
 			t.Fatalf("error, expected %v got %v", reflect.TypeOf(tc.err), reflect.TypeOf(err))
 			return
