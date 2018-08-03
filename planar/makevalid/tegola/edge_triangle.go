@@ -43,7 +43,7 @@ func triangulateGeometry(g geom.Geometry) (geom.MultiPolygon, error) {
 		}
 	}
 	// TODO(gdey): We need to insure that GetTriangles does not dup the first point to the
-	//              last point.
+	//              last point. It may be better if it returned triangles and we moved triangles to Geom.
 	return uut.GetTriangles()
 }
 
@@ -68,14 +68,12 @@ func newEdgeIndexTriangles(ctx context.Context, hm planar.HitMapper, g geom.Geom
 		}
 		triangles = append(triangles, tri)
 	}
-	if debug {
-		log.Printf("Got the following triangles: %v", triangles)
-	}
 
 	t := edgeIndexTriangles{
 		triangles: make([]triangle, len(triangles)),
 		edgeMap:   edgeMapFromTriangles(triangles...),
 	}
+
 	copy(t.triangles, triangles)
 	return &t, nil
 }
@@ -123,7 +121,7 @@ func (eit *edgeIndexTriangles) ringForTriangle(ctx context.Context, idx int, see
 	var ok bool
 
 	if debug {
-		log.Printf("Getting ring for Triangle %v", idx)
+		log.Printf("getting ring for triangle %v", idx)
 	}
 
 	seen[idx] = true
@@ -136,17 +134,6 @@ func (eit *edgeIndexTriangles) ringForTriangle(ctx context.Context, idx int, see
 	rng = append(rng, eit.triangles[idx][:]...)
 	cidxs := []int{idx, idx, idx}
 	cidx := cidxs[len(cidxs)-1]
-
-	if debug {
-		log.Printf("Triangles: Starting at %v", idx)
-		for i := range eit.triangles {
-			log.Printf("Triangle(%v) %v", i, eit.triangles[i])
-		}
-		log.Printf("EdgeMap")
-		for k, v := range eit.edgeMap {
-			log.Printf("Edge %v  => %v", k, v)
-		}
-	}
 
 RING_LOOP:
 	for {
@@ -178,7 +165,7 @@ RING_LOOP:
 		}
 
 		if debug {
-			log.Printf("Check to see if we have seen the triangle we are going to jump to.")
+			log.Printf("check to see if we have seen the triangle we are going to jump to.")
 		}
 
 		// Check to see if we have reached the triangle before.
@@ -187,7 +174,7 @@ RING_LOOP:
 				continue
 			}
 			if debug {
-				log.Printf("We have encountered idx (%v) before at %v", cidx, i)
+				log.Printf("we have encountered idx (%v) before at %v", cidx, i)
 			}
 			// need to move all the points over
 			tlen := len(rng) - (i + 1)
@@ -212,19 +199,17 @@ RING_LOOP:
 }
 
 // polygonForRing returns a polygon for the given ring, this will destroy the ring.
-func (eit *edgeIndexTriangles) polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64) {
+func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64) {
 	if debug {
-		log.Printf("Turning ring into polygon.")
+		log.Printf("turn ring into polygon.")
 	}
-	if len(rng) == 0 {
+
+	if len(rng) <= 2 {
 		return nil
 	}
 
 	// normalize ring
 	cmp.RotateToLeftMostPoint(rng)
-	if len(rng) <= 3 {
-		return [][][2]float64{rng}
-	}
 
 	pIdx := func(i int) int {
 		if i == 0 {
@@ -251,10 +236,8 @@ func (eit *edgeIndexTriangles) polygonForRing(ctx context.Context, rng [][2]floa
 	// let's build an index of where the points that we are walking are. That way when we encounter the same
 	// point we are able to “jump” to that point.
 	ptIndex := map[[2]float64]int{}
-	var (
-		ok              bool
-		pidx, idx, nidx int
-	)
+	var ok bool
+	var idx int
 
 	// Let's walk the points
 	for i := 0; i < len(rng); i++ {
@@ -262,103 +245,84 @@ func (eit *edgeIndexTriangles) polygonForRing(ctx context.Context, rng [][2]floa
 		if ctx.Err() != nil {
 			return nil
 		}
-		pt := rng[i]
 
 		// check to see if we have already seen this point.
-		if idx, ok = ptIndex[pt]; !ok {
+		if idx, ok = ptIndex[rng[i]]; !ok {
 			ptIndex[rng[i]] = i
 			continue
 		}
 
-		if debug {
-			log.Printf("Ring %v", rng)
-			log.Printf("Found Bubble at %v", i)
-		}
-
 		// We need to figure out which type of bubble this is.
-		pidx, nidx = pIdx(idx), nIdx(i)
+		pidx, nidx := pIdx(idx), nIdx(i)
 
-		if debug {
-			log.Printf("Check to see what kind of bubble: %v : %v -- %v : %v ", pidx, idx, i, nidx)
-			log.Printf("Prev Pt: %v    Next Pt: %v", rng[pidx], rng[nidx])
-
+		// Clear out ptIndex of the values we are going to cut.
+		for j := idx; j <= i; j++ {
+			delete(ptIndex, rng[j])
 		}
 
 		// ab…ba ring. So we need to remove all the way to a.
 		if nidx != pidx && cmp.PointEqual(rng[pidx], rng[nidx]) {
 			if debug {
-				log.Printf("bubble type ab … ba")
-				log.Printf("pidx: %v idx: %v i: %v nidx: %v", pidx, idx, i, nidx)
+				log.Printf("bubble type ab…ba: (% 5v)(% 5v) … (% 5v)(% 5v)", pidx, idx, i, nidx)
 			}
 
-			// Cuts are in counter-clockwise order.
-			for j := idx; j <= i; j++ {
-				if debug {
-					log.Printf("Adding Point(%v) to cut %v", j, rng[j])
-				}
-				delete(ptIndex, rng[j])
-			}
-			// These may have wrapped; so don't range with them.
-			delete(ptIndex, rng[nidx])
+			// Delete the a points as well.
 			delete(ptIndex, rng[pidx])
 
 			sliver := cut(&rng, pidx, nidx)
 			// remove ther start ab
 			sliver = sliver[2:]
-			{ // make a copy to free up memory.
+			if len(sliver) >= 3 { // make a copy to free up memory.
 				ps := make([][2]float64, len(sliver))
 				copy(ps, sliver)
 				cmp.RotateToLeftMostPoint(ps)
 				plyg = append(plyg, ps)
 			}
 
-			i = pidx
-			if i >= len(rng) {
+			if i = idx - 1; i < 0 {
 				i = 0
 			}
-			ptIndex[rng[i]] = i
 			continue
 		}
 
-		// ab … bc
-		if debug {
-			log.Printf("bubble type ab…bc")
-		}
-		// Do a quick check to see if b is on ac
+		// do a quick check to see if b is on ac
 		removeB := planar.IsPointOnLine(rng[i], rng[pidx], rng[nidx])
 
-		// Cuts are in counter-clockwise order.
-		for j := idx; j <= i-1; j++ {
-			delete(ptIndex, rng[j])
+		// ab … bc
+		if debug {
+			log.Printf("bubble type ab…bc: (% 5v)(% 5v) … (% 5v)(% 5v) == %t", pidx, idx, i, nidx, removeB)
 		}
 
 		sliver := cut(&rng, idx, i)
-		cmp.RotateToLeftMostPoint(sliver)
-		plyg = append(plyg, sliver)
+		if len(sliver) >= 3 {
+			cmp.RotateToLeftMostPoint(sliver)
+			plyg = append(plyg, sliver)
+		}
 
 		if removeB {
 			cut(&rng, idx, idx+1)
+			if idx == 0 {
+				break
+			}
+			i = idx - 1
 		}
-
-		i = idx
-		ptIndex[rng[i]] = i
 	}
+
+	if len(rng) <= 2 {
+		if debug {
+			log.Println("rng:", rng)
+			log.Println("plyg:", plyg)
+			panic("main ring is not correct!")
+		}
+		return nil
+	}
+
 	plyg[0] = make([][2]float64, len(rng))
 	copy(plyg[0], rng)
 	return plyg
 }
 
 func (eit *edgeIndexTriangles) PolygonForTriangle(ctx context.Context, idx int, seen map[int]bool) (plyg [][][2]float64) {
-
-	if debug {
-		log.Printf("Polygon For Triangle: Started at %v", idx)
-	}
 	// Get the external ring for the given triangle.
-	rng := eit.ringForTriangle(ctx, idx, seen)
-	if debug {
-		log.Printf("Got back ring: %v", rng)
-	}
-	plyg = eit.polygonForRing(ctx, rng)
-
-	return plyg
+	return polygonForRing(ctx, eit.ringForTriangle(ctx, idx, seen))
 }

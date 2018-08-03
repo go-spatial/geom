@@ -6,6 +6,28 @@ import (
 	"testing"
 )
 
+//TestCutPanic test the panic conditions of the cut function.
+func TestCutPanic(t *testing.T) {
+	test := func(start, end int) func(*testing.T) {
+		return func(t *testing.T) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Error("panic, expected panic got nil")
+				}
+			}()
+			// len for rng is 10
+			rng := [][2]float64{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {0, 5}, {0, 6}, {0, 7}, {0, 8}, {0, 9}}
+			cut(&rng, start, end)
+		}
+	}
+
+	t.Run("bad start", test(-1, 9))
+	t.Run("bad end", test(5, -1))
+	t.Run("bad start bigger then ring", test(11, 7))
+	t.Run("bad end bigger then ring", test(1, 11))
+
+}
+
 func TestCut(t *testing.T) {
 	type tcase struct {
 		ring   [][2]float64

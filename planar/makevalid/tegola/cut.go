@@ -1,8 +1,10 @@
 package tegola
 
+import "fmt"
+
 func cut(rng *[][2]float64, start, end int) (sliver [][2]float64) {
-	if start < 0 || end < 0 || start >= len(*rng) || end >= len(*rng) {
-		panic("Index out of bounds.")
+	if start < 0 || end < 0 || start >= len(*rng) || end > len(*rng) {
+		panic(fmt.Sprintf("index out of bounds[0 - %v], start %v end %v", len(*rng), start, end))
 	}
 	switch {
 	case end < start:
