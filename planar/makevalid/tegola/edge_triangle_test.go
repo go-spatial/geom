@@ -2,15 +2,21 @@ package tegola
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"sort"
 	"strconv"
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 )
+
+func init() {
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
+}
 
 func TestNewEdgeIndexTriangles(t *testing.T) {
 	type tcase struct {
@@ -283,4 +289,48 @@ func TestPolygonForTriangle(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPolygonForRing(t *testing.T) {
+	type tcase struct {
+		rng  [][2]float64
+		plyg [][][2]float64
+	}
+
+	fn := func(t *testing.T, tc tcase) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("panic'd, expected nil, got %v", r)
+			}
+		}()
+
+		plyg := polygonForRing(context.Background(), tc.rng)
+		if !cmp.PolygonEqual(tc.plyg, plyg) {
+			t.Errorf("polygon, expected %v got %v", tc.plyg, plyg)
+		}
+	}
+
+	tests := [...]tcase{
+
+		{ // issue-12
+			rng: [][2]float64{
+				{985, 1485}, {986, 1484}, {986, 1483}, {989, 1483}, {991, 1482},
+				{993, 1483}, {993, 1485}, {992, 1487}, {989, 1489}, {988, 1490},
+				{987, 1489}, {986, 1487}, {988, 1485}, {986, 1487},
+			},
+			plyg: [][][2]float64{
+				{
+					{985, 1485}, {986, 1484}, {986, 1483}, {989, 1483}, {991, 1482},
+					{993, 1483}, {993, 1485}, {992, 1487}, {989, 1489}, {988, 1490},
+					{987, 1489},
+				},
+			},
+		},
+	}
+
+	for i, tc := range tests {
+		tc := tc
+		t.Run(strconv.Itoa(i), func(t *testing.T) { fn(t, tc) })
+	}
+
 }
