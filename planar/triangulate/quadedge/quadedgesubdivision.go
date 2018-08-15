@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
@@ -478,7 +479,35 @@ Returns true if the vertex lies on the edge
 If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) IsOnEdge(e *QuadEdge, p geom.Pointer) bool {
-	dist := planar.DistanceToLineSegment(p, e.Orig(), e.Dest())
+	// vertext version of DistanceToLineSegment from planar/distance.go
+	v := e.Orig()
+	w := e.Dest()
+	pv := p.XY()
+
+	dist2 := func(a, b Vertex) float64 {
+		v1 := a[0] - b[0]
+		v2 := a[1] - b[1]
+		return v1*v1 + v2*v2
+	}
+	// note that this is intentionally the distance^2, not distance.
+	l2 := dist2(v, w)
+
+	var dist float64
+	if l2 == 0 {
+		dist = math.Sqrt(dist2(pv, v))
+	} else {
+
+		px := pv[0]
+		py := pv[1]
+		vx := v[0]
+		vy := v[1]
+		wx := w[0]
+		wy := w[1]
+
+		t := ((px-vx)*(wx-vx) + (py-vy)*(wy-vy)) / l2
+		t = math.Max(0, math.Min(1, t))
+		dist = math.Sqrt(dist2(pv, Vertex{vx + t*(wx-vx), vy + t*(wy-vy)}))
+	}
 
 	// heuristic (hack?)
 	return dist < qes.edgeCoincidenceTolerance
