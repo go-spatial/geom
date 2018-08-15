@@ -283,13 +283,13 @@ func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*
 		iter++
 
 		/*
-		So far it has always been the case that failure to locate indicates an
-		invalid subdivision. So just fail completely. (An alternative would be
-		to perform an exhaustive search for the containing triangle, but this
-		would mask errors in the subdivision topology)
+			So far it has always been the case that failure to locate indicates an
+			invalid subdivision. So just fail completely. (An alternative would be
+			to perform an exhaustive search for the containing triangle, but this
+			would mask errors in the subdivision topology)
 
-		This can also happen if two vertices are located very close together,
-		since the orientation predicates may experience precision failures.
+			This can also happen if two vertices are located very close together,
+			since the orientation predicates may experience precision failures.
 		*/
 		if iter > maxIter {
 			return nil, ErrLocateFailure
@@ -752,11 +752,13 @@ func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadE
 
 	visitedEdges := make(edgeSet)
 
+	triEdges := make([]*QuadEdge, 0, 3) // reuse slice for all fetchTriangleToVisit calls
 	for len(*stack) > 0 {
 		edge := stack.pop()
 		if !visitedEdges.contains(edge) {
-			triEdges := qes.fetchTriangleToVisit(edge, stack, includeFrame, visitedEdges)
-			if triEdges != nil {
+			triEdges = triEdges[:0]
+			triEdges = qes.fetchTriangleToVisit(edge, stack, includeFrame, visitedEdges, triEdges)
+			if len(triEdges) > 0 {
 				triVisitor(triEdges)
 			}
 		}
@@ -772,8 +774,7 @@ visited (for instance, if it is outer)
 
 If qes is nil a panic will occur.
 */
-func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edgeStack, includeFrame bool, visitedEdges edgeSet) []*QuadEdge {
-	triEdges := make([]*QuadEdge, 0, 3)
+func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edgeStack, includeFrame bool, visitedEdges edgeSet, triEdges []*QuadEdge) []*QuadEdge {
 	curr := edge
 	var isFrame bool
 
@@ -805,7 +806,7 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 	}
 
 	if isFrame && !includeFrame {
-		return nil
+		return triEdges[:0] // return empty triEdges intead of nil, so that we can reuse the slice
 	}
 	return triEdges
 }
@@ -892,7 +893,7 @@ func (tcv *TriangleCoordinatesVisitor) visit(triEdges []*QuadEdge) {
 	}
 
 	var triangle geom.Polygon
-	triangle = append(triangle, [][2]float64{})
+	triangle = append(triangle, make([][2]float64, 0, 4))
 	for i := 0; i < 3; i++ {
 		v := triEdges[i].Orig()
 		triangle[0] = append(triangle[0], [2]float64(v))
