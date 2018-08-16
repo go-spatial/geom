@@ -16,10 +16,10 @@ const (
 )
 
 func AreLinesColinear(l1, l2 geom.Line) bool {
-	x1, y1 := l1.Point1().X(), l1.Point1().Y()
-	x2, y2 := l1.Point2().X(), l1.Point2().Y()
-	x3, y3 := l2.Point1().X(), l2.Point1().Y()
-	x4, y4 := l2.Point2().X(), l2.Point2().Y()
+	x1, y1 := l1[0][0], l1[0][1]
+	x2, y2 := l1[1][0], l1[1][1]
+	x3, y3 := l2[0][0], l2[0][1]
+	x4, y4 := l2[1][0], l2[1][1]
 
 	denom := ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4))
 	// The lines are parallel or they overlap fi denom is 0.
@@ -37,8 +37,8 @@ func AreLinesColinear(l1, l2 geom.Line) bool {
 		ymin, ymax = y2, y1
 	}
 
-	fn := func(x, y float64) bool { return xmin <= x && x <= xmax && ymin <= y && y <= ymax }
-	return fn(x3, y3) || fn(x4, y4)
+	return (xmin <= x3 && x3 <= xmax && ymin <= y3 && y3 <= ymax) ||
+		(xmin <= x4 && x4 <= xmax && ymin <= y4 && y4 <= ymax)
 }
 
 // LineIntersect find the intersection point (x,y) between two lines if there is one. Ok will be true if it found an interseciton point.
