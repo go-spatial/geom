@@ -77,7 +77,7 @@ func NewEventQueue(segments []geom.Line) (eq EventQueue) {
 		p2 := eq.segments[i][1]
 		eq.events[idx].ev = p1
 		eq.events[idx+1].ev = p2
-		if p1[0] < p2[0] || (p1[0] != p2[0] && p1[1] < p2[1]) {
+		if p1[0] < p2[0] || (p1[0] == p2[0] && p1[1] < p2[1]) {
 			eq.events[idx].edgeType = LEFT
 			eq.events[idx+1].edgeType = RIGHT
 		} else {
