@@ -129,6 +129,66 @@ func GetCoordinates(g Geometry) (pts []Point, err error) {
 	return pts, err
 }
 
+// getExtent is a helper function to efficiently build an Extent without
+// collecting all coordinates first.
+func getExtent(g Geometry, e *Extent) error {
+	switch gg := g.(type) {
+
+	default:
+
+		return ErrUnknownGeometry{g}
+
+	case Pointer:
+		e.AddPoints(gg.XY())
+		return nil
+
+	case MultiPointer:
+		e.AddPoints(gg.Points()...)
+		return nil
+
+	case LineStringer:
+		e.AddPoints(gg.Verticies()...)
+		return nil
+
+	case MultiLineStringer:
+
+		for _, ls := range gg.LineStrings() {
+			if err := getExtent(LineString(ls), e); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case Polygoner:
+
+		for _, ls := range gg.LinearRings() {
+			if err := getExtent(LineString(ls), e); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case MultiPolygoner:
+
+		for _, p := range gg.Polygons() {
+			if err := getExtent(Polygon(p), e); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case Collectioner:
+
+		for _, child := range gg.Geometries() {
+			if err := getExtent(child, e); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	}
+}
+
 // extractLines is a helper function for ExtractLines to avoid too many
 // array copies and still provide a convenient interface to the user.
 func extractLines(g Geometry, lines *[]Line) error {

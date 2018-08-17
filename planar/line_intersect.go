@@ -16,10 +16,10 @@ const (
 )
 
 func AreLinesColinear(l1, l2 geom.Line) bool {
-	x1, y1 := l1.Point1().X(), l1.Point1().Y()
-	x2, y2 := l1.Point2().X(), l1.Point2().Y()
-	x3, y3 := l2.Point1().X(), l2.Point1().Y()
-	x4, y4 := l2.Point2().X(), l2.Point2().Y()
+	x1, y1 := l1[0][0], l1[0][1]
+	x2, y2 := l1[1][0], l1[1][1]
+	x3, y3 := l2[0][0], l2[0][1]
+	x4, y4 := l2[1][0], l2[1][1]
 
 	denom := ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4))
 	// The lines are parallel or they overlap fi denom is 0.
@@ -37,8 +37,8 @@ func AreLinesColinear(l1, l2 geom.Line) bool {
 		ymin, ymax = y2, y1
 	}
 
-	fn := func(x, y float64) bool { return xmin <= x && x <= xmax && ymin <= y && y <= ymax }
-	return fn(x3, y3) || fn(x4, y4)
+	return (xmin <= x3 && x3 <= xmax && ymin <= y3 && y3 <= ymax) ||
+		(xmin <= x4 && x4 <= xmax && ymin <= y4 && y4 <= ymax)
 }
 
 // LineIntersect find the intersection point (x,y) between two lines if there is one. Ok will be true if it found an interseciton point.
@@ -127,8 +127,53 @@ func LineIntersectBigFloat(l1, l2 geom.Line) (pt [2]*big.Float, ok bool) {
 
 }
 
+// LineIntersectFloat find the intersection point (x,y) between two lines if
+// there is one. Ok will be true if it found an intersection point and if the
+// point is on both lines.
+// ref: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
+func LineIntersectFloat(l1, l2 geom.Line) (pt [2]float64, ok bool) {
+
+	x1, y1 := l1.Point1().X(), l1.Point1().Y()
+	x2, y2 := l1.Point2().X(), l1.Point2().Y()
+	x3, y3 := l2.Point1().X(), l2.Point1().Y()
+	x4, y4 := l2.Point2().X(), l2.Point2().Y()
+
+	deltaX12 := x1 - x2
+	deltaX13 := x1 - x3
+	deltaX34 := x3 - x4
+	deltaY12 := y1 - y2
+	deltaY13 := y1 - y3
+	deltaY34 := y3 - y4
+	denom := (deltaX12 * deltaY34) - (deltaY12 * deltaX34)
+
+	// The lines are parallel or they overlap. No single point.
+	if denom == 0 {
+		return pt, false
+	}
+
+	xnom := (((x1 * y2) - (y1 * x2)) * deltaX34) - (deltaX12 * ((x3 * y4) - (y3 * x4)))
+	ynom := (((x1 * y2) - (y1 * x2)) * deltaY34) - (deltaY12 * ((x3 * y4) - (y3 * x4)))
+	bx := (xnom / denom)
+	by := (ynom / denom)
+	if bx == -0 {
+		bx = 0
+	}
+	if by == -0 {
+		by = 0
+	}
+
+	t := ((deltaX13 * deltaY34) - (deltaY13 * deltaX34)) / denom
+	u := -((deltaX12 * deltaY13) - (deltaY12 * deltaX13)) / denom
+
+	intersects := u >= 0.0 && u <= 1.0 && t >= 0.0 && t <= 1.0
+	return [2]float64{bx, by}, intersects
+
+}
+
 // SegmentIntersect finds the intersection point (x,y) between two lines if there is one. Ok will be true if it found a point that is on both line segments, otherwise it will be false.
 func SegmentIntersect(l1, l2 geom.Line) (pt [2]float64, ok bool) {
+	// XXX (olt) use float64 instead of bigfloat
+	return LineIntersectFloat(l1, l2)
 	bpt, ok := LineIntersectBigFloat(l1, l2)
 	if !ok {
 		if debug {

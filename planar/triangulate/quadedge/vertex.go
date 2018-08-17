@@ -15,8 +15,6 @@ package quadedge
 import (
 	"encoding/json"
 	"math"
-
-	"github.com/go-spatial/geom/planar"
 )
 
 const (
@@ -67,7 +65,9 @@ func (u Vertex) Equals(other Vertex) bool {
 }
 
 func (u Vertex) EqualsTolerance(other Vertex, tolerance float64) bool {
-	if planar.PointDistance(u, other) < tolerance {
+	v1 := u[0] - other[0]
+	v2 := u[1] - other[1]
+	if math.Sqrt(v1*v1+v2*v2) < tolerance {
 		return true
 	}
 	return false
@@ -182,9 +182,23 @@ c - a vertex of the triangle
 Return true if this vertex is in the circumcircle of (a,b,c)
 */
 func (u Vertex) IsInCircle(a Vertex, b Vertex, c Vertex) bool {
-	return TrianglePredicate.IsInCircleRobust(a, b, c, u)
-	// non-robust - best to not use
-	//return TrianglePredicate.isInCircle(a.p, b.p, c.p, this.p);
+	// vertext version of IsInCircleNormalized from IsInCircleNormalized
+	adx := a[0] - u[0]
+	ady := a[1] - u[1]
+	bdx := b[0] - u[0]
+	bdy := b[1] - u[1]
+	cdx := c[0] - u[0]
+	cdy := c[1] - u[1]
+
+	abdet := adx*bdy - bdx*ady
+	bcdet := bdx*cdy - cdx*bdy
+	cadet := cdx*ady - adx*cdy
+	alift := adx*adx + ady*ady
+	blift := bdx*bdx + bdy*bdy
+	clift := cdx*cdx + cdy*cdy
+
+	disc := alift*bcdet + blift*cadet + clift*abdet
+	return disc > 0
 }
 
 /**

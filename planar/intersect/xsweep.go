@@ -33,9 +33,9 @@ func (et eventType) String() string {
 }
 
 type event struct {
-	edge     int         // the indext number of the edge in the segment list.
-	edgeType eventType   // Is this the left or right edge.
-	ev       *geom.Point // event vertex
+	edge     int        // the indext number of the edge in the segment list.
+	edgeType eventType  // Is this the left or right edge.
+	ev       geom.Point // event vertex
 }
 
 type EventQueue struct {
@@ -43,19 +43,13 @@ type EventQueue struct {
 	segments []geom.Line
 }
 
-func (e *event) Point() *geom.Point { return e.ev }
-func (e *event) Edge() int          { return e.edge }
+func (e *event) Point() geom.Point { return e.ev }
+func (e *event) Edge() int         { return e.edge }
 
 func (eq EventQueue) Len() int      { return len(eq.events) }
 func (eq EventQueue) Swap(i, j int) { eq.events[i], eq.events[j] = eq.events[j], eq.events[i] }
 func (eq EventQueue) Less(i, j int) bool {
 	pt1, pt2 := eq.events[i].ev, eq.events[j].ev
-	if pt2 == nil {
-		return false
-	}
-	if pt1 == nil {
-		return true
-	}
 	if pt1[0] != pt2[0] {
 		return pt1[0] < pt2[0]
 	}
@@ -79,9 +73,11 @@ func NewEventQueue(segments []geom.Line) (eq EventQueue) {
 		idx := 2 * i
 		eq.events[idx].edge = i
 		eq.events[idx+1].edge = i
-		eq.events[idx].ev = eq.segments[i].Point1()
-		eq.events[idx+1].ev = eq.segments[i].Point2()
-		if cmp.PointerLess(eq.segments[i].Point1(), eq.segments[i].Point2()) {
+		p1 := eq.segments[i][0]
+		p2 := eq.segments[i][1]
+		eq.events[idx].ev = p1
+		eq.events[idx+1].ev = p2
+		if p1[0] < p2[0] || (p1[0] == p2[0] && p1[1] < p2[1]) {
 			eq.events[idx].edgeType = LEFT
 			eq.events[idx+1].edgeType = RIGHT
 		} else {
@@ -105,6 +101,7 @@ func NewEventQueue(segments []geom.Line) (eq EventQueue) {
 
 func (eq *EventQueue) FindIntersects(ctx context.Context, connected bool, fn func(src, dest int, pt [2]float64) error) error {
 	segmap := make(map[int]struct{})
+	keys := make([]int, 0, 2)
 	for _, ev := range eq.events {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -129,13 +126,10 @@ func (eq *EventQueue) FindIntersects(ctx context.Context, connected bool, fn fun
 		if len(segmap) == 0 {
 			continue
 		}
-
-		keys := make([]int, len(segmap))
+		keys = keys[:0]
 		{
-			i := 0
 			for k := range segmap {
-				keys[i] = k
-				i++
+				keys = append(keys, k)
 			}
 			sort.Sort(sort.IntSlice(keys))
 		}
