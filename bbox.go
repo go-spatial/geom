@@ -147,15 +147,7 @@ func (e *Extent) AddPointers(pts ...Pointer) {
 
 // AddPointer expands the specified envelop to contain p.
 func (e *Extent) AddGeometry(g Geometry) error {
-	points, err := GetCoordinates(g)
-	if err != nil {
-		return err
-	}
-
-	for i := range points {
-		e.AddPointers(points[i])
-	}
-	return nil
+	return getExtent(g, e)
 }
 
 // AsPolygon will return the extent as a Polygon
@@ -228,15 +220,12 @@ func NewExtent(points ...[2]float64) *Extent {
 }
 
 func NewExtentFromGeometry(g Geometry) (*Extent, error) {
-	points, err := GetCoordinates(g)
+	e := Extent{}
+	err := getExtent(g, &e)
 	if err != nil {
 		return nil, err
 	}
-	pts := make([][2]float64, len(points))
-	for i := range points {
-		pts[i] = points[i]
-	}
-	return NewExtent(pts...), nil
+	return &e, nil
 }
 
 // Contains will return whether the given  extent is inside of the  extent.
