@@ -13,14 +13,13 @@ type Ring struct {
 	index         *SearchSegmentIdxs
 	IncludeBorder bool
 
-	bbox *geom.Extent
+	bbox geom.Extent
 }
 
 func NewRing(segs []geom.Line) *Ring {
 	r := &Ring{
 		segs:  segs,
 		index: NewSearchSegmentIdxs(segs),
-		bbox:  new(geom.Extent),
 	}
 	for i := range segs {
 		r.bbox.AddPoints(segs[i][0], segs[i][1])
@@ -29,7 +28,7 @@ func NewRing(segs []geom.Line) *Ring {
 }
 
 func NewRingFromPointers(pts ...geom.Pointer) *Ring {
-	var segs []geom.Line
+	segs := make([]geom.Line, 0, len(pts))
 	lp := len(pts) - 1
 	for i := range pts {
 		xy := pts[i].XY()
@@ -41,7 +40,7 @@ func NewRingFromPointers(pts ...geom.Pointer) *Ring {
 }
 
 func NewRingFromPoints(pts ...[2]float64) *Ring {
-	var segs []geom.Line
+	segs := make([]geom.Line, 0, len(pts))
 	lp := len(pts) - 1
 	for i := range pts {
 		segs = append(segs, geom.Line{pts[lp], pts[i]})
@@ -54,7 +53,7 @@ func (r *Ring) Extent() *geom.Extent {
 	if r == nil {
 		return nil
 	}
-	return r.bbox
+	return &r.bbox
 }
 
 func (r *Ring) ContainsPoint(pt [2]float64) bool {
