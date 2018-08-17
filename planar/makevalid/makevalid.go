@@ -66,6 +66,14 @@ func (a ByXYPoint) Len() int           { return len(a) }
 func (a ByXYPoint) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByXYPoint) Less(i, j int) bool { return cmp.PointLess(a[i], a[j]) }
 
+type ByXYLine []geom.Line
+
+func (a ByXYLine) Len() int      { return len(a) }
+func (a ByXYLine) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByXYLine) Less(i, j int) bool {
+	return cmp.PointLess(a[i][0], a[j][0]) || (cmp.PointEqual(a[i][0], a[j][0]) && cmp.PointLess(a[i][1], a[j][1]))
+}
+
 // Destructure will take a multipolygon, break up the polygon into a set of segments that have the following characteristics:
 // 1. no segment will intersect with another segment, other then at the end points; or colinear and partial-coliner lines.
 // 2. normalize direction of line segments to left to right
@@ -108,7 +116,7 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 
 	// Time to start splitting lines. if we have a clip box we can ignore the first 4 (0,1,2,3) lines.
 
-	nsmap := make(map[geom.Line]struct{})
+	nsegs := make([]geom.Line, 0, len(segments))
 
 	for i := 0; i < len(segments); i++ {
 		pts := append([][2]float64{segments[i][0], segments[i][1]}, ipts[i]...)
@@ -125,21 +133,35 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 				// Not in clipbox discard segment.
 				continue
 			}
-			nsmap[nl] = struct{}{}
+			nsegs = append(nsegs, nl)
 		}
 		if ctx.Err() != nil {
 			return nil, err
 		}
 	}
 
-	nsegs := make(geom.MultiLineString, len(nsmap))
-	i := 0
-	for s := range nsmap {
-		s := s
-		nsegs[i] = s[:]
-		i++
+	unique(nsegs)
+	var mls = make(geom.MultiLineString, len(nsegs))
+	for i := range nsegs {
+		mls[i] = nsegs[i][:]
 	}
-	return nsegs, nil
+
+	return mls, nil
+}
+
+// unique sorts segments by XY and filters out duplicate segments.
+func unique(segs []geom.Line) {
+	sort.Sort(ByXYLine(segs))
+
+	// we can use a slice trick to avoid copying the array again. Maybe better
+	// than two index variables...
+	uniqued := segs[:0]
+	for i := 0; i < len(segs); i++ {
+		if i == 0 || !(cmp.PointEqual(segs[i][0], segs[i-1][0]) && cmp.PointEqual(segs[i][1], segs[i-1][1])) {
+			uniqued = append(uniqued, segs[i])
+		}
+	}
+	// uniqued is backed by segs, no need to return it
 }
 
 func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (*geom.MultiPolygon, error) {
