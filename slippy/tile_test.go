@@ -14,14 +14,14 @@ func TestNewTile(t *testing.T) {
 		z, x, y  uint
 		buffer   float64
 		srid     uint64
-		eBounds  [4]float64
+		eBounds  *geom.Extent
 		eExtent  *geom.Extent
 		eBExtent *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 
 		// Test the new functions.
-		tile := slippy.NewTile(tc.z, tc.x, tc.y, tc.buffer, tc.srid)
+		tile := slippy.NewTile(tc.z, tc.x, tc.y, tc.buffer)
 		{
 			gz, gx, gy := tile.ZXY()
 			if gz != tc.z {
@@ -36,9 +36,6 @@ func TestNewTile(t *testing.T) {
 			if tile.Buffer != tc.buffer {
 				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
 			}
-			if tile.SRID != tc.srid {
-				t.Errorf("srid, expected %v got %v", tc.srid, tile.SRID)
-			}
 		}
 		{
 			bounds := tile.Bounds()
@@ -50,20 +47,14 @@ func TestNewTile(t *testing.T) {
 			}
 		}
 		{
-			bufferedExtent, srid := tile.BufferedExtent()
-			if srid != tc.srid {
-				t.Errorf("buffered extent srid, expected %v got %v", tc.srid, srid)
-			}
+			bufferedExtent := tile.BufferedExtent(tc.srid)
 
 			if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
 				t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
 			}
 		}
 		{
-			extent, srid := tile.Extent()
-			if srid != tc.srid {
-				t.Errorf("extent srid, expected %v got %v", tc.srid, srid)
-			}
+			extent := tile.Extent(tc.srid)
 
 			if !cmp.GeomExtent(tc.eExtent, extent) {
 				t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
@@ -86,7 +77,10 @@ func TestNewTile(t *testing.T) {
 				[2]float64{-1.017529720390625e+07, 1.017529720390625e+07},
 				[2]float64{156543.03390624933, -156543.03390624933},
 			),
-			eBounds: [4]float64{-90, 66.51, 0, 0},
+			eBounds: geom.Hull(
+				[2]float64{-90, 66.51},
+				[2]float64{0, 0},
+			),
 		},
 		{
 			z:      16,
@@ -102,7 +96,10 @@ func TestNewTile(t *testing.T) {
 				[2]float64{-1.3044447051847773e+07, 3.8567162532485295e+06},
 				[2]float64{-1.3043816446364507e+07, 3.856085647765265e+06},
 			),
-			eBounds: [4]float64{-117.18, 32.70, -117.17, 32.70},
+			eBounds: geom.Hull(
+				[2]float64{-117.18, 32.70},
+				[2]float64{-117.17, 32.70},
+			),
 		},
 	}
 	for i, tc := range tests {
@@ -136,9 +133,6 @@ func TestNewTileLatLon(t *testing.T) {
 			}
 			if tile.Buffer != tc.buffer {
 				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
-			}
-			if tile.SRID != tc.srid {
-				t.Errorf("srid, expected %v got %v", tc.srid, tile.SRID)
 			}
 		}
 
@@ -199,7 +193,7 @@ func TestRangeFamilyAt(t *testing.T) {
 		expected []coord
 	}{
 		"children 1": {
-			tile:   slippy.NewTile(0, 0, 0, 0, geom.WebMercator),
+			tile:   slippy.NewTile(0, 0, 0, 0),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 0},
@@ -209,7 +203,7 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"children 2": {
-			tile:   slippy.NewTile(8, 3, 5, 0, geom.WebMercator),
+			tile:   slippy.NewTile(8, 3, 5, 0),
 			zoomAt: 10,
 			expected: []coord{
 				{10, 12, 20},
@@ -234,14 +228,14 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"parent 1": {
-			tile:   slippy.NewTile(1, 0, 0, 0, geom.WebMercator),
+			tile:   slippy.NewTile(1, 0, 0, 0),
 			zoomAt: 0,
 			expected: []coord{
 				{0, 0, 0},
 			},
 		},
 		"parent 2": {
-			tile:   slippy.NewTile(3, 3, 5, 0, geom.WebMercator),
+			tile:   slippy.NewTile(3, 3, 5, 0),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 1},
