@@ -32,7 +32,7 @@ If qes is nil a panic will occur.
 func (qes *QuadEdgeSubdivision) hasCCWNeighbor(e *QuadEdge) bool {
 	n := e
 	// if we haven't checked this edge already
-	for true {
+	for {
 		ccw := n.ONext()
 		// this will only work if the angles between edges are < 180deg
 		// if both edges are frame edges then the CCW rule may not
@@ -98,7 +98,7 @@ func (qes *QuadEdgeSubdivision) validateONext() error {
 				}
 				// this isn't a perfect check for CCW, but it should work well
 				// enough in most cases and shouldn't produce false positives.
-				if (qes.isFrameEdge(n) == false || qes.isFrameEdge(ccw) == false) && n.Orig().IsCCW(n.Dest(), ccw.Dest()) == false && qes.hasCCWNeighbor(n) == true {
+				if (qes.IsFrameEdge(n) == false || qes.IsFrameEdge(ccw) == false) && n.Orig().IsCCW(n.Dest(), ccw.Dest()) == false && qes.hasCCWNeighbor(n) == true {
 					return fmt.Errorf("edges are not CCW, expected %v to be CCW of %v", ccw, n)
 				}
 				edgeSet[n] = true

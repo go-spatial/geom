@@ -163,22 +163,24 @@ func (qe *QuadEdge) GetPrimary() *QuadEdge {
 }
 
 /*
-Sets the external data value for this edge.
+SetData sets the external data value for this edge.
 
-@param data an object containing external data
-public void setData(Object data) {
-    this.data = data;
-}
+data an object containing external data
+
+If qe is nil a panic will occur.
 */
+func (qe *QuadEdge) SetData(data interface{}) {
+    qe.data = data;
+}
 
 /*
-Gets the external data value for this edge.
+GetData returns the external data value for this edge.
 
-@return the data object
-public Object getData() {
-    return data;
-}
+If qe is nil a panic will occur.
 */
+func (qe *QuadEdge) GetData() interface{} {
+    return qe.data
+}
 
 /*
 Delete marks this quadedge as being deleted. This does not free the memory
