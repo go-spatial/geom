@@ -6,6 +6,8 @@ import (
 	"github.com/go-spatial/geom/encoding/wkt"
 )
 
+const debug = false
+
 /*
 DebugDumpEdges returns a string with the WKT representation of the
 edges. On error, an error string is returned.

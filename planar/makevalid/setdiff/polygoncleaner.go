@@ -22,8 +22,8 @@ var ErrExtractingGeomFailed = errors.New("extracting geometry failed")
 X Maintain the source of each constraint when building the triangulation. Maybe with the data pointer? A single constraint may come from multiple sources.
 X Build a boolean OddEven inside/outside map for each input linear ring
 X Determine the final triangle class (inside/outside) using boolean logic on the inside/outside map. This should enable intersection, union, etc.
-X As listed in "2012 - Automatically repairing invalid polygons with a constrained triangulation", use a stack to push/pop line strings each time an intersection is found. 
-  + The first/last line string is the exterior, all others are interiors. 
+X As listed in "2012 - Automatically repairing invalid polygons with a constrained triangulation", use a stack to push/pop line strings each time an intersection is found.
+  + The first/last line string is the exterior, all others are interiors.
   + If a linestring is mirrored it is degenerate and can be erased
   + If the linestring is closed, create a ring out of it.
 
@@ -36,17 +36,17 @@ X As listed in "2012 - Automatically repairing invalid polygons with a constrain
 */
 
 type ringReference struct {
-	exterior bool
+	exterior   bool
 	linearRing geom.LineString
 }
 
 /*
-Polygon provides methods for cleaning polygons and multipolygons. Collections 
+Polygon provides methods for cleaning polygons and multipolygons. Collections
 of polygons and multipolygons will also work.
 
 Outer rings will be counter-clockwise and inner rings will be clockwise.
 
-[2] describes the SetDiff method for labeling triangles. [1] describes the 
+[2] describes the SetDiff method for labeling triangles. [1] describes the
 method for converting triangles into linear rings and geometries (section 3.5)
 
 1. Ohori, Ken Arroyo, Hugo Ledoux, and Martijn Meijers. "Validation and automatic repair of planar partitions using a constrained triangulation." Photogrammetrie-Fernerkundung-Geoinformation 2012, no. 5 (2012): 613-630.
@@ -57,18 +57,18 @@ https://pdfs.semanticscholar.org/d9ec/b32a7844b436fcd4757958e5eeca9563fcd2.pdf
 
 */
 type PolygonCleaner struct {
-	builder *constraineddelaunay.Triangulator
-	subdiv      *quadedge.QuadEdgeSubdivision
-	tolerance   float64
+	builder   *constraineddelaunay.Triangulator
+	subdiv    *quadedge.QuadEdgeSubdivision
+	tolerance float64
 	// run validation after many modification operations. This is expensive,
 	// but very useful when debugging.
-	validate bool
-	rings []geom.Geometry
-	ringRefs []*ringReference
+	validate  bool
+	rings     []geom.Geometry
+	ringRefs  []*ringReference
 	triLabels []map[constraineddelaunay.Triangle]bool
 	// the triangles that have been extracted into geometries.
 	extractedTris map[constraineddelaunay.Triangle]bool
-	// the triangles that have been not been extracted into geometries and are 
+	// the triangles that have been not been extracted into geometries and are
 	// labeled as inside.
 	unextractedTris []constraineddelaunay.Triangle
 }
@@ -118,7 +118,7 @@ func (pc *PolygonCleaner) addRing(exterior bool, r geom.LineString) {
 		pc.ringRefs = append(pc.ringRefs, rr)
 
 		// make sure the line string has the same first/last point
-		if cmp.PointEqual(r[0], r[len(r) - 1]) == false {
+		if cmp.PointEqual(r[0], r[len(r)-1]) == false {
 			r = append(r, r[0])
 		}
 
@@ -137,7 +137,9 @@ func (pc *PolygonCleaner) findUnextractedTri() *constraineddelaunay.Triangle {
 		for k, _ := range pc.triLabels[0] {
 			if pc.isInside(k) {
 				pc.unextractedTris = append(pc.unextractedTris, k)
-				log.Printf("k: %v", k.String())
+				if debug {
+					log.Printf("k: %v", k.String())
+				}
 			}
 		}
 
@@ -148,7 +150,9 @@ func (pc *PolygonCleaner) findUnextractedTri() *constraineddelaunay.Triangle {
 	for len(pc.unextractedTris) > 0 {
 		t := pc.unextractedTris[0]
 		pc.unextractedTris = pc.unextractedTris[1:len(pc.unextractedTris)]
-		log.Printf("%v", pc.unextractedTris)
+		if debug {
+			log.Printf("%v", pc.unextractedTris)
+		}
 		if len(pc.extractedTris) == 0 || pc.extractedTris[t] == false {
 			return &t
 		}
@@ -160,13 +164,12 @@ func (pc *PolygonCleaner) findUnextractedTri() *constraineddelaunay.Triangle {
 type edgeString []*quadedge.QuadEdge
 type edgeStack []edgeString
 
-
 /*
-Returns true if qe connects to the end of the edgeString or the edgeString is 
+Returns true if qe connects to the end of the edgeString or the edgeString is
 empty.
 */
 func (es edgeString) connects(qe *quadedge.QuadEdge) bool {
-	if len(es) == 0 || qe.Orig().Equals(es[len(es) - 1].Dest()) {
+	if len(es) == 0 || qe.Orig().Equals(es[len(es)-1].Dest()) {
 		return true
 	}
 
@@ -178,7 +181,7 @@ func (es edgeString) isClosed() bool {
 		return false
 	}
 
-	if es[0].Orig().Equals(es[len(es) - 1].Dest()) {
+	if es[0].Orig().Equals(es[len(es)-1].Dest()) {
 		return true
 	}
 
@@ -199,7 +202,6 @@ func (es edgeString) toLinearRing() geom.LineString {
 	return result
 }
 
-
 /*
 peeks the last edgeString in the stack
 
@@ -209,7 +211,7 @@ func (es *edgeStack) peek() *edgeString {
 	if len(*es) == 0 {
 		(*es).push(edgeString{})
 	}
-	return &((*es)[len(*es) - 1])
+	return &((*es)[len(*es)-1])
 }
 
 /*
@@ -247,31 +249,43 @@ func (pc *PolygonCleaner) followEdges(qe *quadedge.QuadEdge, es *edgeStack, resu
 		return nil
 	}
 
-	log.Printf("tri: %v", tri.String())
+	if debug {
+		log.Printf("tri: %v", tri.String())
+	}
 	pc.extractedTris[tri] = true
 
 	e := qe
 	for {
-		log.Printf("e: %v", e)
+		if debug {
+			log.Printf("e: %v", e)
+		}
 		if pc.isRingEdge(e) {
 			if es.peek().connects(e.Sym()) == false {
-				log.Printf("No Connection: %v %v", es, e)				
+				if debug {
+					log.Printf("No Connection: %v %v", es, e)
+				}
 				// this doesn't connect so create a new edge string
 				es.push(edgeString{})
 			}
 			top := es.peek()
 			*top = append(*top, e.Sym())
-			log.Printf("top: %v e: %v", top, e)
+			if debug {
+				log.Printf("top: %v e: %v", top, e)
+			}
 
 			if top.isClosed() {
 				*result = append(*result, es.pop().toLinearRing())
-				log.Printf("result: %v", result)
+				if debug {
+					log.Printf("result: %v", result)
+				}
 			}
 		} else {
 			if err := pc.followEdges(e.Sym(), es, result); err != nil {
 				return err
 			}
-			log.Printf("es: %v", es)
+			if debug {
+				log.Printf("es: %v", es)
+			}
 		}
 		e = e.RNext()
 
@@ -279,28 +293,30 @@ func (pc *PolygonCleaner) followEdges(qe *quadedge.QuadEdge, es *edgeStack, resu
 			break
 		}
 	}
-	log.Printf("es: %v", es)
+	if debug {
+		log.Printf("es: %v", es)
+	}
 
 	return nil
 	// push the first edge onto the stack
 
-  	// The first/last line string is the exterior, all others are interiors. 
+	// The first/last line string is the exterior, all others are interiors.
 
-	// follow the edge 
-		// if we found an intersection, push it on to the stack and follow
-		// if we are back at the beginning, record it and pop the stack
+	// follow the edge
+	// if we found an intersection, push it on to the stack and follow
+	// if we are back at the beginning, record it and pop the stack
 
 	// If a linestring is mirrored it is degenerate and can be erased
 
-   	// If the linestring is closed, create a ring out of it.
+	// If the linestring is closed, create a ring out of it.
 
 }
 
 /*
 
-As listed in [1], use a stack to push/pop line strings each time an 
-intersection is found. 
-  + The first/last line string is the exterior, all others are interiors. 
+As listed in [1], use a stack to push/pop line strings each time an
+intersection is found.
+  + The first/last line string is the exterior, all others are interiors.
   + If a linestring is mirrored it is degenerate and can be erased
   + If the linestring is closed, create a ring out of it.
 
@@ -315,7 +331,9 @@ func (pc *PolygonCleaner) extractGeometry() (geom.Geometry, error) {
 	for {
 		// find a starting triangle
 		startingTri := pc.findUnextractedTri()
-		log.Printf("startingTri: %v", startingTri)
+		if debug {
+			log.Printf("startingTri: %v", startingTri)
+		}
 
 		// if we didn't find a starting triangle, exit
 		if startingTri == nil {
@@ -328,25 +346,29 @@ func (pc *PolygonCleaner) extractGeometry() (geom.Geometry, error) {
 			return nil, err
 		}
 		if len(es) > 0 {
-			log.Printf("Expected es to be empty after run: %v", es)
+			if debug {
+				log.Printf("Expected es to be empty after run: %v", es)
+			}
 			return nil, ErrExtractingGeomFailed
 		}
 
 		result = append(result, poly)
 
 	}
-	log.Printf("result: %v", result)
+	if debug {
+		log.Printf("result: %v", result)
+	}
 
-	// As listed in [1], use a stack to push/pop line strings each time an 
+	// As listed in [1], use a stack to push/pop line strings each time an
 	// intersection is found.
 
 	if len(result) == 0 {
 		return nil, nil
 	}
-   	if len(result) == 1 {
-   		return geom.Polygon(result[0]), nil
-   	}
-   	return result, nil
+	if len(result) == 1 {
+		return geom.Polygon(result[0]), nil
+	}
+	return result, nil
 }
 
 func (pc *PolygonCleaner) getLabelsAsString() string {
@@ -359,7 +381,7 @@ func (pc *PolygonCleaner) getLabelsAsString() string {
 	l := pc.triLabels[0]
 	for k, _ := range l {
 		if pc.isInside(k) {
-			result = append(result, "inside: " + k.String())
+			result = append(result, "inside: "+k.String())
 		}
 	}
 
@@ -384,15 +406,17 @@ func (pc *PolygonCleaner) isInside(tri constraineddelaunay.Triangle) bool {
 	for i := range pc.ringRefs {
 		v, ok := pc.triLabels[i][tri]
 		if !ok {
-			log.Printf("subdiv: %v", pc.subdiv.DebugDumpEdges())
-			log.Printf("tri: %v lables: %v", tri, pc.triLabels[i])
+			if debug {
+				log.Printf("subdiv: %v", pc.subdiv.DebugDumpEdges())
+				log.Printf("tri: %v lables: %v", tri, pc.triLabels[i])
+			}
 			// did you call labelTriangles first?
-			log.Fatalf("triangle was not labeled properly");
+			log.Fatalf("triangle was not labeled properly")
 		}
 
 		if pc.ringRefs[i].exterior == true {
-			// each time we hit an exterior this is a new polygon. If the 
-			// state is inside at this point we consider the label to be 
+			// each time we hit an exterior this is a new polygon. If the
+			// state is inside at this point we consider the label to be
 			// inside.
 			if inside == true {
 				return true
@@ -420,15 +444,15 @@ func (pc *PolygonCleaner) isLegitEdge(ri int, qe *quadedge.QuadEdge) bool {
 	arr, ok := qe.GetData().([]interface{})
 	// this should never happen
 	if !ok {
-		log.Fatalf("could not cast data to array of interfaces");
+		log.Fatalf("could not cast data to array of interfaces")
 	}
 
 	count := 0
-	for i := range(arr) {
+	for i := range arr {
 		rr, ok := arr[i].(*ringReference)
 		// this should never happen
 		if !ok {
-			log.Fatalf("could not data element to ringReference");
+			log.Fatalf("could not data element to ringReference")
 		}
 
 		if rr == pc.ringRefs[ri] {
@@ -437,7 +461,7 @@ func (pc *PolygonCleaner) isLegitEdge(ri int, qe *quadedge.QuadEdge) bool {
 	}
 
 	// if there are an even number of edges they cancel out.
-	return count % 2 == 1
+	return count%2 == 1
 }
 
 /*
@@ -458,35 +482,43 @@ If pc is nil a panic will occur.
 */
 func (pc *PolygonCleaner) labelTriangles(inside bool, ri int, tri *constraineddelaunay.Triangle) error {
 
-	if (inside) {
+	if debug && inside {
 		log.Printf("inside! %v", tri)
 	}
 
 	pc.triLabels[ri][*tri] = inside
-	log.Printf("tri: %v", tri)
+	if debug {
+		log.Printf("tri: %v", tri)
+	}
 
 	qe := tri.GetStartEdge()
-	log.Printf("Starting qe: %v", qe)
+	if debug {
+		log.Printf("Starting qe: %v", qe)
+	}
 	// go through each edge
 	for i := 0; i < 3; i++ {
 		if pc.subdiv.IsFrameVertex(qe.Orig()) == false || pc.subdiv.IsFrameVertex(qe.Dest()) == false {
 			// if the edge is not a frame edge, evaluate the triangle
-	
+
 			neighbor := &constraineddelaunay.Triangle{qe.Sym()}
 			neighbor = neighbor.Normalize()
 
 			if _, ok := pc.triLabels[ri][*neighbor]; ok == false {
 				// if we haven't already visited this triangle
 
-				log.Printf("neighbor: %v", neighbor)
-				if pc.isLegitEdge(ri, qe) != pc.isLegitEdge(ri, qe.Sym()) {
+				if debug {
+					log.Printf("neighbor: %v", neighbor)
+				}
+				if debug && pc.isLegitEdge(ri, qe) != pc.isLegitEdge(ri, qe.Sym()) {
 					log.Printf("WHOOPS!")
 				}
 				if pc.isLegitEdge(ri, qe) {
-					log.Printf("legit edge: %v", qe)
-					log.Printf("inside: %v", inside)
-					// if the edge contains an odd number of references to the 
-					// ring then invert the value of inside for the recursive 
+					if debug {
+						log.Printf("legit edge: %v", qe)
+						log.Printf("inside: %v", inside)
+					}
+					// if the edge contains an odd number of references to the
+					// ring then invert the value of inside for the recursive
 					// call
 					pc.labelTriangles(!inside, ri, neighbor)
 				} else {
@@ -516,16 +548,22 @@ func (pc *PolygonCleaner) MakeValid(g geom.Geometry) (geom.Geometry, error) {
 	for i := range pc.ringRefs {
 		tmp[i] = pc.ringRefs[i]
 	}
-	log.Printf("pc.rings: %v", pc.rings)
+	if debug {
+		log.Printf("pc.rings: %v", pc.rings)
+	}
 	if err := pc.builder.InsertGeometries(pc.rings, tmp); err != nil {
 		return nil, err
 	}
 
 	pc.subdiv = pc.builder.GetSubdivision()
-	log.Print(pc.subdiv.DebugDumpEdges())
+	if debug {
+		log.Print(pc.subdiv.DebugDumpEdges())
+	}
 
 	start := pc.builder.GetExteriorTriangle().Normalize()
-	log.Print(start.Qe)
+	if debug {
+		log.Print(start.Qe)
+	}
 	if start == nil {
 		return nil, ErrNoExternalTriangle
 	}
@@ -540,7 +578,9 @@ func (pc *PolygonCleaner) MakeValid(g geom.Geometry) (geom.Geometry, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("debug: %v", pc.subdiv.DebugDumpEdges())
+	if debug {
+		log.Printf("debug: %v", pc.subdiv.DebugDumpEdges())
+	}
 
 	// TODO
 	return result, nil

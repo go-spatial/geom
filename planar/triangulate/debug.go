@@ -1,3 +1,3 @@
-package tegola
+package triangulate
 
 const debug = false

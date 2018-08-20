@@ -138,7 +138,9 @@ func (dtb *DelaunayTriangulationBuilder) SetSites(g ...geom.Geometry) error {
 	// remove any duplicate points (they will cause the triangulation to fail)
 	c, err := dtb.extractUniqueCoordinates(g...)
 	dtb.siteCoords = c
-	log.Printf("siteCoords %v", c)
+	if debug {
+		log.Printf("siteCoords %v", c)
+	}
 	return err
 }
 

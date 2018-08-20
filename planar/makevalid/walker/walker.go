@@ -45,8 +45,8 @@ func TriangulateGeometry(g geom.Geometry) ([]geom.Triangle, error) {
 	if debug {
 		log.Printf("Triangulator for given segments %v ", g)
 	}
-	if err := uut.InsertSegments(g); err != nil {
-		if true || debug {
+	if err := uut.InsertGeometries([]geom.Geometry{g}, nil); err != nil {
+		if debug {
 			log.Printf("Triangulator error for given segments %v : %v", g, err)
 		}
 		return []geom.Triangle{}, fmt.Errorf("error triangulating geometry: %v", err)

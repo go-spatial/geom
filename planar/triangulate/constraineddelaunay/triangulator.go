@@ -45,8 +45,8 @@ type Triangulator struct {
 }
 
 /*
-addDataToEdge appends this data to the data associated with an edge. If the 
-edge doesn't already contain an array, the array is created before the data is 
+addDataToEdge appends this data to the data associated with an edge. If the
+edge doesn't already contain an array, the array is created before the data is
 appended.
 */
 func addDataToEdge(qe *quadedge.QuadEdge, data interface{}) {
@@ -56,7 +56,7 @@ func addDataToEdge(qe *quadedge.QuadEdge, data interface{}) {
 		}
 		arr, ok := qe.GetData().([]interface{})
 		if !ok {
-			log.Fatalf("could not cast data to array of interfaces.");
+			log.Fatalf("could not cast data to array of interfaces.")
 		}
 		arr = append(arr, data)
 		qe.SetData(arr)
@@ -87,7 +87,7 @@ func (tri *Triangulator) createSegment(s triangulate.Segment, data interface{}) 
 	}
 
 	qe, err := tri.LocateSegment(s.GetStart(), s.GetEnd())
-	
+
 	if _, ok := err.(quadedge.ErrLocateFailure); err != nil && !ok {
 		return err
 	}
@@ -128,7 +128,9 @@ triangulation.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) createTriangle(a, b, c quadedge.Vertex) error {
-	log.Printf("createTriangle");
+	if debug {
+		log.Printf("createTriangle")
+	}
 	if err := tri.createSegment(triangulate.NewSegment(geom.Line{a, b}), nil); err != nil {
 		return err
 	}
@@ -306,7 +308,7 @@ func (tri *Triangulator) GetExteriorTriangle() *Triangle {
 /*
 Returns the subdivision used by this triangulator.
 
-This is provided for read-only access. Making changes will result in undefined 
+This is provided for read-only access. Making changes will result in undefined
 behaviour.
 
 If tri is nil a panic will occur.
@@ -335,15 +337,15 @@ func (tri *Triangulator) InsertGeometry(g geom.Geometry) error {
 }
 
 /*
-InsertGeometries inserts the line segments in the specified geometries and 
+InsertGeometries inserts the line segments in the specified geometries and
 builds a triangulation. The line segments are used as constraints in the
 triangulation. If the geometry is made up solely of points, then no
 constraints will be used.
 
 g contains a list of the geometries to insert.
 
-data contains a list of the data values that should be associated with the 
-constraints in each geometry. This should either be empty, or the same number 
+data contains a list of the data values that should be associated with the
+constraints in each geometry. This should either be empty, or the same number
 of arguments as g.
 
 If tri is nil a panic will occur.
@@ -354,6 +356,9 @@ func (tri *Triangulator) InsertGeometries(g []geom.Geometry, data []interface{})
 	}
 
 	if err := tri.insertSites(g...); err != nil {
+		if debug {
+			log.Printf("got error for insertSites: %v", err)
+		}
 		return err
 	}
 
@@ -366,6 +371,9 @@ func (tri *Triangulator) InsertGeometries(g []geom.Geometry, data []interface{})
 		}
 
 		if err := tri.insertConstraints(gm, d); err != nil {
+			if debug {
+				log.Printf("got error for insertConstraints: %v", err)
+			}
 			return err
 		}
 	}
@@ -381,7 +389,9 @@ the constrained Delaunay triangulation.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertSites(g ...geom.Geometry) error {
+
 	tri.builder = triangulate.NewDelaunayTriangulationBuilder(tri.tolerance)
+
 	err := tri.builder.SetSites(g...)
 	if err != nil {
 		return err
@@ -437,15 +447,22 @@ func (tri *Triangulator) insertConstraints(g geom.Geometry, data interface{}) er
 		if err := tri.insertIntersectionSites(&tmp); err != nil {
 			return fmt.Errorf("error adding constraint: %v", err)
 		}
-		log.Printf("=== insertIntersectionSites complete %v", tri.subdiv.DebugDumpEdges())
+		if debug {
+			log.Printf("=== insertIntersectionSites complete %v", tri.subdiv.DebugDumpEdges())
+		}
 		if err = tri.Validate(); err != nil {
+			if debug {
+				log.Printf("=== failed validation %v", err)
+			}
 			return err
 		}
 		tmp = seg.DeepCopy()
 		if err := tri.insertEdgeCDT(&tmp, data); err != nil {
 			return fmt.Errorf("error adding constraint: %v", err)
 		}
-		log.Printf("=== Insert constraint complete %v", tri.subdiv.DebugDumpEdges())
+		if debug {
+			log.Printf("=== Insert constraint complete %v", tri.subdiv.DebugDumpEdges())
+		}
 		if err = tri.Validate(); err != nil {
 			return err
 		}
@@ -521,13 +538,15 @@ func (tri *Triangulator) IsConstraint(e *quadedge.QuadEdge) bool {
 }
 
 /*
-insertCoincidentEdge inserts an edge that shares a vertex a with another edge 
+insertCoincidentEdge inserts an edge that shares a vertex a with another edge
 that is coincident with ab.
 
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertCoincidentEdge(ab *triangulate.Segment, data interface{}) error {
-	log.Printf("insertCoincidentEdge %v", ab)
+	if debug {
+		log.Printf("insertCoincidentEdge %v", ab)
+	}
 
 	// find the coincident edge
 	ce, err := tri.findCoincidentEdge(*ab)
@@ -552,7 +571,7 @@ func (tri *Triangulator) insertCoincidentEdge(ab *triangulate.Segment, data inte
 }
 
 /*
-insertCoincidentEdge inserts an edge that shares a vertex a with another edge 
+insertCoincidentEdge inserts an edge that shares a vertex a with another edge
 that is coincident with ab.
 
 If tri is nil a panic will occur.
@@ -603,7 +622,9 @@ If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}) error {
 
-	log.Printf("ab: %v tri: %v", ab, tri.subdiv.DebugDumpEdges())
+	if debug {
+		log.Printf("ab: %v tri: %v", ab, tri.subdiv.DebugDumpEdges())
+	}
 	qe, err := tri.LocateSegment(ab.GetStart(), ab.GetEnd())
 	if qe != nil && err != nil {
 		return fmt.Errorf("error inserting constraint: %v", err)
@@ -622,7 +643,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 	} else if err != nil {
 		return err
 	}
-	log.Printf("ab: %v t: %v", ab, t)
+	if debug {
+		log.Printf("ab: %v t: %v", ab, t)
+	}
 
 	removalList := make([]*quadedge.QuadEdge, 0)
 
@@ -636,7 +659,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 
 	// While v not in t do -- should this be 'b not in t'!? -JRS
 	for t.IntersectsPoint(b) == false {
-		log.Printf("t: %v v: %v", t, v)
+		if debug {
+			log.Printf("t: %v v: %v", t, v)
+		}
 		// tseq:=OpposedTriangle(t,v)
 		tseq, err := t.opposedTriangle(v)
 		if err != nil {
@@ -654,7 +679,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 		}
 
 		c := vseq.Classify(ab.GetStart(), ab.GetEnd())
-		log.Printf("t: %v tseq: %v", t, tseq)
+		if debug {
+			log.Printf("t: %v tseq: %v", t, tseq)
+		}
 
 		// should we remove the edge shared between t & tseq?
 		flagEdgeForRemoval := false
@@ -685,11 +712,13 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
 
 		case c == quadedge.BETWEEN:
-			log.Printf("vseq: %v", vseq)
-			log.Printf("shared: %v", shared)
-			log.Printf("ab: %v", ab)
-			log.Printf("subdiv: %v", tri.subdiv.DebugDumpEdges())
-			log.Printf("tolerance: %v", tri.tolerance)
+			if debug {
+				log.Printf("vseq: %v", vseq)
+				log.Printf("shared: %v", shared)
+				log.Printf("ab: %v", ab)
+				log.Printf("subdiv: %v", tri.subdiv.DebugDumpEdges())
+				log.Printf("tolerance: %v", tri.tolerance)
+			}
 
 			// if tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Orig()) {
 			// 	b = shared.Orig()
@@ -705,14 +734,18 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 
 			b = vseq
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
-			log.Printf("new ab: %v", *ab)
+			if debug {
+				log.Printf("new ab: %v", *ab)
+			}
 			flagEdgeForRemoval = true
 
 		// if the constrained edge is passing through another constrained edge
 		case tri.IsConstraint(shared):
 			// find the point of intersection
 			iv, err := tri.intersection(*ab, triangulate.NewSegment(geom.Line{shared.Orig(), shared.Dest()}))
-			log.Printf("iv: %v ab: %v shared: %v", iv, ab, shared)
+			if debug {
+				log.Printf("iv: %v ab: %v shared: %v", iv, ab, shared)
+			}
 			if err != nil {
 				return err
 			}
@@ -801,7 +834,9 @@ If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertIntersectionSites(ab *triangulate.Segment) error {
 
-	log.Printf("ab: %v tri: %v", ab, tri.subdiv.DebugDumpEdges())
+	if debug {
+		log.Printf("ab: %v tri: %v", ab, tri.subdiv.DebugDumpEdges())
+	}
 	qe, err := tri.LocateSegment(ab.GetStart(), ab.GetEnd())
 	if qe != nil && err != nil {
 		return fmt.Errorf("error inserting constraint: %v", err)
@@ -840,16 +875,20 @@ func (tri *Triangulator) insertIntersectionSites(ab *triangulate.Segment) error 
 		if err != nil {
 			return err
 		}
+		if debug {
 
-		log.Printf("t: %v tseq: %v", t, tseq)
+			log.Printf("t: %v tseq: %v", t, tseq)
 
-		log.Printf("constraint: %v shared: %v", tri.IsConstraint(shared), shared)
+			log.Printf("constraint: %v shared: %v", tri.IsConstraint(shared), shared)
+		}
 
 		// if the constrained edge is passing through another constrained edge
 		if tri.IsConstraint(shared) {
 			// find the point of intersection
 			iv, err := tri.intersection(*ab, triangulate.NewSegment(geom.Line{shared.Orig(), shared.Dest()}))
-			log.Printf("iv: %v ab: %v shared: %v", iv, ab, shared)
+			if debug {
+				log.Printf("iv: %v ab: %v shared: %v", iv, ab, shared)
+			}
 			if err != nil {
 				return err
 			}
@@ -875,7 +914,9 @@ func (tri *Triangulator) insertIntersectionSites(ab *triangulate.Segment) error 
 
 		} else {
 			c := vseq.Classify(ab.GetStart(), ab.GetEnd())
-			log.Printf("t: %v tseq: %v", t, tseq)
+			if debug {
+				log.Printf("t: %v tseq: %v", t, tseq)
+			}
 
 			switch {
 			case tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Orig()):
@@ -936,7 +977,7 @@ func (tri *Triangulator) locateEdgeByVertex(v quadedge.Vertex) (*quadedge.QuadEd
 	qe := tri.vertexIndex[v]
 
 	if qe == nil {
-		return nil, quadedge.ErrLocateFailure{V:&v}
+		return nil, quadedge.ErrLocateFailure{V: &v}
 	}
 	return qe, nil
 }
@@ -953,13 +994,15 @@ func (tri *Triangulator) LocateSegment(v1 quadedge.Vertex, v2 quadedge.Vertex) (
 	qe := tri.vertexIndex[v1]
 
 	if qe == nil {
-		return nil, quadedge.ErrLocateFailure{V:&v1}
+		return nil, quadedge.ErrLocateFailure{V: &v1}
 	}
 
 	start := qe
 	for {
 		if qe == nil || qe.IsLive() == false {
-			log.Printf("unexpected dead node: %v", qe)
+			if debug {
+				log.Printf("unexpected dead node: %v", qe)
+			}
 			return nil, fmt.Errorf("nil or dead qe when locating segment %v %v", v1, v2)
 		}
 		if v2.Equals(qe.Dest()) {
@@ -968,7 +1011,7 @@ func (tri *Triangulator) LocateSegment(v1 quadedge.Vertex, v2 quadedge.Vertex) (
 
 		qe = qe.ONext()
 		if qe == start {
-			return nil, quadedge.ErrLocateFailure{V:&v2}
+			return nil, quadedge.ErrLocateFailure{V: &v2}
 		}
 	}
 
@@ -1020,12 +1063,12 @@ func (tri *Triangulator) removeEdgesFromVertexIndex(toRemove map[*quadedge.QuadE
 }
 
 /*
-splitEdge splits the given edge at the vertex v. When this happens it creates 
-two quadrilaterals. Rather than attempt to maintain the Delaunay properties, 
-this will simply add two more edges from the vertex v to maintain the 
+splitEdge splits the given edge at the vertex v. When this happens it creates
+two quadrilaterals. Rather than attempt to maintain the Delaunay properties,
+this will simply add two more edges from the vertex v to maintain the
 triangulation.
 
-While we may lose our Delaunay properties here, this isn't such a big deal as 
+While we may lose our Delaunay properties here, this isn't such a big deal as
 the constraints can also nullify the Delaunay properties.
 
 If tri is nil a panic will occur.
@@ -1036,7 +1079,9 @@ func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) erro
 	}
 
 	constraint := tri.IsConstraint(e)
-	log.Printf("splitEdge e: %v v: %v", e, v)
+	if debug {
+		log.Printf("splitEdge e: %v v: %v", e, v)
+	}
 
 	ePrev := e.OPrev()
 	eSym := e.Sym()
@@ -1074,24 +1119,30 @@ func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) erro
 		arr, ok := e.GetData().([]interface{})
 		// this should never happen
 		if !ok {
-			log.Fatalf("could not cast data to array of interfaces.");
+			log.Fatalf("could not cast data to array of interfaces.")
 		}
 		newArr := make([]interface{}, len(arr))
 		copy(newArr, arr)
 		e2.SetData(newArr)
 
 		// keep these linked so changing one changes the sym.
-		e1.Sym().SetData(e1.GetData());
-		e2.Sym().SetData(e2.GetData());
+		e1.Sym().SetData(e1.GetData())
+		e2.Sym().SetData(e2.GetData())
 	}
 
-	log.Printf("e: %v subdiv: %v", e, tri.subdiv.DebugDumpEdges())
+	if debug {
+		log.Printf("e: %v subdiv: %v", e, tri.subdiv.DebugDumpEdges())
+	}
 	t1 := Triangle{e1}
 	t2 := Triangle{e2}
-	log.Printf("e1: %v t1: %v", e1, &t1)
-	log.Printf("e2: %v t2: %v", e2, &t2)
+	if debug {
+		log.Printf("e1: %v t1: %v", e1, &t1)
+		log.Printf("e2: %v t2: %v", e2, &t2)
+	}
 	if t1.IsValid() == false {
-		log.Printf("adding: %v", geom.Line{v, e1.RNext().Orig()})
+		if debug {
+			log.Printf("adding: %v", geom.Line{v, e1.RNext().Orig()})
+		}
 		if err := tri.createSegment(triangulate.NewSegment(geom.Line{v, e1.RNext().Orig()}), nil); err != nil {
 			return err
 		}
@@ -1100,7 +1151,9 @@ func (tri *Triangulator) splitEdge(e *quadedge.QuadEdge, v quadedge.Vertex) erro
 		}
 	}
 	if t2.IsValid() == false {
-		log.Printf("adding: %v", geom.Line{v, e2.RNext().Orig()})
+		if debug {
+			log.Printf("adding: %v", geom.Line{v, e2.RNext().Orig()})
+		}
 		if err := tri.createSegment(triangulate.NewSegment(geom.Line{v, e2.RNext().Orig()}), nil); err != nil {
 			return err
 		}
@@ -1121,7 +1174,9 @@ from Figure 10 in Domiter.
 If tri is nil a panic will occur.
 */
 func (tri *Triangulator) triangulatePseudoPolygon(p []quadedge.Vertex, ab triangulate.Segment) error {
-	log.Printf("triangulatePseudoPolygon(%v, %v)", p, ab)
+	if debug {
+		log.Printf("triangulatePseudoPolygon(%v, %v)", p, ab)
+	}
 
 	// triangulatePseudoPolygon([[0.2 0.3] [0 0]], {[[0 1] [1 0.5]] <nil>})
 	a := ab.GetStart()
@@ -1178,14 +1233,26 @@ func (tri *Triangulator) Validate() error {
 	if tri.validate == false {
 		return nil
 	}
-	
+
 	if err := tri.subdiv.Validate(); err != nil {
+		if debug {
+			log.Printf("subdiv is invalid: %v", err)
+		}
 		return err
 	}
 	if err := tri.validateTriangles(); err != nil {
+		if debug {
+			log.Printf("validateTriangles is invalid: %v", err)
+		}
 		return err
 	}
-	return tri.validateVertexIndex()
+	if err := tri.validateVertexIndex(); err != nil {
+		if debug {
+			log.Printf("validateVertexIndex is invalid: %v", err)
+		}
+		return err
+	}
+	return nil
 }
 
 /*
@@ -1212,9 +1279,11 @@ func (tri *Triangulator) validateVertexIndex() error {
 			return fmt.Errorf("vertex index contains an unexpected vertex: %v", v)
 		}
 		if _, ok := edgeSet[e]; ok == false {
-			log.Printf("subdiv: %v", tri.subdiv.DebugDumpEdges())
-			for a, b := range edgeSet {
-				log.Printf("%v %v", a, b)
+			if debug {
+				log.Printf("subdiv: %v", tri.subdiv.DebugDumpEdges())
+				for a, b := range edgeSet {
+					log.Printf("%v %v", a, b)
+				}
 			}
 			return fmt.Errorf("vertex index contains an unexpected edge: %v", e)
 		}
@@ -1234,7 +1303,7 @@ func (tri *Triangulator) validateVertexIndex() error {
 }
 
 /*
-validateTriangles is a self consistency check that ensures all triangles are 
+validateTriangles is a self consistency check that ensures all triangles are
 valid.
 
 If tri is nil a panic will occur.
@@ -1247,10 +1316,14 @@ func (tri *Triangulator) validateTriangles() error {
 		t := Triangle{e}
 		if t.IsValid() == false {
 			for k, v := range tri.vertexIndex {
-				log.Printf("k: %v v: %v", k, v)
+				if debug {
+					log.Printf("k: %v v: %v", k, v)
+				}
 				e := v
 				for {
-					log.Printf("%v", e)
+					if debug {
+						log.Printf("%v", e)
+					}
 					e = e.ONext()
 					if e == v {
 						break
