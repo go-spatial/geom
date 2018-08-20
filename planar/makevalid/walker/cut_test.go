@@ -1,4 +1,4 @@
-package tegola
+package walker
 
 import (
 	"reflect"

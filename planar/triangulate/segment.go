@@ -36,6 +36,20 @@ func NewSegment(l geom.Line) Segment {
 	return Segment{ls: l}
 }
 
+/*
+This makes a deep copy of the line segment, but not the data.
+
+If seg is nil a panic will occur.
+*/
+func (seg *Segment) DeepCopy() Segment {
+    cp := Segment{}
+    cp.ls[0][0] = seg.ls[0][0]
+    cp.ls[0][1] = seg.ls[0][1]
+    cp.ls[1][0] = seg.ls[1][0]
+    cp.ls[1][1] = seg.ls[1][1]
+    return cp
+}
+
 /**
    * Creates a new instance for the given ordinates.
   public Segment(double x1, double y1, double z1, double x2, double y2, double z2) {
@@ -64,6 +78,8 @@ func NewSegment(l geom.Line) Segment {
 Gets the start coordinate of the segment
 
 Returns the starting vertex
+
+If seg is nil a panic will occur.
 */
 func (seg *Segment) GetStart() quadedge.Vertex {
 	return quadedge.Vertex(seg.ls[0])
@@ -73,6 +89,8 @@ func (seg *Segment) GetStart() quadedge.Vertex {
 Gets the end coordinate of the segment
 
 Return a Coordinate
+
+If seg is nil a panic will occur.
 */
 func (seg *Segment) GetEnd() quadedge.Vertex {
 	return quadedge.Vertex(seg.ls[1])

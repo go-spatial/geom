@@ -1,4 +1,4 @@
-package tegola
+package makevalid
 
 import (
 	"context"
@@ -8,9 +8,19 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/intersect"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
+	"github.com/go-spatial/geom/planar/makevalid/walker"
 )
+
+type Makevalid struct {
+	Hitmap planar.HitMapper
+	// Currently not used, but once we have the IsValid function, we can use this instead
+	// Of running the MakeValid routine on a Geometry that is alreayd valid.
+	// Used to clip geometries that are not Polygon and MultiPolygons
+	Clipper planar.Clipper
+}
 
 // asSegments calls the AsSegments functions and flattens the array of segments that are returned.
 func asSegments(g geom.Geometry) (segs []geom.Line, err error) {
@@ -56,12 +66,12 @@ func (a ByXYPoint) Len() int           { return len(a) }
 func (a ByXYPoint) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByXYPoint) Less(i, j int) bool { return cmp.PointLess(a[i], a[j]) }
 
-// destructure will take a multipolygon, break up the polygon into a set of segments that have the following characteristics:
+// Destructure will take a multipolygon, break up the polygon into a set of segments that have the following characteristics:
 // 1. no segment will intersect with another segment, other then at the end points; or colinear and partial-coliner lines.
 // 2. normalize direction of line segments to left to right
 // 3. line segments are generally unique.
 // 4. line segments outside of the clipbox will be clipped
-func destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) ([]geom.Line, error) {
+func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (geom.MultiLineString, error) {
 
 	segments, err := asSegments(*multipolygon)
 	if err != nil {
@@ -122,13 +132,12 @@ func destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 		}
 	}
 
-	nsegs := make([]geom.Line, len(nsmap))
-	{
-		i := 0
-		for s := range nsmap {
-			nsegs[i] = s
-			i++
-		}
+	nsegs := make(geom.MultiLineString, len(nsmap))
+	i := 0
+	for s := range nsmap {
+		s := s
+		nsegs[i] = s[:]
+		i++
 	}
 	return nsegs, nil
 }
@@ -137,7 +146,7 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if debug {
 		log.Printf("*Step  1 : Destructure the geometry into segments w/ the clipbox applied.")
 	}
-	segs, err := destructure(ctx, clipbox, multipolygon)
+	segs, err := Destructure(ctx, clipbox, multipolygon)
 	if err != nil {
 		if debug {
 			log.Printf("Destructure returned err %v", err)
@@ -155,10 +164,7 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if debug {
 		log.Printf("Step   2 : Convert segments to linestrings to use in triangleuation.")
 	}
-	geomSegments := make(geom.MultiLineString, len(segs))
-	for i := range segs {
-		geomSegments[i] = segs[i][:]
-	}
+
 	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
 	if err != nil {
 		return nil, err
@@ -166,14 +172,17 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if debug {
 		log.Printf("Step   3 : generate triangles")
 	}
-	edix, err := newEdgeIndexTriangles(ctx, hm, geomSegments)
+	triWalker, err := walker.New(ctx, hm, segs)
 	if err != nil {
+		if debug {
+			log.Println("Step     3a: got error", err)
+		}
 		return nil, err
 	}
 	if debug {
 		log.Printf("Step   4 : generate multipolygon from triangles")
 	}
-	mplygs := geom.MultiPolygon(edix.MultiPolygon(ctx))
+	mplygs := triWalker.MultiPolygon(ctx)
 
 	return &mplygs, nil
 

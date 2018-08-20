@@ -1,4 +1,4 @@
-package tegola
+package makevalid
 
 import (
 	"context"
@@ -20,11 +20,11 @@ type makevalidCase struct {
 }
 
 // Segments returns the flattened segments of the MultiPolygon, on an error it will panic.
-func (mvc makevalidCase) Segments() (segments []geom.Line) {
+func (mvc makevalidCase) Segments() (segments geom.MultiLineString) {
 	if debug {
 		log.Printf("MakeValidTestCase Polygon: %+v", mvc.MultiPolygon)
 	}
-	segs, err := destructure(context.Background(), nil, mvc.MultiPolygon)
+	segs, err := Destructure(context.Background(), nil, mvc.MultiPolygon)
 	if err != nil {
 		panic(err)
 	}

@@ -1,7 +1,8 @@
-package tegola
+package walker
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/go-spatial/geom"
@@ -17,11 +18,11 @@ func sortedEdge(pt1, pt2 [2]float64) [2][2]float64 {
 	return [2][2]float64{pt2, pt1}
 }
 
-func edgeMapFromTriangles(triangles ...triangle) map[[2][2]float64][]int {
+func edgeMapFromTriangles(triangles ...geom.Triangle) map[[2][2]float64][]int {
 	// an edge can have at most two triangles associated with it.
 	em := make(map[[2][2]float64][]int, 2*len(triangles))
 	for i, tri := range triangles {
-		for _, edg := range tri.SortedEdges() {
+		for _, edg := range SortedEdges(tri) {
 			if _, ok := em[edg]; !ok {
 				em[edg] = make([]int, 0, 2)
 			}
@@ -31,64 +32,126 @@ func edgeMapFromTriangles(triangles ...triangle) map[[2][2]float64][]int {
 	return em
 }
 
-func triangulateGeometry(g geom.Geometry) (geom.MultiPolygon, error) {
+func SortedEdges(t geom.Triangle) [3][2][2]float64 {
+	return [3][2][2]float64{
+		sortedEdge(t[0], t[1]),
+		sortedEdge(t[0], t[2]),
+		sortedEdge(t[1], t[2]),
+	}
+}
+
+func TriangulateGeometry(g geom.Geometry) ([]geom.Triangle, error) {
 	uut := new(constraineddelaunay.Triangulator)
-	uut.InsertSegments(g)
+	if debug {
+		log.Printf("Triangulator for given segments %v ", g)
+	}
+	if err := uut.InsertGeometries([]geom.Geometry{g}, nil); err != nil {
+		if debug {
+			log.Printf("Triangulator error for given segments %v : %v", g, err)
+		}
+		return []geom.Triangle{}, fmt.Errorf("error triangulating geometry: %v", err)
+	}
 
 	if debug {
 		err := uut.Validate()
 		if err != nil {
 			log.Printf("Triangulator is not validate for the given segments %v : %v", g, err)
-			return nil, err
+			return []geom.Triangle{}, err
 		}
 	}
 	// TODO(gdey): We need to insure that GetTriangles does not dup the first point to the
 	//              last point. It may be better if it returned triangles and we moved triangles to Geom.
-	return uut.GetTriangles()
+	gtris, err := uut.GetTriangles()
+	if err != nil {
+		if debug {
+			log.Printf("got the following error %v", err)
+		}
+		return []geom.Triangle{}, err
+	}
+	if debug {
+		log.Printf("Triangulator genereated %v triangles", len(gtris))
+	}
+	var triangles = make([]geom.Triangle, len(gtris))
+	for i, ply := range gtris {
+		triangles[i] = geom.NewTriangleFromPolygon(ply)
+		cmp.RotateToLeftMostPoint(triangles[i][:])
+	}
+	return triangles, nil
 }
 
-func newEdgeIndexTriangles(ctx context.Context, hm planar.HitMapper, g geom.Geometry) (*edgeIndexTriangles, error) {
+// New creates a new walker that can be used to fix a geometry.
+func New(ctx context.Context, hm planar.HitMapper, g geom.Geometry) (*walker, error) {
 
-	var geomTriangles geom.MultiPolygon
+	var allTriangles []geom.Triangle
 	var err error
 
-	if geomTriangles, err = triangulateGeometry(g); err != nil {
+	if allTriangles, err = TriangulateGeometry(g); err != nil {
 		return nil, err
 	}
 
-	triangles := make([]triangle, 0, len(geomTriangles))
+	if debug {
+		log.Printf("generated %v triangles.", len(allTriangles))
+	}
 
-	for _, ply := range geomTriangles {
+	triangles := make([]geom.Triangle, 0, len(allTriangles))
+
+	for _, triangle := range allTriangles {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		tri := newTriangleFromPolygon(ply)
-		if hm.LabelFor(tri.Center()) == planar.Outside {
+		if hm.LabelFor(triangle.Center()) == planar.Outside {
 			continue
 		}
-		triangles = append(triangles, tri)
+		triangles = append(triangles, triangle)
 	}
 
-	t := edgeIndexTriangles{
-		triangles: make([]triangle, len(triangles)),
+	t := walker{
+		triangles: make([]geom.Triangle, len(triangles)),
 		edgeMap:   edgeMapFromTriangles(triangles...),
 	}
 
+	// free up memory
 	copy(t.triangles, triangles)
 	return &t, nil
 }
 
-type edgeIndexTriangles struct {
-	triangles []triangle
+type walker struct {
+	triangles []geom.Triangle
 	edgeMap   map[[2][2]float64][]int
 }
 
-func (eit *edgeIndexTriangles) MultiPolygon(ctx context.Context) (mplyg [][][][2]float64) {
-	if eit == nil {
+// Triangles returns a copy of the triangles.
+func (w *walker) Triangles() (triangles []geom.Triangle) {
+	if w == nil {
+		return triangles
+	}
+	triangles = make([]geom.Triangle, len(w.triangles))
+	copy(triangles, w.triangles)
+	return triangles
+}
+
+// EdgeMap returns a copy of the edgemap
+func (w *walker) EdgeMap() (edgeMap map[[2][2]float64][]int) {
+	if w == nil {
+		return edgeMap
+	}
+	edgeMap = make(map[[2][2]float64][]int, len(w.edgeMap))
+	for k, v := range w.edgeMap {
+		edgeMap[k] = v
+	}
+	return edgeMap
+}
+
+// MultiPolygon walks all triangles and returns the generated polygons as a multipolygon.
+func (w *walker) MultiPolygon(ctx context.Context) (mplyg geom.MultiPolygon) {
+	if w == nil {
+		if debug {
+			log.Printf("walker is nil.")
+		}
 		return mplyg
 	}
-	seen := make(map[int]bool, len(eit.triangles))
-	for i := range eit.triangles {
+	seen := make(map[int]bool, len(w.triangles))
+	for i := range w.triangles {
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -96,27 +159,30 @@ func (eit *edgeIndexTriangles) MultiPolygon(ctx context.Context) (mplyg [][][][2
 			continue
 		}
 		seen[i] = true
-		plyg := eit.PolygonForTriangle(ctx, i, seen)
+		plyg := w.PolygonForTriangle(ctx, i, seen)
+		if debug {
+			log.Println(i, " : got the following plyg ", plyg)
+		}
 		if len(plyg) > 0 {
 			mplyg = append(mplyg, plyg)
 		}
 	}
-	return mplyg
+	return geom.MultiPolygon(mplyg)
 }
 
-func (eit *edgeIndexTriangles) indexForEdge(p1, p2 [2]float64, defaultIdx int, seen map[int]bool) (idx int, ok bool) {
-	for _, idx := range eit.edgeMap[sortedEdge(p1, p2)] {
-		if seen[idx] || idx == defaultIdx {
-			continue
-		}
-		return idx, true
-	}
-	return defaultIdx, false
+// PolygonForTriangle walks the triangles starting at the given triangle returning the generated polygon from the walk.
+func (w *walker) PolygonForTriangle(ctx context.Context, idx int, seen map[int]bool) (plyg [][][2]float64) {
+	// Get the external ring for the given triangle.
+	return PolygonForRing(ctx, w.RingForTriangle(ctx, idx, seen))
 }
 
-// ringForTriangle will walk the set of triangles starting at the given triangle index. As it walks the triangles it will
+// RingForTriangle will walk the set of triangles starting at the given triangle index. As it walks the triangles it will
 // mark them as seen on the seen map. The function will return the outside ring of the walk
-func (eit *edgeIndexTriangles) ringForTriangle(ctx context.Context, idx int, seen map[int]bool) (rng [][2]float64) {
+// if seen is nil, the function will panic.
+func (w *walker) RingForTriangle(ctx context.Context, idx int, seen map[int]bool) (rng [][2]float64) {
+	if w == nil {
+		return rng
+	}
 
 	var ok bool
 
@@ -131,7 +197,7 @@ func (eit *edgeIndexTriangles) ringForTriangle(ctx context.Context, idx int, see
 	// This track the original begining of the ring.
 	var headIdx int
 
-	rng = append(rng, eit.triangles[idx][:]...)
+	rng = append(rng, w.triangles[idx][:]...)
 	cidxs := []int{idx, idx, idx}
 	cidx := cidxs[len(cidxs)-1]
 
@@ -149,7 +215,7 @@ RING_LOOP:
 			log.Printf("cidxs: %v", cidxs)
 		}
 
-		if cidx, ok = eit.indexForEdge(rng[0], rng[len(rng)-1], cidxs[len(cidxs)-1], seen); !ok {
+		if cidx, ok = w.indexForEdge(rng[0], rng[len(rng)-1], cidxs[len(cidxs)-1], seen); !ok {
 			// We don't have a neighbor to walk to here. Let's move back one and see if there is a path we need to go down.
 			headIdx += 1
 			lpt := rng[len(rng)-1]
@@ -188,7 +254,7 @@ RING_LOOP:
 			continue RING_LOOP
 		}
 
-		rng = append(rng, eit.triangles[cidx].ThirdPoint(rng[0], rng[len(rng)-1]))
+		rng = append(rng, w.triangles[cidx].ThirdPoint(rng[0], rng[len(rng)-1]))
 
 		cidxs[len(cidxs)-1] = cidx
 		cidxs = append(cidxs, cidx)
@@ -198,8 +264,18 @@ RING_LOOP:
 	return rng
 }
 
-// polygonForRing returns a polygon for the given ring, this will destroy the ring.
-func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64) {
+func (w *walker) indexForEdge(p1, p2 [2]float64, defaultIdx int, seen map[int]bool) (idx int, ok bool) {
+	for _, idx := range w.edgeMap[sortedEdge(p1, p2)] {
+		if seen[idx] || idx == defaultIdx {
+			continue
+		}
+		return idx, true
+	}
+	return defaultIdx, false
+}
+
+// PolygonForRing returns a polygon for the given ring, this will destroy the ring.
+func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64) {
 	if debug {
 		log.Printf("turn ring into polygon.")
 	}
@@ -252,10 +328,10 @@ func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 			continue
 		}
 
-		// We need to figure out which type of bubble this is.
+		// ➠ what type of bubble are we dealing with
 		pidx, nidx := pIdx(idx), nIdx(i)
 
-		// Clear out ptIndex of the values we are going to cut.
+		// clear out ptIndex of the values we are going to cut.
 		for j := idx; j <= i; j++ {
 			delete(ptIndex, rng[j])
 		}
@@ -266,7 +342,7 @@ func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 				log.Printf("bubble type ab…ba: (% 5v)(% 5v) … (% 5v)(% 5v)", pidx, idx, i, nidx)
 			}
 
-			// Delete the a points as well.
+			// delete the ʽaʼ point as well from point index
 			delete(ptIndex, rng[pidx])
 
 			sliver := cut(&rng, pidx, nidx)
@@ -288,7 +364,7 @@ func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 		// do a quick check to see if b is on ac
 		removeB := planar.IsPointOnLine(rng[i], rng[pidx], rng[nidx])
 
-		// ab … bc
+		// ab … bc The sliver is going to be from b … just before b. So, the ring will be …abc… or …ac… depending on removeB
 		if debug {
 			log.Printf("bubble type ab…bc: (% 5v)(% 5v) … (% 5v)(% 5v) == %t", pidx, idx, i, nidx, removeB)
 		}
@@ -299,6 +375,7 @@ func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 			plyg = append(plyg, sliver)
 		}
 
+		i = idx
 		if removeB {
 			cut(&rng, idx, idx+1)
 			if idx == 0 {
@@ -306,7 +383,7 @@ func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 			}
 			i = idx - 1
 		}
-	}
+	} // for
 
 	if len(rng) <= 2 {
 		if debug {
@@ -319,10 +396,6 @@ func polygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 
 	plyg[0] = make([][2]float64, len(rng))
 	copy(plyg[0], rng)
+	cmp.RotateToLeftMostPoint(plyg[0])
 	return plyg
-}
-
-func (eit *edgeIndexTriangles) PolygonForTriangle(ctx context.Context, idx int, seen map[int]bool) (plyg [][][2]float64) {
-	// Get the external ring for the given triangle.
-	return polygonForRing(ctx, eit.ringForTriangle(ctx, idx, seen))
 }

@@ -1,4 +1,4 @@
-package tegola
+package makevalid
 
 import (
 	"context"

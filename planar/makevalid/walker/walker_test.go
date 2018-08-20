@@ -1,4 +1,4 @@
-package tegola
+package walker
 
 import (
 	"context"
@@ -18,16 +18,16 @@ func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 }
 
-func TestNewEdgeIndexTriangles(t *testing.T) {
+func TestNew(t *testing.T) {
 	type tcase struct {
-		g    geom.Geometry
-		hm   planar.HitMapper
-		edix *edgeIndexTriangles
-		err  error
+		g   geom.Geometry
+		hm  planar.HitMapper
+		w   *walker
+		err error
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		edix, err := newEdgeIndexTriangles(context.Background(), tc.hm, tc.g)
+		w, err := New(context.Background(), tc.hm, tc.g)
 		if tc.err != nil {
 			if err == nil || tc.err.Error() != err.Error() {
 				t.Errorf("error, expected %v got %v", tc.err, err)
@@ -39,8 +39,8 @@ func TestNewEdgeIndexTriangles(t *testing.T) {
 			return
 		}
 
-		if !reflect.DeepEqual(*tc.edix, *edix) {
-			t.Errorf("index,\n expected %+v\n got       %+v", *tc.edix, *edix)
+		if !reflect.DeepEqual(*tc.w, *w) {
+			t.Errorf("index,\n expected %+v\n got       %+v", *tc.w, *w)
 		}
 
 	}
@@ -53,8 +53,8 @@ func TestNewEdgeIndexTriangles(t *testing.T) {
 				{{0, 10}, {0, 0}},
 			},
 			hm: hitmap.Inside,
-			edix: &edgeIndexTriangles{
-				triangles: []triangle{
+			w: &walker{
+				triangles: []geom.Triangle{
 					{{0, 0}, {10, 0}, {0, 10}},
 					{{0, 10}, {10, 0}, {10, 10}},
 				},
@@ -73,8 +73,8 @@ func TestNewEdgeIndexTriangles(t *testing.T) {
 				{{0, 7}, {7, 7}, {7, 2}},
 			},
 			hm: hitmap.Inside,
-			edix: &edgeIndexTriangles{
-				triangles: []triangle{
+			w: &walker{
+				triangles: []geom.Triangle{
 					{{0, 7}, {7, 7}, {0, 10}},
 					{{0, 10}, {7, 7}, {10, 10}},
 					{{7, 7}, {10, 0}, {10, 10}},
@@ -109,9 +109,9 @@ func TestNewEdgeIndexTriangles(t *testing.T) {
 				{{0, 0}, {8, 0}, {8, 8}, {0, 8}},
 				{{2, 2}, {2, 5}, {5, 5}, {5, 2}},
 			}),
-			edix: &edgeIndexTriangles{
+			w: &walker{
 
-				triangles: []triangle{
+				triangles: []geom.Triangle{
 
 					{{0, 0}, {2, 5}, {0, 8}},
 					{{0, 8}, {2, 5}, {5, 5}},
@@ -154,14 +154,14 @@ func TestNewEdgeIndexTriangles(t *testing.T) {
 
 func TestPolygonForTriangle(t *testing.T) {
 	type tcase struct {
-		edix          *edgeIndexTriangles
+		w             *walker
 		idx           []int
 		polygons      [][][][2]float64
 		seenTriangles [][]int
 	}
 	fn := func(t *testing.T, idx int, tc tcase) {
 		seen := make(map[int]bool)
-		plyg := tc.edix.PolygonForTriangle(context.Background(), idx, seen)
+		plyg := tc.w.PolygonForTriangle(context.Background(), idx, seen)
 		seenTriangles := make([]int, 0, len(seen))
 		for k, _ := range seen {
 			seenTriangles = append(seenTriangles, k)
@@ -177,8 +177,8 @@ func TestPolygonForTriangle(t *testing.T) {
 
 	tests := []tcase{
 		{ // simple squire
-			edix: &edgeIndexTriangles{
-				triangles: []triangle{
+			w: &walker{
+				triangles: []geom.Triangle{
 					{{0, 0}, {10, 0}, {0, 10}},
 					{{0, 10}, {10, 0}, {10, 10}},
 				},
@@ -201,8 +201,8 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 		},
 		{
-			edix: &edgeIndexTriangles{
-				triangles: []triangle{
+			w: &walker{
+				triangles: []geom.Triangle{
 					{{0, 7}, {7, 7}, {0, 10}},
 					{{0, 10}, {7, 7}, {10, 10}},
 					{{7, 7}, {10, 0}, {10, 10}},
@@ -237,9 +237,9 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 		},
 		{ // 2
-			edix: &edgeIndexTriangles{
+			w: &walker{
 
-				triangles: []triangle{
+				triangles: []geom.Triangle{
 
 					{{0, 0}, {2, 5}, {0, 8}},
 					{{0, 8}, {2, 5}, {5, 5}},
@@ -304,7 +304,7 @@ func TestPolygonForRing(t *testing.T) {
 			}
 		}()
 
-		plyg := polygonForRing(context.Background(), tc.rng)
+		plyg := PolygonForRing(context.Background(), tc.rng)
 		if !cmp.PolygonEqual(tc.plyg, plyg) {
 			t.Errorf("polygon, expected %v got %v", tc.plyg, plyg)
 		}

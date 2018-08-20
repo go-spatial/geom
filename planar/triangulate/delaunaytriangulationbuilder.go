@@ -13,6 +13,7 @@ http://www.eclipse.org/org/documents/edl-v10.php.
 package triangulate
 
 import (
+	"log"
 	"sort"
 
 	"github.com/go-spatial/geom"
@@ -52,19 +53,23 @@ Returns a List of the unique Coordinates
 
 If dtb is nil a panic will occur.
 */
-func (dtb *DelaunayTriangulationBuilder) extractUniqueCoordinates(g geom.Geometry) ([]quadedge.Vertex, error) {
-	if g == nil {
-		return []quadedge.Vertex{}, nil
-	}
+func (dtb *DelaunayTriangulationBuilder) extractUniqueCoordinates(g ...geom.Geometry) ([]quadedge.Vertex, error) {
 
-	coords, err := geom.GetCoordinates(g)
-	if err != nil {
-		return nil, err
-	}
+	vertices := make([]quadedge.Vertex, 0)
 
-	vertices := make([]quadedge.Vertex, len(coords))
-	for i := range coords {
-		vertices[i] = quadedge.Vertex{coords[i][0], coords[i][1]}
+	for _, g1 := range g {
+		if g1 == nil {
+			continue
+		}
+
+		coords, err := geom.GetCoordinates(g1)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range coords {
+			vertices = append(vertices, quadedge.Vertex{coords[i][0], coords[i][1]})
+		}
 	}
 
 	return dtb.unique(vertices), nil
@@ -129,10 +134,13 @@ geom - the geometry from which the sites will be extracted.
 
 If dtb is nil a panic will occur.
 */
-func (dtb *DelaunayTriangulationBuilder) SetSites(g geom.Geometry) error {
+func (dtb *DelaunayTriangulationBuilder) SetSites(g ...geom.Geometry) error {
 	// remove any duplicate points (they will cause the triangulation to fail)
-	c, err := dtb.extractUniqueCoordinates(g)
+	c, err := dtb.extractUniqueCoordinates(g...)
 	dtb.siteCoords = c
+	if debug {
+		log.Printf("siteCoords %v", c)
+	}
 	return err
 }
 
