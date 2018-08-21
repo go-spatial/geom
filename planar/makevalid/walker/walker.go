@@ -2,13 +2,11 @@ package walker
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/planar/triangulate/constraineddelaunay"
 )
 
 func sortedEdge(pt1, pt2 [2]float64) [2][2]float64 {
@@ -40,98 +38,26 @@ func SortedEdges(t geom.Triangle) [3][2][2]float64 {
 	}
 }
 
-func TriangulateGeometry(g geom.Geometry) ([]geom.Triangle, error) {
-	uut := new(constraineddelaunay.Triangulator)
-	if debug {
-		log.Printf("Triangulator for given segments %v ", g)
-	}
-	if err := uut.InsertGeometries([]geom.Geometry{g}, nil); err != nil {
-		if debug {
-			log.Printf("Triangulator error for given segments %v : %v", g, err)
-		}
-		return []geom.Triangle{}, fmt.Errorf("error triangulating geometry: %v", err)
-	}
-
-	if debug {
-		err := uut.Validate()
-		if err != nil {
-			log.Printf("Triangulator is not validate for the given segments %v : %v", g, err)
-			return []geom.Triangle{}, err
-		}
-	}
-	// TODO(gdey): We need to insure that GetTriangles does not dup the first point to the
-	//              last point. It may be better if it returned triangles and we moved triangles to Geom.
-	gtris, err := uut.GetTriangles()
-	if err != nil {
-		if debug {
-			log.Printf("got the following error %v", err)
-		}
-		return []geom.Triangle{}, err
-	}
-	if debug {
-		log.Printf("Triangulator genereated %v triangles", len(gtris))
-	}
-	var triangles = make([]geom.Triangle, len(gtris))
-	for i, ply := range gtris {
-		triangles[i] = geom.NewTriangleFromPolygon(ply)
-		cmp.RotateToLeftMostPoint(triangles[i][:])
-	}
-	return triangles, nil
+func MultiPolygon(ctx context.Context, triangles []geom.Triangle) geom.MultiPolygon {
+	return New(triangles).MultiPolygon(ctx)
 }
 
 // New creates a new walker that can be used to fix a geometry.
-func New(ctx context.Context, hm planar.HitMapper, g geom.Geometry) (*walker, error) {
+func New(triangles []geom.Triangle) *Walker {
 
-	var allTriangles []geom.Triangle
-	var err error
-
-	if allTriangles, err = TriangulateGeometry(g); err != nil {
-		return nil, err
-	}
-
-	if debug {
-		log.Printf("generated %v triangles.", len(allTriangles))
-	}
-
-	triangles := make([]geom.Triangle, 0, len(allTriangles))
-
-	for _, triangle := range allTriangles {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		if hm.LabelFor(triangle.Center()) == planar.Outside {
-			continue
-		}
-		triangles = append(triangles, triangle)
-	}
-
-	t := walker{
-		triangles: make([]geom.Triangle, len(triangles)),
+	return &Walker{
+		Triangles: triangles,
 		edgeMap:   edgeMapFromTriangles(triangles...),
 	}
-
-	// free up memory
-	copy(t.triangles, triangles)
-	return &t, nil
 }
 
-type walker struct {
-	triangles []geom.Triangle
+type Walker struct {
+	Triangles []geom.Triangle
 	edgeMap   map[[2][2]float64][]int
 }
 
-// Triangles returns a copy of the triangles.
-func (w *walker) Triangles() (triangles []geom.Triangle) {
-	if w == nil {
-		return triangles
-	}
-	triangles = make([]geom.Triangle, len(w.triangles))
-	copy(triangles, w.triangles)
-	return triangles
-}
-
 // EdgeMap returns a copy of the edgemap
-func (w *walker) EdgeMap() (edgeMap map[[2][2]float64][]int) {
+func (w *Walker) EdgeMap() (edgeMap map[[2][2]float64][]int) {
 	if w == nil {
 		return edgeMap
 	}
@@ -143,15 +69,18 @@ func (w *walker) EdgeMap() (edgeMap map[[2][2]float64][]int) {
 }
 
 // MultiPolygon walks all triangles and returns the generated polygons as a multipolygon.
-func (w *walker) MultiPolygon(ctx context.Context) (mplyg geom.MultiPolygon) {
+func (w *Walker) MultiPolygon(ctx context.Context) (mplyg geom.MultiPolygon) {
 	if w == nil {
 		if debug {
 			log.Printf("walker is nil.")
 		}
 		return mplyg
 	}
-	seen := make(map[int]bool, len(w.triangles))
-	for i := range w.triangles {
+	if w.edgeMap == nil {
+		w.edgeMap = edgeMapFromTriangles(w.Triangles...)
+	}
+	seen := make(map[int]bool, len(w.Triangles))
+	for i := range w.Triangles {
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -171,7 +100,7 @@ func (w *walker) MultiPolygon(ctx context.Context) (mplyg geom.MultiPolygon) {
 }
 
 // PolygonForTriangle walks the triangles starting at the given triangle returning the generated polygon from the walk.
-func (w *walker) PolygonForTriangle(ctx context.Context, idx int, seen map[int]bool) (plyg [][][2]float64) {
+func (w *Walker) PolygonForTriangle(ctx context.Context, idx int, seen map[int]bool) (plyg [][][2]float64) {
 	// Get the external ring for the given triangle.
 	return PolygonForRing(ctx, w.RingForTriangle(ctx, idx, seen))
 }
@@ -179,7 +108,7 @@ func (w *walker) PolygonForTriangle(ctx context.Context, idx int, seen map[int]b
 // RingForTriangle will walk the set of triangles starting at the given triangle index. As it walks the triangles it will
 // mark them as seen on the seen map. The function will return the outside ring of the walk
 // if seen is nil, the function will panic.
-func (w *walker) RingForTriangle(ctx context.Context, idx int, seen map[int]bool) (rng [][2]float64) {
+func (w *Walker) RingForTriangle(ctx context.Context, idx int, seen map[int]bool) (rng [][2]float64) {
 	if w == nil {
 		return rng
 	}
@@ -197,7 +126,7 @@ func (w *walker) RingForTriangle(ctx context.Context, idx int, seen map[int]bool
 	// This track the original begining of the ring.
 	var headIdx int
 
-	rng = append(rng, w.triangles[idx][:]...)
+	rng = append(rng, w.Triangles[idx][:]...)
 	cidxs := []int{idx, idx, idx}
 	cidx := cidxs[len(cidxs)-1]
 
@@ -254,7 +183,7 @@ RING_LOOP:
 			continue RING_LOOP
 		}
 
-		rng = append(rng, w.triangles[cidx].ThirdPoint(rng[0], rng[len(rng)-1]))
+		rng = append(rng, w.Triangles[cidx].ThirdPoint(rng[0], rng[len(rng)-1]))
 
 		cidxs[len(cidxs)-1] = cidx
 		cidxs = append(cidxs, cidx)
@@ -264,7 +193,7 @@ RING_LOOP:
 	return rng
 }
 
-func (w *walker) indexForEdge(p1, p2 [2]float64, defaultIdx int, seen map[int]bool) (idx int, ok bool) {
+func (w *Walker) indexForEdge(p1, p2 [2]float64, defaultIdx int, seen map[int]bool) (idx int, ok bool) {
 	for _, idx := range w.edgeMap[sortedEdge(p1, p2)] {
 		if seen[idx] || idx == defaultIdx {
 			continue

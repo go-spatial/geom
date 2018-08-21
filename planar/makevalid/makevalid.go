@@ -169,23 +169,14 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if err != nil {
 		return nil, err
 	}
+	triangles, err := InsideTrianglesForGeometry(ctx, multipolygon, hm)
 	if debug {
-		log.Printf("Step   3 : generate triangles")
+		log.Printf("Step   5 : generate multipolygon from triangles")
 	}
-	triWalker, err := walker.New(ctx, hm, segs)
-	if err != nil {
-		if debug {
-			log.Println("Step     3a: got error", err)
-		}
-		return nil, err
-	}
-	if debug {
-		log.Printf("Step   4 : generate multipolygon from triangles")
-	}
+	triWalker := walker.New(triangles)
 	mplygs := triWalker.MultiPolygon(ctx)
 
 	return &mplygs, nil
-
 }
 
 func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *geom.Extent) (geometry geom.Geometry, didClip bool, err error) {
