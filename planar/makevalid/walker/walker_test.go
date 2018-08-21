@@ -10,8 +10,6 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 )
 
 func init() {
@@ -20,25 +18,13 @@ func init() {
 
 func TestNew(t *testing.T) {
 	type tcase struct {
-		g   geom.Geometry
-		hm  planar.HitMapper
-		w   *walker
-		err error
+		triangles []geom.Triangle
+		w         *Walker
 	}
 
 	fn := func(t *testing.T, tc tcase) {
-		w, err := New(context.Background(), tc.hm, tc.g)
-		if tc.err != nil {
-			if err == nil || tc.err.Error() != err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err, err)
-			}
-			return
-		}
-		if err != nil {
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
 
+		w := New(tc.triangles)
 		if !reflect.DeepEqual(*tc.w, *w) {
 			t.Errorf("index,\n expected %+v\n got       %+v", *tc.w, *w)
 		}
@@ -46,15 +32,12 @@ func TestNew(t *testing.T) {
 	}
 	tests := []tcase{
 		{
-			g: geom.MultiLineString{
-				{{0, 0}, {10, 0}},
-				{{10, 0}, {10, 10}},
-				{{10, 10}, {0, 10}},
-				{{0, 10}, {0, 0}},
+			triangles: []geom.Triangle{
+				{{0, 0}, {10, 0}, {0, 10}},
+				{{0, 10}, {10, 0}, {10, 10}},
 			},
-			hm: hitmap.Inside,
-			w: &walker{
-				triangles: []geom.Triangle{
+			w: &Walker{
+				Triangles: []geom.Triangle{
 					{{0, 0}, {10, 0}, {0, 10}},
 					{{0, 10}, {10, 0}, {10, 10}},
 				},
@@ -68,13 +51,17 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			g: geom.Polygon{
-				{{0, 0}, {10, 0}, {10, 10}, {0, 10}},
-				{{0, 7}, {7, 7}, {7, 2}},
+			triangles: []geom.Triangle{
+				{{0, 7}, {7, 7}, {0, 10}},
+				{{0, 10}, {7, 7}, {10, 10}},
+				{{7, 7}, {10, 0}, {10, 10}},
+				{{0, 0}, {10, 0}, {7, 2}},
+				{{0, 0}, {7, 2}, {0, 7}},
+				{{0, 7}, {7, 2}, {7, 7}},
+				{{7, 2}, {10, 0}, {7, 7}},
 			},
-			hm: hitmap.Inside,
-			w: &walker{
-				triangles: []geom.Triangle{
+			w: &Walker{
+				Triangles: []geom.Triangle{
 					{{0, 7}, {7, 7}, {0, 10}},
 					{{0, 10}, {7, 7}, {10, 10}},
 					{{7, 7}, {10, 0}, {10, 10}},
@@ -101,17 +88,20 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			g: geom.Polygon{
-				{{0, 0}, {8, 0}, {8, 8}, {0, 8}},
-				{{2, 2}, {2, 5}, {5, 5}, {5, 2}},
-			},
-			hm: hitmap.MustNewFromPolygons(nil, [][][2]float64{
-				{{0, 0}, {8, 0}, {8, 8}, {0, 8}},
-				{{2, 2}, {2, 5}, {5, 5}, {5, 2}},
-			}),
-			w: &walker{
+			triangles: []geom.Triangle{
 
-				triangles: []geom.Triangle{
+				{{0, 0}, {2, 5}, {0, 8}},
+				{{0, 8}, {2, 5}, {5, 5}},
+				{{0, 8}, {5, 5}, {8, 8}},
+				{{5, 5}, {8, 0}, {8, 8}},
+				{{0, 0}, {8, 0}, {5, 2}},
+				{{0, 0}, {5, 2}, {2, 2}},
+				{{0, 0}, {2, 2}, {2, 5}},
+				{{5, 2}, {8, 0}, {5, 5}},
+			},
+			w: &Walker{
+
+				Triangles: []geom.Triangle{
 
 					{{0, 0}, {2, 5}, {0, 8}},
 					{{0, 8}, {2, 5}, {5, 5}},
@@ -154,7 +144,7 @@ func TestNew(t *testing.T) {
 
 func TestPolygonForTriangle(t *testing.T) {
 	type tcase struct {
-		w             *walker
+		w             *Walker
 		idx           []int
 		polygons      [][][][2]float64
 		seenTriangles [][]int
@@ -177,8 +167,8 @@ func TestPolygonForTriangle(t *testing.T) {
 
 	tests := []tcase{
 		{ // simple squire
-			w: &walker{
-				triangles: []geom.Triangle{
+			w: &Walker{
+				Triangles: []geom.Triangle{
 					{{0, 0}, {10, 0}, {0, 10}},
 					{{0, 10}, {10, 0}, {10, 10}},
 				},
@@ -201,8 +191,8 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 		},
 		{
-			w: &walker{
-				triangles: []geom.Triangle{
+			w: &Walker{
+				Triangles: []geom.Triangle{
 					{{0, 7}, {7, 7}, {0, 10}},
 					{{0, 10}, {7, 7}, {10, 10}},
 					{{7, 7}, {10, 0}, {10, 10}},
@@ -237,9 +227,9 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 		},
 		{ // 2
-			w: &walker{
+			w: &Walker{
 
-				triangles: []geom.Triangle{
+				Triangles: []geom.Triangle{
 
 					{{0, 0}, {2, 5}, {0, 8}},
 					{{0, 8}, {2, 5}, {5, 5}},

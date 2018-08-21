@@ -76,6 +76,14 @@ func NewOrderedHM(hms ...planar.HitMapper) OrderedHM {
 	return ohm
 }
 
+func MustNew(clipbox *geom.Extent, geo geom.Geometry) planar.HitMapper {
+	hm, err := New(clipbox, geo)
+	if err != nil {
+		panic(err)
+	}
+	return hm
+}
+
 // NewHitMap will return a Polygon Hit map, a Ordered Hit Map, or a nil Hit map based on the geomtry type.
 func New(clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
 
