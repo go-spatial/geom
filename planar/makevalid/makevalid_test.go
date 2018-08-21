@@ -10,7 +10,10 @@ import (
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 )
 
-func TestMakeValid(t *testing.T) {
+func TestMakeValid(t *testing.T)      { checkMakeValid(t) }
+func BenchmakrMakeValid(b *testing.B) { checkMakeValid(b) }
+
+func checkMakeValid(tb testing.TB) {
 	type tcase struct {
 		MultiPolygon         *geom.MultiPolygon
 		ExpectedMultiPolygon *geom.MultiPolygon
@@ -19,7 +22,7 @@ func TestMakeValid(t *testing.T) {
 		didClip              bool
 	}
 
-	fn := func(t *testing.T, tc tcase) {
+	fn := func(t testing.TB, tc tcase) {
 		hm, err := hitmap.NewFromPolygons(tc.ClipBox, tc.MultiPolygon.Polygons()...)
 		if err != nil {
 			panic("Was not expecting the hitmap to return error.")
@@ -61,6 +64,16 @@ func TestMakeValid(t *testing.T) {
 	}
 	for name, tc := range tests {
 		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		switch t := tb.(type) {
+		case *testing.T:
+			t.Run(name, func(t *testing.T) { fn(t, tc) })
+		case *testing.B:
+			t.Run(name, func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					fn(b, tc)
+				}
+			})
+		}
 	}
 }
