@@ -27,7 +27,7 @@ func TestSearchSegmentIdx(t *testing.T) {
 		}
 	}
 	testSegments := [...][]geom.Line{
-		[]geom.Line{ // 0
+		{ // 0
 			{{1, 0}, {10, 9}},  // 00
 			{{10, 9}, {14, 5}}, // 01
 			{{14, 5}, {2, 5}},  // 02
@@ -45,7 +45,7 @@ func TestSearchSegmentIdx(t *testing.T) {
 			{{11, 7}, {6, 5}},  // 14
 			{{6, 5}, {3, 9}},   // 15
 		},
-		[]geom.Line{ // 1
+		{ // 1
 			{{1, 3}, {1, 1}},   // 01
 			{{1, 1}, {4, -4}},  // 02
 			{{4, -4}, {8, -4}}, // 03

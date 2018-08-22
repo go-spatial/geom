@@ -21,17 +21,17 @@ func TestIsInCircleRobust(t *testing.T) {
 	}
 	testcases := []tcase{
 		{
-			circle:   [3]Vertex{Vertex{10, 10}, Vertex{15, 120}, Vertex{10, 20}},
+			circle:   [3]Vertex{{10, 10}, {15, 120}, {10, 20}},
 			point:    Vertex{20, 10},
 			expected: true,
 		},
 		{
-			circle:   [3]Vertex{Vertex{15, 120}, Vertex{10, 10}, Vertex{20, 20}},
+			circle:   [3]Vertex{{15, 120}, {10, 10}, {20, 20}},
 			point:    Vertex{10, 20},
 			expected: true,
 		},
 		{
-			circle:   [3]Vertex{Vertex{10, 10}, Vertex{15, 120}, Vertex{10, 20}},
+			circle:   [3]Vertex{{10, 10}, {15, 120}, {10, 20}},
 			point:    Vertex{0, 10},
 			expected: false,
 		},

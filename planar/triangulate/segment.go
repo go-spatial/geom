@@ -42,12 +42,12 @@ This makes a deep copy of the line segment, but not the data.
 If seg is nil a panic will occur.
 */
 func (seg *Segment) DeepCopy() Segment {
-    cp := Segment{}
-    cp.ls[0][0] = seg.ls[0][0]
-    cp.ls[0][1] = seg.ls[0][1]
-    cp.ls[1][0] = seg.ls[1][0]
-    cp.ls[1][1] = seg.ls[1][1]
-    return cp
+	cp := Segment{}
+	cp.ls[0][0] = seg.ls[0][0]
+	cp.ls[0][1] = seg.ls[0][1]
+	cp.ls[1][0] = seg.ls[1][0]
+	cp.ls[1][1] = seg.ls[1][1]
+	return cp
 }
 
 /**

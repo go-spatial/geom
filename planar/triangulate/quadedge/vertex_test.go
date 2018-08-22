@@ -185,9 +185,9 @@ func TestVertexScalar(t *testing.T) {
 
 func TestVertexUnary(t *testing.T) {
 	type tcase struct {
-		v     Vertex
-		cross  Vertex
-		magn   float64
+		v         Vertex
+		cross     Vertex
+		magn      float64
 		normalize Vertex
 	}
 
@@ -222,10 +222,10 @@ func TestVertexUnary(t *testing.T) {
 
 func TestVertexVertex(t *testing.T) {
 	type tcase struct {
-		v1     Vertex
-		v2	   Vertex
-		dot    float64
-		sum    Vertex
+		v1  Vertex
+		v2  Vertex
+		dot float64
+		sum Vertex
 	}
 
 	fn := func(t *testing.T, tc tcase) {

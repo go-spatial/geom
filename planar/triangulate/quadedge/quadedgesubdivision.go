@@ -36,7 +36,6 @@ func (e ErrLocateFailure) Error() string {
 	return fmt.Sprintf("failure locating")
 }
 
-
 /*
 QuadEdgeSubdivision is a class that contains the QuadEdges representing a
 planar subdivision that models a triangulation. The subdivision is constructed
@@ -305,7 +304,7 @@ func (qes *QuadEdgeSubdivision) LocateFromEdge(v Vertex, startEdge *QuadEdge) (*
 			since the orientation predicates may experience precision failures.
 		*/
 		if iter > maxIter {
-			return nil, ErrLocateFailure{V:&v}
+			return nil, ErrLocateFailure{V: &v}
 		}
 
 		if v.Equals(e.Orig()) || v.Equals(e.Dest()) {

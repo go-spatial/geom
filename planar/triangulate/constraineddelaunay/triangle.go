@@ -21,9 +21,11 @@ type Triangle struct {
 
 type TriangleByCentroid []Triangle
 
-func (a TriangleByCentroid) Len() int           { return len(a) }
-func (a TriangleByCentroid) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a TriangleByCentroid) Less(i, j int) bool { return cmp.PointLess(a[i].Centroid().XY(), a[j].Centroid().XY()) }
+func (a TriangleByCentroid) Len() int      { return len(a) }
+func (a TriangleByCentroid) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a TriangleByCentroid) Less(i, j int) bool {
+	return cmp.PointLess(a[i].Centroid().XY(), a[j].Centroid().XY())
+}
 
 /*
 IntersectsPoint returns true if the vertex intersects the given triangle. This
@@ -69,7 +71,7 @@ func (tri *Triangle) Centroid() quadedge.Vertex {
 }
 
 /*
-GetStartEdge returns the 'starting' edge of this triangle. Unless Normalize 
+GetStartEdge returns the 'starting' edge of this triangle. Unless Normalize
 has been called the edge is arbitrary.
 
 If tri is nil a panic will occur.
@@ -105,10 +107,10 @@ func (tri *Triangle) IsValid() bool {
 }
 
 /*
-Normalize returns a triangle that is represented by the QuadEdge that starts 
+Normalize returns a triangle that is represented by the QuadEdge that starts
 at the "smallest" coordinate.
 
-Because there are multiple ways to represent the same triangle this is 
+Because there are multiple ways to represent the same triangle this is
 necessary if you want to maintain a set or map of triangles.
 
 If tri is nil a panic will occur.
@@ -240,7 +242,7 @@ func (tri *Triangle) sharedEdge(other *Triangle) (*quadedge.QuadEdge, error) {
 /*
 String returns a string representation of triangle.
 
-If IsValid is false you may get a "triangle" with more or less than three 
+If IsValid is false you may get a "triangle" with more or less than three
 sides.
 
 If tri is nil a panic will occur.

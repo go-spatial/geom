@@ -52,21 +52,21 @@ func TestInsertPoints(t *testing.T) {
 	tests := map[string]tcase{
 		"good": {
 			points: []geom.Point{
-				geom.Point{0, 0},
-				geom.Point{1, 0},
-				geom.Point{1, 1},
-				geom.Point{-1, 0},
+				{0, 0},
+				{1, 0},
+				{1, 1},
+				{-1, 0},
 			},
 			eJSON: `{"P":[0,0],"Left":{"P":[-1,0]},"Right":{"P":[1,0],"Right":{"P":[1,1]}}}`,
 		},
 		// insert 0,0 twice which should return an error
 		"duplicate point": {
 			points: []geom.Point{
-				geom.Point{0, 0},
-				geom.Point{1, 0},
-				geom.Point{1, 1},
-				geom.Point{0, 0},
-				geom.Point{-1, 0},
+				{0, 0},
+				{1, 0},
+				{1, 1},
+				{0, 0},
+				{-1, 0},
 			},
 			err: ErrDuplicateNode,
 		},

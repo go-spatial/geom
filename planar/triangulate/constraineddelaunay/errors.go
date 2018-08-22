@@ -15,7 +15,6 @@ func (e ErrNoMatchingEdgeFound) Error() string {
 	return fmt.Sprintf("no matching edge found T1: %v T2: %v", e.T1, e.T2)
 }
 
-
 type ErrInvalidVertex struct {
 	V quadedge.Vertex
 	T *Triangle

@@ -1293,7 +1293,7 @@ func (tri *Triangulator) validateVertexIndex() error {
 	}
 
 	// verify all vertices are in the vertex index
-	for v, _ := range vertexSet {
+	for v := range vertexSet {
 		if _, ok := tri.vertexIndex[v]; ok == false {
 			return fmt.Errorf("vertex index is missing a vertex: %v", v)
 		}

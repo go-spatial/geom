@@ -134,7 +134,7 @@ func (pc *PolygonCleaner) findUnextractedTri() *constraineddelaunay.Triangle {
 	// put the unextracted triangles into an array and sort based on centroid
 	if len(pc.extractedTris) == 0 {
 		pc.unextractedTris = make([]constraineddelaunay.Triangle, 0)
-		for k, _ := range pc.triLabels[0] {
+		for k := range pc.triLabels[0] {
 			if pc.isInside(k) {
 				pc.unextractedTris = append(pc.unextractedTris, k)
 				if debug {
@@ -379,7 +379,7 @@ func (pc *PolygonCleaner) getLabelsAsString() string {
 	result := []string{}
 
 	l := pc.triLabels[0]
-	for k, _ := range l {
+	for k := range l {
 		if pc.isInside(k) {
 			result = append(result, "inside: "+k.String())
 		}
