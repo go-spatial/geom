@@ -59,8 +59,15 @@ func LineIntersect(l1, l2 geom.Line) (pt [2]float64, ok bool) {
 
 	xnom := (((x1 * y2) - (y1 * x2)) * (x3 - x4)) - ((x1 - x2) * ((x3 * y4) - (y3 * x4)))
 	ynom := (((x1 * y2) - (y1 * x2)) * (y3 - y4)) - ((y1 - y2) * ((x3 * y4) - (y3 * x4)))
-	return [2]float64{xnom / denom, ynom / denom}, true
-
+	x := xnom / denom
+	if x == -0 {
+		x = 0
+	}
+	y := ynom / denom
+	if y == -0 {
+		y = 0
+	}
+	return [2]float64{x, y}, true
 }
 
 func bigFloat(f float64) *big.Float { return big.NewFloat(f).SetPrec(PrecisionLevelBigFloat) }
@@ -129,27 +136,18 @@ func LineIntersectBigFloat(l1, l2 geom.Line) (pt [2]*big.Float, ok bool) {
 
 // SegmentIntersect finds the intersection point (x,y) between two lines if there is one. Ok will be true if it found a point that is on both line segments, otherwise it will be false.
 func SegmentIntersect(l1, l2 geom.Line) (pt [2]float64, ok bool) {
-	bpt, ok := LineIntersectBigFloat(l1, l2)
-	if !ok {
+	if pt, ok = LineIntersect(l1, l2); !ok {
 		if debug {
 			log.Printf("Lines don't intersect: %v %v", l1, l2)
 		}
 		return pt, false
 	}
-	l1c, l2c := l1.ContainsPointBigFloat(bpt), l2.ContainsPointBigFloat(bpt)
+	l1c, l2c := l1.ContainsPoint(pt), l2.ContainsPoint(pt)
 	if debug {
-		log.Printf("LineIntersect returns %v %v", bpt, ok)
-		log.Printf("line (%v) contains point(%v) :%v ", l1, bpt, l1c)
-		log.Printf("line (%v) contains point(%v) :%v ", l2, bpt, l2c)
-	}
-	x, _ := bpt[0].Float64()
-	y, _ := bpt[1].Float64()
-	if y == -0 {
-		y = 0
-	}
-	if x == -0 {
-		x = 0
+		log.Printf("LineIntersect returns %v %v", pt, ok)
+		log.Printf("line (%v) contains point(%v) :%v ", l1, pt, l1c)
+		log.Printf("line (%v) contains point(%v) :%v ", l2, pt, l2c)
 	}
 	// Check to see if the pt is on both line segments.
-	return [2]float64{x, y}, l1c && l2c
+	return pt, l1c && l2c
 }
