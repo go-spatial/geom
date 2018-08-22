@@ -243,7 +243,7 @@ func (e *Extent) ContainsLine(l [2][2]float64) bool {
 
 // ContainsGeom will return weather the given geometry is completely inside of the extent.
 func (e *Extent) ContainsGeom(g Geometry) (bool, error) {
-	if e == nil {
+	if e.IsUniverse() {
 		return true, nil
 	}
 	// Check to see if it can be a MinMaxer, if so use that.

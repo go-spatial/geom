@@ -49,9 +49,6 @@ func lineString(ctx context.Context, ls [][2]float64, clipbox *geom.Extent) (mls
 	}
 
 	// The clipbox contains everything, no need to clip anything, just return the LineString in a MultiLineString.
-	if clipbox.IsUniverse() {
-		return geom.MultiLineString{ls}, nil
-	}
 	if len(ls) == 0 {
 		return geom.MultiLineString{}, nil
 	}
