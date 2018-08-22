@@ -68,10 +68,10 @@ func TestQuery(t *testing.T) {
 	tests := map[string]tcase{
 		"good": {
 			points: []geom.Point{
-				geom.Point{0, 0},
-				geom.Point{1, 0},
-				geom.Point{1, 1},
-				geom.Point{-1, 0},
+				{0, 0},
+				{1, 0},
+				{1, 1},
+				{-1, 0},
 			},
 			queryPoint: geom.Point{2, 2},
 			eOrder: []string{

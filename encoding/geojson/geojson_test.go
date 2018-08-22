@@ -204,7 +204,7 @@ func TestUnmarshalJSON(t *testing.T) {
 		"feature collection": {
 			gjson: []byte(`{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[12.2,17.7]},"properties":null}]}`),
 			expected: geojson.FeatureCollection{
-				Features: []geojson.Feature{geojson.Feature{Geometry: geojson.Geometry{geom.Point{12.2, 17.7}}}},
+				Features: []geojson.Feature{{Geometry: geojson.Geometry{geom.Point{12.2, 17.7}}}},
 			},
 		},
 	}

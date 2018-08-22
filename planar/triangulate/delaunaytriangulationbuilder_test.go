@@ -39,12 +39,12 @@ func TestUnique(t *testing.T) {
 	}
 	testcases := []tcase{
 		{
-			points:   []quadedge.Vertex{quadedge.Vertex{0, 1}, quadedge.Vertex{0, 1}},
-			expected: []quadedge.Vertex{quadedge.Vertex{0, 1}},
+			points:   []quadedge.Vertex{{0, 1}, {0, 1}},
+			expected: []quadedge.Vertex{{0, 1}},
 		},
 		{
-			points:   []quadedge.Vertex{quadedge.Vertex{0, 1}, quadedge.Vertex{0, 1}, quadedge.Vertex{1, 0}},
-			expected: []quadedge.Vertex{quadedge.Vertex{0, 1}, quadedge.Vertex{1, 0}},
+			points:   []quadedge.Vertex{{0, 1}, {0, 1}, {1, 0}},
+			expected: []quadedge.Vertex{{0, 1}, {1, 0}},
 		},
 	}
 

@@ -70,15 +70,15 @@ func TestClipLineString(t *testing.T) {
 	}
 
 	tests := [...]tcase{
-		tcase{ /* 000 */
+		{ /* 000 */
 			extent:  testExtents[0],
 			linestr: [][2]float64{{-2, 1}, {2, 1}, {2, 2}, {-1, 2}, {-1, 11}, {2, 11}, {2, 4}, {4, 4}, {4, 13}, {-2, 13}},
 			expected: [][][2]float64{
-				[][2]float64{{0, 1}, {2, 1}, {2, 2}, {0, 2}},
-				[][2]float64{{2, 10}, {2, 4}, {4, 4}, {4, 10}},
+				{{0, 1}, {2, 1}, {2, 2}, {0, 2}},
+				{{2, 10}, {2, 4}, {4, 4}, {4, 10}},
 			},
 		},
-		tcase{ /* 001 */
+		{ /* 001 */
 			extent:  testExtents[0],
 			linestr: [][2]float64{{-2, 1}, {12, 1}, {12, 2}, {-1, 2}, {-1, 11}, {2, 11}, {2, 4}, {4, 4}, {4, 13}, {-2, 13}},
 			expected: geom.MultiLineString{
@@ -87,7 +87,7 @@ func TestClipLineString(t *testing.T) {
 				[][2]float64{{2, 10}, {2, 4}, {4, 4}, {4, 10}},
 			},
 		},
-		tcase{ /* 002 */
+		{ /* 002 */
 			extent:  testExtents[0],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
@@ -96,7 +96,7 @@ func TestClipLineString(t *testing.T) {
 				[][2]float64{{0, 4}, {3, 4}, {3, 1}},
 			},
 		},
-		tcase{ /* 003 */
+		{ /* 003 */
 			extent:  testExtents[1],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
@@ -105,7 +105,7 @@ func TestClipLineString(t *testing.T) {
 				[][2]float64{{2, 4}, {3, 4}, {3, 2}},
 			},
 		},
-		tcase{ /* 004 */
+		{ /* 004 */
 			extent:  testExtents[2],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
@@ -113,57 +113,57 @@ func TestClipLineString(t *testing.T) {
 				[][2]float64{{0, 4}, {3, 4}, {3, 1}},
 			},
 		},
-		tcase{ /* 005 */
+		{ /* 005 */
 			extent:  testExtents[3],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
 				[][2]float64{{-2, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			},
 		},
-		tcase{ /* 006 */
+		{ /* 006 */
 			extent:  testExtents[4],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
 				[][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			},
 		},
-		tcase{ /* 007 */
+		{ /* 007 */
 			extent:  testExtents[5],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
 				[][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			},
 		},
-		tcase{ /* 008 */
+		{ /* 008 */
 			extent:  testExtents[6],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
 				[][2]float64{{7, 2}, {5, 2}, {5, 3}},
 			},
 		},
-		tcase{ /* 009 */
+		{ /* 009 */
 			extent:   testExtents[7],
 			linestr:  [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: nil,
 		},
-		tcase{ /* 010 */
+		{ /* 010 */
 			extent:   testExtents[8],
 			linestr:  [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: nil,
 		},
-		tcase{ /* 011 */
+		{ /* 011 */
 			extent:  testExtents[9],
 			linestr: [][2]float64{{-3, 1}, {-3, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: geom.MultiLineString{
 				[][2]float64{{5, 9}, {11, 9}, {11, 2}, {5, 2}, {5, 8}},
 			},
 		},
-		tcase{ /* 012 */
+		{ /* 012 */
 			extent:   testExtents[9],
 			linestr:  [][2]float64{{-3, 1}, {-3, 10}, {12, 10}, {12, 1}, {4, 1}, {4, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 1}},
 			expected: nil,
 		},
-		tcase{ /* 013 */
+		{ /* 013 */
 			extent:  testExtents[0],
 			linestr: [][2]float64{{-3, -3}, {-3, 10}, {12, 10}, {12, 1}, {4, 1}, {4, 8}, {-1, 8}, {-1, 4}, {3, 4}, {3, 3}},
 			expected: geom.MultiLineString{
@@ -172,14 +172,14 @@ func TestClipLineString(t *testing.T) {
 				[][2]float64{{0, 4}, {3, 4}, {3, 3}},
 			},
 		},
-		tcase{ /* 014 */
+		{ /* 014 */
 			extent:  testExtents[10],
 			linestr: [][2]float64{{-1, -1}, {12, -1}, {12, 12}, {-1, 12}},
 			expected: geom.MultiLineString{
 				[][2]float64{{-1, -1}, {11, -1}},
 			},
 		},
-		tcase{ /* 015 */
+		{ /* 015 */
 			extent: testExtents[11],
 
 			linestr: [][2]float64{{7848, 19609}, {7340, 18835}, {6524, 17314}, {6433, 17163}, {5178, 15057}, {5147, 15006}, {4680, 14226}, {3861, 12766}, {2471, 10524}, {2277, 10029}, {1741, 8281}, {1655, 8017}, {1629, 7930}, {1437, 7368}, {973, 5481}, {325, 4339}, {-497, 3233}, {-1060, 2745}, {-1646, 2326}, {-1883, 2156}, {-2002, 2102}, {-2719, 1774}, {-3638, 1382}, {-3795, 1320}, {-5225, 938}, {-6972, 295}, {-7672, -88}, {-8243, -564}, {-8715, -1112}, {-9019, -1573}, {-9235, -2067}, {-9293, -2193}, {-9408, -2570}, {-9823, -4630}, {-10118, -5927}, {-10478, -7353}, {-10909, -8587}, {-11555, -9743}, {-11837, -10005}, {-12277, -10360}, {-13748, -11189}, {-14853, -12102}, {-15806, -12853}, {-16711, -13414}},
@@ -187,24 +187,24 @@ func TestClipLineString(t *testing.T) {
 				[][2]float64{{144.397830, 4096}, {-0, 3901.712895}},
 			},
 		},
-		tcase{ /* 016 */
+		{ /* 016 */
 			extent:   testExtents[11],
 			linestr:  [][2]float64{},
 			expected: nil,
 		},
-		tcase{ /* 017 */
+		{ /* 017 */
 			extent:   testExtents[11],
 			linestr:  [][2]float64{{-1, 1}, {1, -1}},
 			expected: nil,
 		},
-		tcase{ /* 018 */
+		{ /* 018 */
 			extent:  nil,
 			linestr: [][2]float64{{-1, 1}, {1, -1}},
 			expected: geom.MultiLineString{
 				[][2]float64{{-1, 1}, {1, -1}},
 			},
 		},
-		tcase{ /* 019 */
+		{ /* 019 */
 			extent:  testExtents[11],
 			linestr: [][2]float64{{-1, 1}},
 			err:     geom.ErrInvalidLineString,

@@ -170,7 +170,7 @@ data an object containing external data
 If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) SetData(data interface{}) {
-    qe.data = data;
+	qe.data = data
 }
 
 /*
@@ -179,7 +179,7 @@ GetData returns the external data value for this edge.
 If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) GetData() interface{} {
-    return qe.data
+	return qe.data
 }
 
 /*
