@@ -1,7 +1,6 @@
 package planar
 
 import (
-	"log"
 	"math/big"
 
 	"github.com/go-spatial/geom"
@@ -134,20 +133,45 @@ func LineIntersectBigFloat(l1, l2 geom.Line) (pt [2]*big.Float, ok bool) {
 
 }
 
-// SegmentIntersect finds the intersection point (x,y) between two lines if there is one. Ok will be true if it found a point that is on both line segments, otherwise it will be false.
+// SegmentIntersect will find the intersection point (x,y) between two lines if
+// there is one. Ok will be true if it found an intersection point and if the
+// point is on both lines.
+// ref: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
 func SegmentIntersect(l1, l2 geom.Line) (pt [2]float64, ok bool) {
-	if pt, ok = LineIntersect(l1, l2); !ok {
-		if debug {
-			log.Printf("Lines don't intersect: %v %v", l1, l2)
-		}
+
+	x1, y1 := l1.Point1().X(), l1.Point1().Y()
+	x2, y2 := l1.Point2().X(), l1.Point2().Y()
+	x3, y3 := l2.Point1().X(), l2.Point1().Y()
+	x4, y4 := l2.Point2().X(), l2.Point2().Y()
+
+	deltaX12 := x1 - x2
+	deltaX13 := x1 - x3
+	deltaX34 := x3 - x4
+	deltaY12 := y1 - y2
+	deltaY13 := y1 - y3
+	deltaY34 := y3 - y4
+	denom := (deltaX12 * deltaY34) - (deltaY12 * deltaX34)
+
+	// The lines are parallel or they overlap. No single point.
+	if denom == 0 {
 		return pt, false
 	}
-	l1c, l2c := l1.ContainsPoint(pt), l2.ContainsPoint(pt)
-	if debug {
-		log.Printf("LineIntersect returns %v %v", pt, ok)
-		log.Printf("line (%v) contains point(%v) :%v ", l1, pt, l1c)
-		log.Printf("line (%v) contains point(%v) :%v ", l2, pt, l2c)
+
+	xnom := (((x1 * y2) - (y1 * x2)) * deltaX34) - (deltaX12 * ((x3 * y4) - (y3 * x4)))
+	ynom := (((x1 * y2) - (y1 * x2)) * deltaY34) - (deltaY12 * ((x3 * y4) - (y3 * x4)))
+	bx := (xnom / denom)
+	by := (ynom / denom)
+	if bx == -0 {
+		bx = 0
 	}
-	// Check to see if the pt is on both line segments.
-	return pt, l1c && l2c
+	if by == -0 {
+		by = 0
+	}
+
+	t := ((deltaX13 * deltaY34) - (deltaY13 * deltaX34)) / denom
+	u := -((deltaX12 * deltaY13) - (deltaY12 * deltaX13)) / denom
+
+	intersects := u >= 0.0 && u <= 1.0 && t >= 0.0 && t <= 1.0
+	return [2]float64{bx, by}, intersects
+
 }

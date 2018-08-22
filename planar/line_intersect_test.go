@@ -151,7 +151,7 @@ func TestSegmentIntersect(t *testing.T) {
 			l1: geom.Line{{1, 1}, {10, 20}},
 			l2: geom.Line{{-1, 5.928571428571428}, {13.333333333333334, 5.928571428571428}},
 			ok: true,
-			pt: [2]float64{3.3345870971679688, 5.9285736083984375},
+			pt: [2]float64{3.334586, 5.92857142},
 		},
 	}
 	for key, tc := range tests {
