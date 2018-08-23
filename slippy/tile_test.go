@@ -7,6 +7,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/slippy"
+	"reflect"
 )
 
 func TestNewTile(t *testing.T) {
@@ -21,7 +22,7 @@ func TestNewTile(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 
 		// Test the new functions.
-		tile := slippy.NewTile(tc.z, tc.x, tc.y, tc.buffer)
+		tile := slippy.NewTile(tc.z, tc.x, tc.y)
 		{
 			gz, gx, gy := tile.ZXY()
 			if gz != tc.z {
@@ -33,12 +34,9 @@ func TestNewTile(t *testing.T) {
 			if gy != tc.y {
 				t.Errorf("y, expected %v got %v", tc.y, gy)
 			}
-			if tile.Buffer != tc.buffer {
-				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
-			}
 		}
 		{
-			bounds := tile.Bounds()
+			bounds := tile.Extent4326()
 			for i := 0; i < 4; i++ {
 				if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01) {
 					t.Errorf("bounds[%v] , expected %v got %v", i, tc.eBounds[i], bounds[i])
@@ -47,14 +45,14 @@ func TestNewTile(t *testing.T) {
 			}
 		}
 		{
-			bufferedExtent := tile.BufferedExtent(tc.srid)
+			bufferedExtent := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, uint(tc.buffer)))
 
 			if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
 				t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
 			}
 		}
 		{
-			extent := tile.Extent(tc.srid)
+			extent := tile.Extent3857()
 
 			if !cmp.GeomExtent(tc.eExtent, extent) {
 				t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
@@ -68,7 +66,6 @@ func TestNewTile(t *testing.T) {
 			x:      1,
 			y:      1,
 			buffer: 64,
-			srid:   geom.WebMercator,
 			eExtent: geom.NewExtent(
 				[2]float64{-10018754.17, 10018754.17},
 				[2]float64{0, 0},
@@ -87,7 +84,6 @@ func TestNewTile(t *testing.T) {
 			x:      11436,
 			y:      26461,
 			buffer: 64,
-			srid:   geom.WebMercator,
 			eExtent: geom.NewExtent(
 				[2]float64{-13044437.497219238996, 3856706.6986199953},
 				[2]float64{-13043826.000993041, 3856095.202393799},
@@ -119,7 +115,7 @@ func TestNewTileLatLon(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 
 		// Test the new functions.
-		tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon, tc.buffer, tc.srid)
+		tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon)
 		{
 			gz, gx, gy := tile.ZXY()
 			if gz != tc.z {
@@ -130,9 +126,6 @@ func TestNewTileLatLon(t *testing.T) {
 			}
 			if gy != tc.y {
 				t.Errorf("y, expected %v got %v", tc.y, gy)
-			}
-			if tile.Buffer != tc.buffer {
-				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
 			}
 		}
 
@@ -145,7 +138,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    0,
 			lon:    0,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 		"center": {
 			z:      8,
@@ -154,7 +146,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    0,
 			lon:    0,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 		"arbitrary zoom 2": {
 			z:      2,
@@ -163,7 +154,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    -70,
 			lon:    20,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 		"arbitrary zoom 16": {
 			z:      16,
@@ -172,7 +162,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    32.705,
 			lon:    -117.176,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 	}
 
@@ -193,7 +182,7 @@ func TestRangeFamilyAt(t *testing.T) {
 		expected []coord
 	}{
 		"children 1": {
-			tile:   slippy.NewTile(0, 0, 0, 0),
+			tile:   slippy.NewTile(0, 0, 0),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 0},
@@ -203,7 +192,7 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"children 2": {
-			tile:   slippy.NewTile(8, 3, 5, 0),
+			tile:   slippy.NewTile(8, 3, 5),
 			zoomAt: 10,
 			expected: []coord{
 				{10, 12, 20},
@@ -228,14 +217,14 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"parent 1": {
-			tile:   slippy.NewTile(1, 0, 0, 0),
+			tile:   slippy.NewTile(1, 0, 0),
 			zoomAt: 0,
 			expected: []coord{
 				{0, 0, 0},
 			},
 		},
 		"parent 2": {
-			tile:   slippy.NewTile(3, 3, 5, 0),
+			tile:   slippy.NewTile(3, 3, 5),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 1},
@@ -276,31 +265,29 @@ func TestRangeFamilyAt(t *testing.T) {
 	}
 }
 
-func TestNewTilePoint(t *testing.T) {
+func TestNewTileMinMaxer(t *testing.T) {
 	type tcase struct {
-		srid uint64
-		zoom uint
-		point geom.Point
+		mm geom.MinMaxer
 		tile *slippy.Tile
 	}
 
-	fn := func(tc tcase, t *testing.T) {
-		tile := slippy.NewTilePoint(tc.zoom, &tc.point, tc.srid)
-
-		gz, gx, gy := tile.ZXY()
-		ez, ex, ey := tc.tile.ZXY()
-
-		if tile.ZXY() != tc.tile.ZXY() {
-			t.Fatalf("incorrect value (z: %v, x: %v, y: %v), expected (z: %v, x: %v, y: %v)", gz, gx, gy, ez, ex, ey )
+	fn := func (tc tcase, t *testing.T) {
+		tile := slippy.NewTileMinMaxer(tc.mm)
+		if !reflect.DeepEqual(tile, tc.tile) {
+			t.Errorf("unexpected tile %v, expected %v", tile, tc.tile)
 		}
 	}
 
-	testcases := map[string]tcase{
+	testcases := map[string]tcase {
 		"1": {
-			srid: geom.WebMercator,
-			zoom: 1,
-			point: [2]float64{-1, 1},
-			tile: slippy.NewTile(1, 0, 0, 0),
+			mm: geom.Segment(
+				[2]float64{-179.0, 85.0},
+				[2]float64{179.0, -85.0}),
+				tile: slippy.NewTile(0, 0, 0),
+		},
+		"2" : {
+			mm: slippy.NewTile(15, 2, 98).Extent4326(),
+			tile: slippy.NewTile(15, 2, 98),
 		},
 	}
 
@@ -310,10 +297,3 @@ func TestNewTilePoint(t *testing.T) {
 		})
 	}
 }
-
-//func TestNewTileMinMaxer(t *testing.T) {
-//	type tcase struct {
-//		mm geom.MinMaxer
-//		tile *slippy.Tile
-//	}
-//}
