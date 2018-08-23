@@ -275,3 +275,45 @@ func TestRangeFamilyAt(t *testing.T) {
 		}
 	}
 }
+
+func TestNewTilePoint(t *testing.T) {
+	type tcase struct {
+		srid uint64
+		zoom uint
+		point geom.Point
+		tile *slippy.Tile
+	}
+
+	fn := func(tc tcase, t *testing.T) {
+		tile := slippy.NewTilePoint(tc.zoom, &tc.point, tc.srid)
+
+		gz, gx, gy := tile.ZXY()
+		ez, ex, ey := tc.tile.ZXY()
+
+		if tile.ZXY() != tc.tile.ZXY() {
+			t.Fatalf("incorrect value (z: %v, x: %v, y: %v), expected (z: %v, x: %v, y: %v)", gz, gx, gy, ez, ex, ey )
+		}
+	}
+
+	testcases := map[string]tcase{
+		"1": {
+			srid: geom.WebMercator,
+			zoom: 1,
+			point: [2]float64{-1, 1},
+			tile: slippy.NewTile(1, 0, 0, 0),
+		},
+	}
+
+	for k, v := range testcases {
+		t.Run(k, func(t *testing.T) {
+			fn(v, t)
+		})
+	}
+}
+
+//func TestNewTileMinMaxer(t *testing.T) {
+//	type tcase struct {
+//		mm geom.MinMaxer
+//		tile *slippy.Tile
+//	}
+//}
