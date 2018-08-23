@@ -173,7 +173,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 			v := lr.Verticies()
 			if len(v) > 2 && lr.IsRing() == false {
 				// create a connection from last -> first if it doesn't exist
-				*lines = append(*lines, Line{v[len(v) - 1], v[0]})
+				*lines = append(*lines, Line{v[len(v)-1], v[0]})
 			}
 		}
 		return nil

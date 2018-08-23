@@ -172,7 +172,7 @@ func Hull(a, b [2]float64) *Extent {
 	// lng <=> x
 
 	// make a the westmost point
-	if math.Abs(a[0] - b[0]) > 180.0 {
+	if math.Abs(a[0]-b[0]) > 180.0 {
 		// smallest longitudinal arc crosses the antimeridian
 		if a[0] < b[0] {
 			a[0], b[0] = b[0], a[0]

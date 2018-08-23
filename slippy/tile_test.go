@@ -278,10 +278,10 @@ func TestRangeFamilyAt(t *testing.T) {
 
 func TestNewTilePoint(t *testing.T) {
 	type tcase struct {
-		srid uint64
-		zoom uint
+		srid  uint64
+		zoom  uint
 		point geom.Point
-		tile *slippy.Tile
+		tile  *slippy.Tile
 	}
 
 	fn := func(tc tcase, t *testing.T) {
@@ -291,16 +291,16 @@ func TestNewTilePoint(t *testing.T) {
 		ez, ex, ey := tc.tile.ZXY()
 
 		if tile.ZXY() != tc.tile.ZXY() {
-			t.Fatalf("incorrect value (z: %v, x: %v, y: %v), expected (z: %v, x: %v, y: %v)", gz, gx, gy, ez, ex, ey )
+			t.Fatalf("incorrect value (z: %v, x: %v, y: %v), expected (z: %v, x: %v, y: %v)", gz, gx, gy, ez, ex, ey)
 		}
 	}
 
 	testcases := map[string]tcase{
 		"1": {
-			srid: geom.WebMercator,
-			zoom: 1,
+			srid:  geom.WebMercator,
+			zoom:  1,
 			point: [2]float64{-1, 1},
-			tile: slippy.NewTile(1, 0, 0, 0),
+			tile:  slippy.NewTile(1, 0, 0, 0),
 		},
 	}
 

@@ -3,17 +3,17 @@ package slippy
 import (
 	"math"
 
-	"github.com/go-spatial/geom"
 	"errors"
+	"github.com/go-spatial/geom"
 )
 
 const MaxZoom = 22
 
 func NewTile(z, x, y uint) *Tile {
 	return &Tile{
-		z:      z,
-		x:      x,
-		y:      y,
+		z: z,
+		x: x,
+		y: y,
 	}
 }
 
@@ -31,7 +31,7 @@ type Tile struct {
 // geom.MinMaxer. Note: it assumes the values of ext are
 // EPSG:4326 (lat/lng)
 func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
-	upperLeft:= NewTileLatLon(MaxZoom, ext.MinX(), ext.MaxY())
+	upperLeft := NewTileLatLon(MaxZoom, ext.MinX(), ext.MaxY())
 	point := &geom.Point{ext.MaxX(), ext.MinY()}
 
 	var ret *Tile
@@ -56,16 +56,16 @@ func NewTileLatLon(z uint, lat, lon float64) *Tile {
 	y := Lat2Tile(z, lat)
 
 	return &Tile{
-		z:      z,
-		x:      x,
-		y:      y,
+		z: z,
+		x: x,
+		y: y,
 	}
 }
 
 func (t *Tile) ZXY() (uint, uint, uint) { return t.z, t.x, t.y }
 
 // Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
-func(t *Tile) Extent3857() *geom.Extent {
+func (t *Tile) Extent3857() *geom.Extent {
 	return geom.NewExtent(
 		[2]float64{Tile2WebX(t.z, t.x), Tile2WebY(t.z, t.y+1)},
 		[2]float64{Tile2WebX(t.z, t.x+1), Tile2WebY(t.z, t.y)},
@@ -73,7 +73,7 @@ func(t *Tile) Extent3857() *geom.Extent {
 }
 
 // Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long)
-func(t *Tile) Extent4326() *geom.Extent {
+func (t *Tile) Extent4326() *geom.Extent {
 	return geom.NewExtent(
 		[2]float64{Tile2Lon(t.z, t.x), Tile2Lat(t.z, t.y+1)},
 		[2]float64{Tile2Lon(t.z, t.x+1), Tile2Lat(t.z, t.y)},

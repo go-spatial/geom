@@ -7,10 +7,10 @@ import "math"
 func Lat2Tile(zoom uint, lat float64) (y uint) {
 	lat_rad := lat * math.Pi / 180
 
-	return uint(math.Exp2(float64(zoom)) *
-		(1.0 - math.Log(
-			math.Tan(lat_rad) +
-				(1 / math.Cos(lat_rad))) / math.Pi)) /
+	return uint(math.Exp2(float64(zoom))*
+		(1.0-math.Log(
+			math.Tan(lat_rad)+
+				(1/math.Cos(lat_rad)))/math.Pi)) /
 		2.0
 
 }
@@ -61,7 +61,7 @@ func WebX2Tile(zoom uint, x float64) uint {
 func WebY2Tile(zoom uint, y float64) uint {
 	res := (WebMercMax * 2) / math.Exp2(float64(zoom))
 
-	return uint(- (y - WebMercMax) / res)
+	return uint(-(y - WebMercMax) / res)
 }
 
 // ==== pixels ====
