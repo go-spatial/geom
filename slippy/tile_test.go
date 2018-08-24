@@ -7,6 +7,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/slippy"
+	"reflect"
 )
 
 func TestNewTile(t *testing.T) {
@@ -14,14 +15,14 @@ func TestNewTile(t *testing.T) {
 		z, x, y  uint
 		buffer   float64
 		srid     uint64
-		eBounds  [4]float64
+		eBounds  *geom.Extent
 		eExtent  *geom.Extent
 		eBExtent *geom.Extent
 	}
 	fn := func(t *testing.T, tc tcase) {
 
 		// Test the new functions.
-		tile := slippy.NewTile(tc.z, tc.x, tc.y, tc.buffer, tc.srid)
+		tile := slippy.NewTile(tc.z, tc.x, tc.y)
 		{
 			gz, gx, gy := tile.ZXY()
 			if gz != tc.z {
@@ -33,15 +34,9 @@ func TestNewTile(t *testing.T) {
 			if gy != tc.y {
 				t.Errorf("y, expected %v got %v", tc.y, gy)
 			}
-			if tile.Buffer != tc.buffer {
-				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
-			}
-			if tile.SRID != tc.srid {
-				t.Errorf("srid, expected %v got %v", tc.srid, tile.SRID)
-			}
 		}
 		{
-			bounds := tile.Bounds()
+			bounds := tile.Extent4326()
 			for i := 0; i < 4; i++ {
 				if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01) {
 					t.Errorf("bounds[%v] , expected %v got %v", i, tc.eBounds[i], bounds[i])
@@ -50,20 +45,14 @@ func TestNewTile(t *testing.T) {
 			}
 		}
 		{
-			bufferedExtent, srid := tile.BufferedExtent()
-			if srid != tc.srid {
-				t.Errorf("buffered extent srid, expected %v got %v", tc.srid, srid)
-			}
+			bufferedExtent := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, uint(tc.buffer)))
 
 			if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
 				t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
 			}
 		}
 		{
-			extent, srid := tile.Extent()
-			if srid != tc.srid {
-				t.Errorf("extent srid, expected %v got %v", tc.srid, srid)
-			}
+			extent := tile.Extent3857()
 
 			if !cmp.GeomExtent(tc.eExtent, extent) {
 				t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
@@ -77,7 +66,6 @@ func TestNewTile(t *testing.T) {
 			x:      1,
 			y:      1,
 			buffer: 64,
-			srid:   geom.WebMercator,
 			eExtent: geom.NewExtent(
 				[2]float64{-10018754.17, 10018754.17},
 				[2]float64{0, 0},
@@ -86,14 +74,16 @@ func TestNewTile(t *testing.T) {
 				[2]float64{-1.017529720390625e+07, 1.017529720390625e+07},
 				[2]float64{156543.03390624933, -156543.03390624933},
 			),
-			eBounds: [4]float64{-90, 66.51, 0, 0},
+			eBounds: geom.Hull(
+				[2]float64{-90, 66.51},
+				[2]float64{0, 0},
+			),
 		},
 		{
 			z:      16,
 			x:      11436,
 			y:      26461,
 			buffer: 64,
-			srid:   geom.WebMercator,
 			eExtent: geom.NewExtent(
 				[2]float64{-13044437.497219238996, 3856706.6986199953},
 				[2]float64{-13043826.000993041, 3856095.202393799},
@@ -102,7 +92,10 @@ func TestNewTile(t *testing.T) {
 				[2]float64{-1.3044447051847773e+07, 3.8567162532485295e+06},
 				[2]float64{-1.3043816446364507e+07, 3.856085647765265e+06},
 			),
-			eBounds: [4]float64{-117.18, 32.70, -117.17, 32.70},
+			eBounds: geom.Hull(
+				[2]float64{-117.18, 32.70},
+				[2]float64{-117.17, 32.70},
+			),
 		},
 	}
 	for i, tc := range tests {
@@ -122,7 +115,7 @@ func TestNewTileLatLon(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 
 		// Test the new functions.
-		tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon, tc.buffer, tc.srid)
+		tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon)
 		{
 			gz, gx, gy := tile.ZXY()
 			if gz != tc.z {
@@ -133,12 +126,6 @@ func TestNewTileLatLon(t *testing.T) {
 			}
 			if gy != tc.y {
 				t.Errorf("y, expected %v got %v", tc.y, gy)
-			}
-			if tile.Buffer != tc.buffer {
-				t.Errorf("buffer, expected %v got %v", tc.buffer, tile.Buffer)
-			}
-			if tile.SRID != tc.srid {
-				t.Errorf("srid, expected %v got %v", tc.srid, tile.SRID)
 			}
 		}
 
@@ -151,7 +138,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    0,
 			lon:    0,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 		"center": {
 			z:      8,
@@ -160,7 +146,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    0,
 			lon:    0,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 		"arbitrary zoom 2": {
 			z:      2,
@@ -169,7 +154,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    -70,
 			lon:    20,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 		"arbitrary zoom 16": {
 			z:      16,
@@ -178,7 +162,6 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    32.705,
 			lon:    -117.176,
 			buffer: 64,
-			srid:   geom.WebMercator,
 		},
 	}
 
@@ -199,7 +182,7 @@ func TestRangeFamilyAt(t *testing.T) {
 		expected []coord
 	}{
 		"children 1": {
-			tile:   slippy.NewTile(0, 0, 0, 0, geom.WebMercator),
+			tile:   slippy.NewTile(0, 0, 0),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 0},
@@ -209,7 +192,7 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"children 2": {
-			tile:   slippy.NewTile(8, 3, 5, 0, geom.WebMercator),
+			tile:   slippy.NewTile(8, 3, 5),
 			zoomAt: 10,
 			expected: []coord{
 				{10, 12, 20},
@@ -234,14 +217,14 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"parent 1": {
-			tile:   slippy.NewTile(1, 0, 0, 0, geom.WebMercator),
+			tile:   slippy.NewTile(1, 0, 0),
 			zoomAt: 0,
 			expected: []coord{
 				{0, 0, 0},
 			},
 		},
 		"parent 2": {
-			tile:   slippy.NewTile(3, 3, 5, 0, geom.WebMercator),
+			tile:   slippy.NewTile(3, 3, 5),
 			zoomAt: 1,
 			expected: []coord{
 				{1, 0, 1},
@@ -279,5 +262,38 @@ func TestRangeFamilyAt(t *testing.T) {
 				t.Fatalf("[%v] expected coordinate %v missing from list %v", k, v, coordList)
 			}
 		}
+	}
+}
+
+func TestNewTileMinMaxer(t *testing.T) {
+	type tcase struct {
+		mm geom.MinMaxer
+		tile *slippy.Tile
+	}
+
+	fn := func (tc tcase, t *testing.T) {
+		tile := slippy.NewTileMinMaxer(tc.mm)
+		if !reflect.DeepEqual(tile, tc.tile) {
+			t.Errorf("unexpected tile %v, expected %v", tile, tc.tile)
+		}
+	}
+
+	testcases := map[string]tcase {
+		"1": {
+			mm: geom.Segment(
+				[2]float64{-179.0, 85.0},
+				[2]float64{179.0, -85.0}),
+				tile: slippy.NewTile(0, 0, 0),
+		},
+		"2" : {
+			mm: slippy.NewTile(15, 2, 98).Extent4326(),
+			tile: slippy.NewTile(15, 2, 98),
+		},
+	}
+
+	for k, v := range testcases {
+		t.Run(k, func(t *testing.T) {
+			fn(v, t)
+		})
 	}
 }

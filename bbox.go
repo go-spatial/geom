@@ -158,6 +158,37 @@ func (e *Extent) Area() float64 {
 	return math.Abs((e.MaxY() - e.MinY()) * (e.MaxX() - e.MinX()))
 }
 
+// Hull returns the smallest extent from lon/lat points.
+// The hull is defined in the following order [4]float64{ West, South, East, North}
+func Hull(a, b [2]float64) *Extent {
+	// lat <=> y
+	// lng <=> x
+
+	// make a the westmost point
+	if math.Abs(a[0]-b[0]) > 180.0 {
+		// smallest longitudinal arc crosses the antimeridian
+		if a[0] < b[0] {
+			a[0], b[0] = b[0], a[0]
+		}
+	} else {
+		if a[0] > b[0] {
+			a[0], b[0] = b[0], a[0]
+		}
+	}
+
+	return Segment(a, b)
+}
+
+// Segment of a sphere from two long/lat points, with a being the westmost point and b the eastmost point; in following format [4]float64{ West, South, East, North }
+func Segment(westy, easty [2]float64) *Extent {
+	north, south := westy[1], easty[1]
+	if north < south {
+		south, north = north, south
+	}
+
+	return &Extent{westy[0], south, easty[0], north}
+}
+
 // NewExtent returns an Extent for the provided points; in following format [4]float64{ MinX, MinY, MaxX, MaxY }
 func NewExtent(points ...[2]float64) *Extent {
 	var xy [2]float64
