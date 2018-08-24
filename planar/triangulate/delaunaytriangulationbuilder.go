@@ -13,6 +13,7 @@ http://www.eclipse.org/org/documents/edl-v10.php.
 package triangulate
 
 import (
+	"errors"
 	"log"
 	"sort"
 
@@ -56,7 +57,6 @@ If dtb is nil a panic will occur.
 func (dtb *DelaunayTriangulationBuilder) extractUniqueCoordinates(g ...geom.Geometry) ([]quadedge.Vertex, error) {
 
 	vertices := make([]quadedge.Vertex, 0)
-
 	for _, g1 := range g {
 		if g1 == nil {
 			continue
@@ -126,15 +126,15 @@ public static Envelope envelope(Collection coords)
 }
 */
 
-/*
-SetSites sets the vertices which will be triangulated. All vertices of the
-given geometry will be used as sites.
-
-geom - the geometry from which the sites will be extracted.
-
-If dtb is nil a panic will occur.
-*/
+// SetSites sets the vertices which will be triangulated. All vertices of the
+// 	given geometry will be used as sites.
+//
+// geom - the geometry from which the sites will be extracted.
+//
 func (dtb *DelaunayTriangulationBuilder) SetSites(g ...geom.Geometry) error {
+	if dtb == nil {
+		return errors.New("DelaunayTriangulationBuilder not set.")
+	}
 	// remove any duplicate points (they will cause the triangulation to fail)
 	c, err := dtb.extractUniqueCoordinates(g...)
 	dtb.siteCoords = c

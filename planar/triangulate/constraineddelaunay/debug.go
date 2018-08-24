@@ -1,3 +1,3 @@
 package constraineddelaunay
 
-const debug = false
+const debug = true

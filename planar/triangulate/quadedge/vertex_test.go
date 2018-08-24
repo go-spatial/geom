@@ -16,14 +16,16 @@ func TestVertexClassify(t *testing.T) {
 		u        Vertex
 		p0       Vertex
 		p1       Vertex
-		expected int
+		expected QType
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		r := tc.u.Classify(tc.p0, tc.p1)
-		if r != tc.expected {
-			t.Errorf("error, expected %v got %v", tc.expected, r)
-			return
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			r := tc.u.Classify(tc.p0, tc.p1)
+			if r != tc.expected {
+				t.Errorf("error, expected %v got %v", tc.expected, r)
+				return
+			}
 		}
 	}
 	testcases := []tcase{
@@ -37,8 +39,7 @@ func TestVertexClassify(t *testing.T) {
 	}
 
 	for i, tc := range testcases {
-		tc := tc
-		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+		t.Run(strconv.FormatInt(int64(i), 10), fn(tc))
 	}
 }
 

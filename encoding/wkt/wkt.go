@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func isNil(a interface{}) bool {
@@ -142,6 +143,10 @@ func _encode(geo geom.Geometry) string {
 			if len(l) == 0 {
 				continue
 			}
+			if !cmp.PointEqual(l[0], l[len(l)-1]) {
+				// Dup the first point to close the polygon.
+				l = append(l, l[0])
+			}
 			rings = append(rings, _encode(geom.LineString(l)))
 		}
 		return "(" + strings.Join(rings, ",") + ")"
@@ -165,8 +170,11 @@ func _encode(geo geom.Geometry) string {
 func Encode(geo geom.Geometry) (string, error) {
 	switch g := geo.(type) {
 	default:
+
 		return "", geom.ErrUnknownGeometry{geo}
+
 	case geom.Pointer:
+
 		// POINT( 10 10)
 		if isNil(g) {
 			return "POINT EMPTY", nil
@@ -174,36 +182,42 @@ func Encode(geo geom.Geometry) (string, error) {
 		return "POINT (" + _encode(geo) + ")", nil
 
 	case geom.MultiPointer:
+
 		if isNil(g) || len(g.Points()) == 0 {
 			return "MULTIPOINT EMPTY", nil
 		}
 		return "MULTIPOINT " + _encode(geo), nil
 
 	case geom.LineStringer:
+
 		if isNil(g) || len(g.Verticies()) == 0 {
 			return "LINESTRING EMPTY", nil
 		}
 		return "LINESTRING " + _encode(geo), nil
 
 	case geom.MultiLineStringer:
+
 		if isMultiLineStringerEmpty(g) {
 			return "MULTILINESTRING EMPTY", nil
 		}
 		return "MULTILINESTRING " + _encode(geo), nil
 
 	case geom.Polygoner:
+
 		if isPolygonerEmpty(g) {
 			return "POLYGON EMPTY", nil
 		}
 		return "POLYGON " + _encode(geo), nil
 
 	case geom.MultiPolygoner:
+
 		if isMultiPolygonerEmpty(g) {
 			return "MULTIPOLYGON EMPTY", nil
 		}
 		return "MULTIPOLYGON " + _encode(geo), nil
 
 	case geom.Collectioner:
+
 		if isCollectionerEmpty(g) {
 			return "GEOMETRYCOLLECTION EMPTY", nil
 		}
@@ -216,7 +230,44 @@ func Encode(geo geom.Geometry) (string, error) {
 			geometries = append(geometries, s)
 		}
 		return "GEOMETRYCOLLECTION (" + strings.Join(geometries, ",") + ")", nil
+
+	case geom.Line:
+
+		return Encode(geom.LineString(g[:]))
+
+	case []geom.Line:
+
+		ml := make(geom.MultiLineString, len(g))
+		for i := range g {
+			ml[i] = g[i][:]
+		}
+		return Encode(ml)
+
+	case []geom.Point:
+		mp := make(geom.MultiPoint, len(g))
+		for i := range g {
+			mp[i] = [2]float64(g[i])
+		}
+		return Encode(mp)
+
+	case geom.Triangle:
+		// We will treat Triangles as polygons
+		return Encode(geom.Polygon{g[:]})
+	case []geom.Triangle:
+		mp := make(geom.MultiPolygon, len(g))
+		for i := range g {
+			mp[i] = geom.Polygon{g[i][:]}
+		}
+		return Encode(mp)
+
 	}
+}
+func MustEncode(geo geom.Geometry) (str string) {
+	var err error
+	if str, err = Encode(geo); err != nil {
+		panic(fmt.Sprintf("unable to encode %v as wkt", geo))
+	}
+	return str
 }
 
 func Decode(text string) (geo geom.Geometry, err error) {

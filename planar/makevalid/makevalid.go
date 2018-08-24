@@ -3,8 +3,10 @@ package makevalid
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"sort"
+	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
@@ -79,7 +81,7 @@ func (a ByXYLine) Less(i, j int) bool {
 // 2. normalize direction of line segments to left to right
 // 3. line segments are generally unique.
 // 4. line segments outside of the clipbox will be clipped
-func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (geom.MultiLineString, error) {
+func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) ([]geom.Line, error) {
 
 	segments, err := asSegments(*multipolygon)
 	if err != nil {
@@ -96,9 +98,16 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	// Let's see if our clip box is bigger then our polygon.
 	// if it is we don't need the clip box.
 	hasClipbox := clipbox != nil && !clipbox.Contains(gext)
+	var clpbx *geom.Extent
 	// Let's get the edges of our clipbox; as segments and add it to the begining.
 	if hasClipbox {
-		edges := clipbox.Edges(nil)
+		var ok bool
+		// Let get the intersection of the clipbox and the extent of the geometry.
+		if clpbx, ok = clipbox.Intersect(gext); !ok {
+			return []geom.Line{}, nil
+		}
+
+		edges := clpbx.Edges(nil)
 		segments = append([]geom.Line{
 			geom.Line(edges[0]), geom.Line(edges[1]),
 			geom.Line(edges[2]), geom.Line(edges[3]),
@@ -115,10 +124,14 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	})
 
 	// Time to start splitting lines. if we have a clip box we can ignore the first 4 (0,1,2,3) lines.
+	offset := 0
+	if hasClipbox {
+		offset = 4
+	}
 
 	nsegs := make([]geom.Line, 0, len(segments))
 
-	for i := 0; i < len(segments); i++ {
+	for i := offset; i < len(segments); i++ {
 		pts := append([][2]float64{segments[i][0], segments[i][1]}, ipts[i]...)
 
 		// Normalize the direction of the points.
@@ -129,7 +142,7 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 				continue
 			}
 			nl := geom.Line{pts[j-1], pts[j]}
-			if hasClipbox && !clipbox.ContainsLine(nl) {
+			if hasClipbox && !clpbx.ContainsLine(nl) {
 				// Not in clipbox discard segment.
 				continue
 			}
@@ -141,12 +154,7 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	}
 
 	unique(nsegs)
-	var mls = make(geom.MultiLineString, len(nsegs))
-	for i := range nsegs {
-		mls[i] = nsegs[i][:]
-	}
-
-	return mls, nil
+	return nsegs, nil
 }
 
 // unique sorts segments by XY and filters out duplicate segments.
@@ -191,7 +199,14 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if err != nil {
 		return nil, err
 	}
-	triangles, err := InsideTrianglesForGeometry(ctx, multipolygon, hm)
+
+	start := time.Now()
+	fmt.Printf("triangulating segs(%v)\n", len(segs))
+	//fmt.Printf("segs:\n%+v\n", segs)
+	//fmt.Printf("Wkt segs:\n%v\n", wkt.MustEncode(segs))
+	triangles, err := InsideTrianglesForGeometry(ctx, segs, hm)
+	fmt.Printf("triangulations of segs(%v) took %v\n", len(segs), time.Since(start))
+
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}

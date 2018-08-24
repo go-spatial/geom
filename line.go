@@ -63,3 +63,9 @@ func (l Line) ContainsPointBigFloat(pt [2]*big.Float) bool {
 
 	return goodX && goodY
 }
+
+// LengthSqured returns the length of the segment squared
+func (l Line) LenghtSquared() float64 {
+	deltax, deltay := l[1][0]-l[0][0], l[1][1]-l[0][1]
+	return (deltax * deltax) + (deltay * deltay)
+}

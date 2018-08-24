@@ -38,6 +38,7 @@ Author David Skea
 Author Martin Davis
 Ported to Go by Jason R. Surratt
 */
+// TODO : This should be named Edge not QuadEdge
 type QuadEdge struct {
 	rot    *QuadEdge
 	vertex Vertex
@@ -197,11 +198,9 @@ func (qe *QuadEdge) Delete() {
 IsLive tests whether this edge has been deleted.
 
 Returns true if this edge has not been deleted.
-
-If qe is nil a panic will occur.
 */
 func (qe *QuadEdge) IsLive() bool {
-	return qe.rot != nil
+	return qe != nil && qe.rot != nil
 }
 
 /*

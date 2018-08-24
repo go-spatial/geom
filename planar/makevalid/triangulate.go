@@ -4,57 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/planar/triangulate/constraineddelaunay"
+	"github.com/go-spatial/geom/planar/triangulate/delaunay"
 )
 
-func TriangulateGeometry(ctx context.Context, g geom.Geometry) ([]geom.Triangle, error) {
-	uut := new(constraineddelaunay.Triangulator)
-	if debug {
-		log.Printf("Triangulator for given segments %v ", g)
-	}
-	if err := uut.InsertGeometries([]geom.Geometry{g}, nil); err != nil {
-		if debug {
-			log.Printf("Triangulator error for given segments %v : %v", g, err)
-		}
-		return []geom.Triangle{}, fmt.Errorf("error triangulating geometry: %v", err)
-	}
-
-	if debug {
-		err := uut.Validate()
-		if err != nil {
-			log.Printf("Triangulator is not validate for the given segments %v : %v", g, err)
-			return []geom.Triangle{}, err
-		}
-	}
-	// TODO(gdey): We need to insure that GetTriangles does not dup the first point to the
-	//              last point. It may be better if it returned triangles and we moved triangles to Geom.
-	gtris, err := uut.GetTriangles()
-	if err != nil {
-		if debug {
-			log.Printf("got the following error %v", err)
-		}
-		return []geom.Triangle{}, err
-	}
-	if debug {
-		log.Printf("Triangulator genereated %v triangles", len(gtris))
-	}
-	var triangles = make([]geom.Triangle, len(gtris))
-	for i, ply := range gtris {
-		triangles[i] = geom.NewTriangleFromPolygon(ply)
-		cmp.RotateToLeftMostPoint(triangles[i][:])
-	}
-	return triangles, nil
-}
-
-func InsideTrianglesForGeometry(ctx context.Context, g geom.Geometry, hm planar.HitMapper) ([]geom.Triangle, error) {
+func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
 	if debug {
 		log.Printf("Step   3 : generate triangles")
 	}
-	allTriangles, err := TriangulateGeometry(ctx, g)
+	builder := delaunay.NewConstrained(delaunay.TOLERANCE, []geom.Point{}, segs)
+	start := time.Now()
+	allTriangles, err := builder.Triangles(false)
+	fmt.Printf("triangulations of segs(%v) took %v\n", len(segs), time.Since(start))
+	//fmt.Printf("Wkt alltriangles:\n%v\n", wkt.MustEncode(allTriangles))
+
 	if err != nil {
 		if debug {
 			log.Println("Step     3a: got error", err)

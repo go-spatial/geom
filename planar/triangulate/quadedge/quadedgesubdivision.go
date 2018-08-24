@@ -18,6 +18,7 @@ import (
 	"math"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
 )
 
@@ -180,7 +181,7 @@ return a collection of QuadEdges
 If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetEdges() []*QuadEdge {
-	return qes.quadEdges
+	return qes.GetPrimaryEdges(true)
 }
 
 // 	/**
@@ -250,14 +251,14 @@ func (qes *QuadEdgeSubdivision) Delete(e *QuadEdge) {
 		if ele.IsLive() {
 			newArray = append(newArray, ele)
 
-			if ele.next.IsLive() == false {
+			if !ele.next.IsLive() {
 				log.Fatalf("a dead edge is still linked: %v", ele)
 			}
 		}
 	}
 	qes.quadEdges = newArray
 
-	if qes.startingEdge.IsLive() == false {
+	if !qes.startingEdge.IsLive() {
 		if len(qes.quadEdges) > 0 {
 			qes.startingEdge = qes.quadEdges[0]
 		} else {
@@ -334,6 +335,9 @@ location or nil if no such triangle exists
 If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) Locate(v Vertex) (*QuadEdge, error) {
+	if qes == nil {
+		return nil, nil
+	}
 	return qes.locator.Locate(v)
 }
 
@@ -349,6 +353,9 @@ exists
 If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) LocateSegment(p0 Vertex, p1 Vertex) (*QuadEdge, error) {
+	if qes == nil {
+		return nil, nil
+	}
 	// find an edge containing one of the points
 	e, err := qes.locator.Locate(p0)
 	if err != nil || e == nil {
@@ -360,20 +367,20 @@ func (qes *QuadEdgeSubdivision) LocateSegment(p0 Vertex, p1 Vertex) (*QuadEdge, 
 	if e.Dest().EqualsTolerance(p0, qes.tolerance) {
 		base = e.Sym()
 	}
+
 	// check all edges around origin of base edge
 	locEdge := base
-	done := false
-	for !done {
-		if locEdge.Dest().EqualsTolerance(p1, qes.tolerance) {
+	for {
+		dest := locEdge.Dest()
+		if dest.EqualsTolerance(p1, qes.tolerance) {
 			return locEdge, nil
 		}
 		locEdge = locEdge.ONext()
 
 		if locEdge == base {
-			done = true
+			return nil, nil
 		}
 	}
-	return nil, nil
 }
 
 /**
@@ -613,7 +620,7 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 //       QuadEdge qe = (QuadEdge) i.next();
 //       Vertex v = qe.orig();
 //       //System.out.println(v);
-//       if (! visitedVertices.contains(v)) {
+//       if (! visitedVertices.Contains(v)) {
 //       	visitedVertices.add(v);
 //         if (includeFrame || ! IsFrameVertex(v)) {
 //         	edges.add(qe);
@@ -628,7 +635,7 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 //       QuadEdge qd = qe.sym();
 //       Vertex vd = qd.orig();
 //       //System.out.println(vd);
-//       if (! visitedVertices.contains(vd)) {
+//       if (! visitedVertices.Contains(vd)) {
 //       	visitedVertices.add(vd);
 //         if (includeFrame || ! IsFrameVertex(vd)) {
 //         	edges.add(qd);
@@ -641,53 +648,40 @@ func (qes *QuadEdgeSubdivision) IsVertexOfEdge(e *QuadEdge, v Vertex) bool {
 type edgeStack []*QuadEdge
 type edgeSet map[*QuadEdge]bool
 
-/*
-push pushes an edge onto the edgeStack
-
-If es is nil a panic will occur.
-*/
-func (es *edgeStack) push(edge *QuadEdge) {
+// Push pushes an edge onto the edgeStack
+func (es *edgeStack) Push(edge *QuadEdge) {
+	if es == nil {
+		return
+	}
 	*es = append(*es, edge)
 }
 
-/*
-pop pops an edge off the edgeStack
-
-If es is nil a panic will occur.
-*/
-func (es *edgeStack) pop() *QuadEdge {
-	if len(*es) == 0 {
+// Pop pops an edge off the edgeStack
+func (es *edgeStack) Pop() (result *QuadEdge) {
+	if es == nil || len(*es) == 0 {
 		return nil
 	}
-	result := (*es)[len(*es)-1]
+	result = (*es)[len(*es)-1]
 	*es = (*es)[:len(*es)-1]
 	return result
 }
 
-/*
-contains returns true if edge is in the map.
+// Length return the length of the stack
+func (es edgeStack) Length() int { return len(es) }
 
-This just isn't natural for me yet...
-if _, ok := es[edge]; ok {
+// contains returns true if edge is in the map.
+func (es *edgeSet) Contains(edge *QuadEdge) bool { return es != nil && (*es)[edge] }
 
-If es is nil a panic will occur.
-*/
-func (es *edgeSet) contains(edge *QuadEdge) bool {
-	_, ok := (*es)[edge]
-	return ok
-}
-
-/*
-GetPrimaryEdges gets all primary quadedges in the subdivision. A primary edge
-is a QuadEdge which occupies the 0'th position in its array of associated
-quadedges. These provide the unique geometric edges of the triangulation.
-
-includeFrame true if the frame edges are to be included
-Return a List of QuadEdges
-
-If qes is nil a panic will occur.
-*/
+// GetPrimaryEdges gets all primary quadedges in the subdivision. A primary edge
+// is a QuadEdge which occupies the 0'th position in its array of associated
+// quadedges. These provide the unique geometric edges of the triangulation.
+//
+// includeFrame true if the frame edges are to be included
+// Return a List of QuadEdges
 func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
+	if qes == nil {
+		return nil
+	}
 	qes.visitedKey++
 
 	var edges []*QuadEdge
@@ -695,22 +689,22 @@ func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
 		return edges
 	}
 	var stack edgeStack
-	stack.push(qes.startingEdge)
+	stack.Push(qes.startingEdge)
 
 	visitedEdges := make(edgeSet)
 
 	for len(stack) > 0 {
-		edge := stack.pop()
+		edge := stack.Pop()
 
-		if !visitedEdges.contains(edge) {
+		if !visitedEdges[edge] {
 			priQE := edge.GetPrimary()
 
 			if includeFrame || !qes.IsFrameEdge(priQE) {
 				edges = append(edges, priQE)
 			}
 
-			stack.push(edge.ONext())
-			stack.push(edge.Sym().ONext())
+			stack.Push(edge.ONext())
+			stack.Push(edge.Sym().ONext())
 
 			visitedEdges[edge] = true
 			visitedEdges[edge.Sym()] = true
@@ -752,22 +746,25 @@ func (qes *QuadEdgeSubdivision) GetPrimaryEdges(includeFrame bool) []*QuadEdge {
 // 	 * Visitors
 // 	 ****************************************************************************/
 
-func (qes *QuadEdgeSubdivision) visitTriangles(triVisitor func(triEdges []*QuadEdge), includeFrame bool) {
+func (qes *QuadEdgeSubdivision) VisitTriangles(triVisitor func(triEdges []*QuadEdge), includeFrame bool) {
+	if qes == nil {
+		return
+	}
 	qes.visitedKey++
 
 	// visited flag is used to record visited edges of triangles
 	// setVisitedAll(false);
 	var stack *edgeStack = new(edgeStack)
 	if qes.startingEdge != nil {
-		stack.push(qes.startingEdge)
+		stack.Push(qes.startingEdge)
 	}
 
 	visitedEdges := make(edgeSet)
 
 	triEdges := make([]*QuadEdge, 0, 3) // reuse slice for all fetchTriangleToVisit calls
-	for len(*stack) > 0 {
-		edge := stack.pop()
-		if !visitedEdges.contains(edge) {
+	for stack.Length() > 0 {
+		edge := stack.Pop()
+		if !visitedEdges[edge] {
 			triEdges = triEdges[:0]
 			triEdges = qes.fetchTriangleToVisit(edge, stack, includeFrame, visitedEdges, triEdges)
 			if len(triEdges) > 0 {
@@ -790,6 +787,10 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 	curr := edge
 	var isFrame bool
 
+	if debug {
+		log.Printf("Going to find triangles for edge(%p): %v", edge, wkt.MustEncode(EdgeAsGeomLine(edge)))
+	}
+
 	for {
 		triEdges = append(triEdges, curr)
 
@@ -803,8 +804,8 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 
 		// push sym edges to visit next
 		sym := curr.Sym()
-		if !visitedEdges.contains(sym) {
-			stack.push(sym)
+		if !visitedEdges[sym] {
+			stack.Push(sym)
 		}
 
 		// mark this edge as visited
@@ -814,6 +815,9 @@ func (qes *QuadEdgeSubdivision) fetchTriangleToVisit(edge *QuadEdge, stack *edge
 
 		if curr == edge {
 			break
+		}
+		if debug {
+			log.Printf("\t Next edge(%p): %v", curr, wkt.MustEncode(EdgeAsGeomLine(curr)))
 		}
 	}
 
@@ -887,7 +891,7 @@ If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetTriangleCoordinates(includeFrame bool) ([]geom.Polygon, error) {
 	var visitor TriangleCoordinatesVisitor
-	qes.visitTriangles(visitor.visit, includeFrame)
+	qes.VisitTriangles(visitor.visit, includeFrame)
 	if visitor.err != nil {
 		return nil, visitor.err
 	}

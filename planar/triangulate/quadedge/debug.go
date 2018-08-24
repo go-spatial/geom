@@ -13,16 +13,12 @@ DebugDumpEdges returns a string with the WKT representation of the
 edges. On error, an error string is returned.
 
 This is intended for debug purposes only.
-
-If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) DebugDumpEdges() string {
-	edges := qes.GetEdgesAsMultiLineString()
-	edgesWKT, err := wkt.Encode(edges)
-	if err != nil {
-		return fmt.Sprintf("error formatting as WKT: %v", err)
+	if qes == nil {
+		return ""
 	}
-	return edgesWKT
+	return wkt.MustEncode(qes.GetEdgesAsMultiLineString())
 }
 
 /*
@@ -101,7 +97,7 @@ func (qes *QuadEdgeSubdivision) validateONext() error {
 				// this isn't a perfect check for CCW, but it should work well
 				// enough in most cases and shouldn't produce false positives.
 				if (qes.IsFrameEdge(n) == false || qes.IsFrameEdge(ccw) == false) && n.Orig().IsCCW(n.Dest(), ccw.Dest()) == false && qes.hasCCWNeighbor(n) == true {
-					return fmt.Errorf("edges are not CCW, expected %v to be CCW of %v", ccw, n)
+					return fmt.Errorf("edges are not CCW, expected %v(%[1]p) to be CCW of %v(%[2]p)", ccw, n)
 				}
 				edgeSet[n] = true
 				n = ccw

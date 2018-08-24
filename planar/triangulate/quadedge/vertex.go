@@ -14,11 +14,16 @@ package quadedge
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
+
+	"github.com/go-spatial/geom/cmp"
 )
 
+type QType uint
+
 const (
-	LEFT = iota
+	LEFT = QType(iota)
 	RIGHT
 	BEYOND
 	BEHIND
@@ -26,6 +31,27 @@ const (
 	ORIGIN
 	DESTINATION
 )
+
+func (q QType) String() string {
+	switch q {
+	case LEFT:
+		return "LEFT"
+	case RIGHT:
+		return "RIGHT"
+	case BEYOND:
+		return "BEYOND"
+	case BEHIND:
+		return "BEHIND"
+	case BETWEEN:
+		return "BETWEEN"
+	case ORIGIN:
+		return "ORIGIN"
+	case DESTINATION:
+		return "DESTINATION"
+	default:
+		return fmt.Sprintf("UNKNOWN(%v)", int(q))
+	}
+}
 
 /*
 Vertex models a site (node) in a QuadEdgeSubdivision. The sites can be points
@@ -52,28 +78,21 @@ func (u Vertex) MarshalJSON() ([]byte, error) {
 		X float64
 		Y float64
 	}{
-		u.X(),
-		u.Y(),
+		X: u[0],
+		Y: u[1],
 	})
 }
 
 func (u Vertex) Equals(other Vertex) bool {
-	if u.X() == other.X() && u.Y() == other.Y() {
-		return true
-	}
-	return false
+
+	return u[0] == other[0] && u[1] == other[1]
 }
 
 func (u Vertex) EqualsTolerance(other Vertex, tolerance float64) bool {
-	v1 := u[0] - other[0]
-	v2 := u[1] - other[1]
-	if math.Sqrt(v1*v1+v2*v2) < tolerance {
-		return true
-	}
-	return false
+	return cmp.Float64(u[0], other[0], tolerance) && cmp.Float64(u[1], other[1], tolerance)
 }
 
-func (u Vertex) Classify(p0 Vertex, p1 Vertex) int {
+func (u Vertex) Classify(p0 Vertex, p1 Vertex) QType {
 	p2 := u
 	a := p1.Sub(p0)
 	b := p2.Sub(p0)
@@ -104,7 +123,7 @@ CrossProduct computes the cross product k = u X v.
 @return returns the magnitude of u X v
 */
 func (u Vertex) CrossProduct(v Vertex) float64 {
-	return (u.X()*v.Y() - u.Y()*v.X())
+	return (u[0]*v[1] - u[1]*v[0])
 }
 
 /*
@@ -114,7 +133,7 @@ Dot computes the inner or dot product
 @return returns the dot product u.v
 */
 func (u Vertex) Dot(v Vertex) float64 {
-	return u.X()*v.X() + u.Y()*v.Y()
+	return u[0]*v[0] + u[1]*v[1]
 }
 
 /*
@@ -123,7 +142,7 @@ Times computes the scalar product c(v)
 Return the scaled vector
 */
 func (u Vertex) Times(c float64) Vertex {
-	return Vertex{u.X() * c, u.Y() * c}
+	return Vertex{u[0] * c, u[1] * c}
 }
 
 /*
@@ -134,7 +153,7 @@ Returns the scaled vector
 This is not part of the original JTS code.
 */
 func (u Vertex) Divide(c float64) Vertex {
-	return Vertex{u.X() / c, u.Y() / c}
+	return Vertex{u[0] / c, u[1] / c}
 }
 
 // Sum u + v and return the new Vertex

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar/triangulate"
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
@@ -127,19 +128,33 @@ triangulation.
 
 If tri is nil a panic will occur.
 */
-func (tri *Triangulator) createTriangle(a, b, c quadedge.Vertex) error {
+func (tri *Triangulator) createTriangle(a, b, c quadedge.Vertex) (err error) {
+	if debug {
+		defer func() {
+			log.Printf("createTriangle  err: %v", err)
+		}()
+	}
 	if debug {
 		log.Printf("createTriangle")
 	}
-	if err := tri.createSegment(triangulate.NewSegment(geom.Line{a, b}), nil); err != nil {
+	if err = tri.createSegment(triangulate.NewSegment(geom.Line{a, b}), nil); err != nil {
+		if debug {
+			log.Printf("createTriangle")
+		}
 		return err
 	}
 
-	if err := tri.createSegment(triangulate.NewSegment(geom.Line{b, c}), nil); err != nil {
+	if err = tri.createSegment(triangulate.NewSegment(geom.Line{b, c}), nil); err != nil {
+		if debug {
+			log.Printf("createTriangle")
+		}
 		return err
 	}
 
-	if err := tri.createSegment(triangulate.NewSegment(geom.Line{c, a}), nil); err != nil {
+	if err = tri.createSegment(triangulate.NewSegment(geom.Line{c, a}), nil); err != nil {
+		if debug {
+			log.Printf("createTriangle")
+		}
 		return err
 	}
 
@@ -428,6 +443,10 @@ func (tri *Triangulator) insertConstraints(g geom.Geometry, data interface{}) er
 	if err != nil {
 		return fmt.Errorf("error adding constraint: %v", err)
 	}
+	if debug {
+		wktml, _ := wkt.Encode(lines)
+		log.Println("\n\ninsertConstraints lines:\n\n ", wktml, "\n\n", "foo")
+	}
 	constraints := make(map[triangulate.Segment]bool)
 	for _, l := range lines {
 		// make the line ordering consistent
@@ -622,6 +641,8 @@ If tri is nil a panic will occur.
 */
 func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}) error {
 
+	orgab := ab.DeepCopy()
+	_ = orgab
 	if debug {
 		log.Printf("ab: %v tri: %v", ab, tri.subdiv.DebugDumpEdges())
 	}
@@ -640,7 +661,8 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 	t, err := tri.findIntersectingTriangle(*ab)
 	if err == ErrCoincidentEdges {
 		return tri.insertCoincidentEdge(ab, data)
-	} else if err != nil {
+	}
+	if err != nil {
 		return err
 	}
 	if debug {
@@ -656,6 +678,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 	// v:=a
 	v := ab.GetStart()
 	b := ab.GetEnd()
+	if debug {
+		log.Printf("new ab: %v", *ab)
+	}
 
 	// While v not in t do -- should this be 'b not in t'!? -JRS
 	for t.IntersectsPoint(b) == false {
@@ -689,6 +714,11 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 		abOnOrig := tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Orig())
 		abOnDest := tri.subdiv.IsOnLine(ab.GetLineSegment(), shared.Dest())
 
+		if debug {
+			log.Printf("abOnOrig: %v, abOnDest: %v", abOnOrig, abOnDest)
+			log.Printf("c: %v", c)
+		}
+
 		switch {
 
 		case abOnOrig:
@@ -700,6 +730,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 			// a:=vseq -- Should this be b:=vseq!? -JRS
 			b = shared.Orig()
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
+			if debug {
+				log.Printf("Changing on abOnOrig %v", ab)
+			}
 
 		case abOnDest:
 			// InsertEdgeCDT(T, vseqb)
@@ -710,6 +743,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 			// a:=vseq -- Should this be b:=vseq!? -JRS
 			b = shared.Dest()
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), b})
+			if debug {
+				log.Printf("Changing on abOnDest %v", ab)
+			}
 
 		case c == quadedge.BETWEEN:
 			if debug {
@@ -768,6 +804,9 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 			// the current insertion will stop at the interesction point
 			b = iv
 			*ab = triangulate.NewSegment(geom.Line{ab.GetStart(), iv})
+			if debug {
+				log.Printf("new ab: %v", *ab)
+			}
 
 		// If vseq above the edge ab then
 		case c == quadedge.LEFT:
@@ -802,29 +841,39 @@ func (tri *Triangulator) insertEdgeCDT(ab *triangulate.Segment, data interface{}
 
 		t = tseq
 	}
+	if debug {
+		log.Printf("new ab: %v", *ab)
+	}
 	// EndWhile
 
-	if ab.GetStart().Equals(ab.GetEnd()) == false {
-		// remove the previously marked edges
-		for i := range removalList {
-			tri.deleteEdge(removalList[i])
-		}
-
-		// TriangulatePseudoPolygon(PU,ab,T)
-		if err := tri.triangulatePseudoPolygon(pu, *ab); err != nil {
-			return err
-		}
-		// TriangulatePseudoPolygon(PL,ab,T)
-		if err := tri.triangulatePseudoPolygon(pl, *ab); err != nil {
-			return err
-		}
-
-		// Add edge ab to T
-		if err := tri.createSegment(*ab, data); err != nil {
-			return err
-		}
-		tri.constraints[*ab] = true
+	if ab.GetStart().Equals(ab.GetEnd()) {
+		return nil
 	}
+	// remove the previously marked edges
+	for i := range removalList {
+		tri.deleteEdge(removalList[i])
+	}
+
+	// TriangulatePseudoPolygon(PU,ab,T)
+	if debug {
+		log.Printf("Calling triangulatePseudoPolygon pu with %v", *ab)
+	}
+	if err := tri.triangulatePseudoPolygon(pu, *ab); err != nil {
+		return err
+	}
+	// TriangulatePseudoPolygon(PL,ab,T)
+	if debug {
+		log.Printf("Calling triangulatePseudoPolygon pl with %v", *ab)
+	}
+	if err := tri.triangulatePseudoPolygon(pl, *ab); err != nil {
+		return err
+	}
+
+	// Add edge ab to T
+	if err := tri.createSegment(*ab, data); err != nil {
+		return err
+	}
+	tri.constraints[*ab] = true
 
 	return nil
 }
@@ -1199,10 +1248,16 @@ func (tri *Triangulator) triangulatePseudoPolygon(p []quadedge.Vertex, ab triang
 		pe := p[0:ci]
 		pd := p[ci+1:]
 		// TriangulatePseudoPolygon(PE, ac, T)
+		if debug {
+			log.Printf("Calling triangulatePseudoPolygon pe with %v", geom.Line{a, c})
+		}
 		if err := tri.triangulatePseudoPolygon(pe, triangulate.NewSegment(geom.Line{a, c})); err != nil {
 			return err
 		}
 		// TriangulatePseudoPolygon(PD, cd, T) (cb instead of cd? -JRS)
+		if debug {
+			log.Printf("Calling triangulatePseudoPolygon pd with %v", geom.Line{c, b})
+		}
 		if err := tri.triangulatePseudoPolygon(pd, triangulate.NewSegment(geom.Line{c, b})); err != nil {
 			return err
 		}
