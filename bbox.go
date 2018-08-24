@@ -166,7 +166,8 @@ func (e *Extent) Area() float64 {
 	return math.Abs((e.MaxY() - e.MinY()) * (e.MaxX() - e.MinX()))
 }
 
-// Takes the smallest Extent from two long/lat points; in following format [4]float64{ West, South, East, North }
+// Hull returns the smallest extent from lon/lat points.
+// The hull is defined in the following order [4]float64{ West, South, East, North}
 func Hull(a, b [2]float64) *Extent {
 	// lat <=> y
 	// lng <=> x
