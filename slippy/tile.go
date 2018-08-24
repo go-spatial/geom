@@ -31,13 +31,12 @@ type Tile struct {
 // geom.MinMaxer. Note: it assumes the values of ext are
 // EPSG:4326 (lat/lng)
 func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
-	upperLeft := NewTileLatLon(MaxZoom, ext.MinX(), ext.MaxY())
+	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX())
 	point := &geom.Point{ext.MaxX(), ext.MinY()}
 
 	var ret *Tile
 
-	for z := uint(MaxZoom); z >= 0 && ret == nil; z-- {
-
+	for z := uint(MaxZoom); int(z) >= 0 && ret == nil; z-- {
 		upperLeft.RangeFamilyAt(z, func(tile *Tile) error {
 			if tile.Extent4326().Contains(point) {
 				ret = tile
@@ -51,6 +50,7 @@ func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
 	return ret
 }
 
+// Instantiates a tile containing the coordinate with the specified zoom
 func NewTileLatLon(z uint, lat, lon float64) *Tile {
 	x := Lon2Tile(z, lon)
 	y := Lat2Tile(z, lat)
