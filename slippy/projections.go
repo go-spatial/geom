@@ -34,34 +34,34 @@ func Tile2Lat(zoom, y uint) float64 {
 
 // ==== Web Mercator ====
 
-const WebMercMax = 20037508.34
+const WebMercatorMax = 20037508.34
 
 // Returns the side of the tile in the -x side
 func Tile2WebX(zoom uint, n uint) float64 {
-	res := (WebMercMax * 2) / math.Exp2(float64(zoom))
+	res := (WebMercatorMax * 2) / math.Exp2(float64(zoom))
 
-	return -WebMercMax + float64(n)*res
+	return -WebMercatorMax + float64(n)*res
 }
 
 // Returns the side of the tile in the +y side
 func Tile2WebY(zoom uint, n uint) float64 {
-	res := (WebMercMax * 2) / math.Exp2(float64(zoom))
+	res := (WebMercatorMax * 2) / math.Exp2(float64(zoom))
 
-	return WebMercMax - float64(n)*res
+	return WebMercatorMax - float64(n)*res
 }
 
 // returns the column of the tile given the web mercator x value
 func WebX2Tile(zoom uint, x float64) uint {
-	res := (WebMercMax * 2) / math.Exp2(float64(zoom))
+	res := (WebMercatorMax * 2) / math.Exp2(float64(zoom))
 
-	return uint((x + WebMercMax) / res)
+	return uint((x + WebMercatorMax) / res)
 }
 
 // returns the row of the tile given the web mercator y value
 func WebY2Tile(zoom uint, y float64) uint {
-	res := (WebMercMax * 2) / math.Exp2(float64(zoom))
+	res := (WebMercatorMax * 2) / math.Exp2(float64(zoom))
 
-	return uint(-(y - WebMercMax) / res)
+	return uint(-(y - WebMercatorMax) / res)
 }
 
 // ==== pixels ====
@@ -71,5 +71,5 @@ const MvtTileDim = 4096.0
 // Scalar conversion of pixels into web mercator units
 // TODO (@ear7h): perhaps rethink this
 func Pixels2Webs(zoom uint, pixels uint) float64 {
-	return WebMercMax * 2 / math.Exp2(float64(zoom)) * float64(pixels) / MvtTileDim
+	return WebMercatorMax * 2 / math.Exp2(float64(zoom)) * float64(pixels) / MvtTileDim
 }
