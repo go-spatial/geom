@@ -14,9 +14,17 @@ func (w WindingOrder) String() string {
 	}
 	return "clockwise"
 }
-func (w WindingOrder) IsClockwise() bool        { return w == Clockwise }
+
+// IsClockwise checks if winding is clockwise
+func (w WindingOrder) IsClockwise() bool { return w == Clockwise }
+
+// IsCounterClockwise checks if winding is counter clockwise
 func (w WindingOrder) IsCounterClockwise() bool { return w == CounterClockwise }
-func (w WindingOrder) Not() WindingOrder        { return !w }
+
+// Not returns the inverse of the winding
+func (w WindingOrder) Not() WindingOrder { return !w }
+
+// OfPoints gets the winding order of the points passed
 func OfPoints(pts ...[2]float64) WindingOrder {
 	sum := 0.0
 	li := len(pts) - 1

@@ -4,7 +4,10 @@ import (
 	"errors"
 )
 
+// ErrNilLineString is thrown when a LineString is nil but shouldn't be
 var ErrNilLineString = errors.New("geom: nil LineString")
+
+// ErrInvalidLineString is thrown when a LineString is malformed
 var ErrInvalidLineString = errors.New("geom: invalid LineString")
 
 // LineString is a basic line type which is made up of two or more points that don't interacted.
@@ -17,9 +20,7 @@ func (ls LineString) Points() [][2]float64 {
 }
 */
 
-/*
-Returns true if the first and last vertices are the same
-*/
+// IsRing returns true if the first and last vertices are the same
 func (ls LineString) IsRing() bool {
 	last := len(ls) - 1
 	if len(ls) > 1 && ls[0][0] == ls[last][0] && ls[0][1] == ls[last][1] {
@@ -28,10 +29,10 @@ func (ls LineString) IsRing() bool {
 	return false
 }
 
-// Vertexes returns a slice of XY values
+// Verticies returns a slice of XY values
 func (ls LineString) Verticies() [][2]float64 { return ls }
 
-// SetVertexes modifies the array of 2D coordinates
+// SetVerticies modifies the array of 2D coordinates
 func (ls *LineString) SetVerticies(input [][2]float64) (err error) {
 	if ls == nil {
 		return ErrNilLineString

@@ -25,14 +25,17 @@ func cmpFloat(f1, f2 float64) bool {
 }
 func pointEqual(p1, p2 [2]float64) bool { return cmpFloat(p1[0], p2[0]) && cmpFloat(p1[1], p2[1]) }
 
+// Triangle is a array representation of a geometry trinagle.
 type Triangle [3][2]float64
 
+// Center returns the average of [0..2][0] and [0..2][1]
 func (t Triangle) Center() (pt [2]float64) {
 	pt[0] = (t[0][0] + t[1][0] + t[2][0]) / 3
 	pt[1] = (t[0][1] + t[1][1] + t[2][1]) / 3
 	return pt
 }
 
+// ThirdPoint takes 2 points and checks which point is the 3rd in the Triangle
 func (t Triangle) ThirdPoint(p1, p2 [2]float64) [2]float64 {
 	switch {
 	case (pointEqual(t[0], p1) && pointEqual(t[1], p2)) ||
@@ -46,6 +49,7 @@ func (t Triangle) ThirdPoint(p1, p2 [2]float64) [2]float64 {
 	}
 }
 
+// NewTriangleFromPolygon takes the first [0][0..2] points of the input polygon and returns a Triangle.
 func NewTriangleFromPolygon(py [][][2]float64) Triangle {
 	// Assume we are getting triangles from the function.
 	if debug && len(py) != 1 {
