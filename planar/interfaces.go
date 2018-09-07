@@ -6,7 +6,7 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// label is the the label for the triangle. Is in "inside" or "outside".
+// Label is the the label for the triangle. Is in "inside" or "outside".
 // TODO: gdey — would be make more sense to just have a bool here? IsInside or somthing like that?
 type Label uint8
 
@@ -22,6 +22,7 @@ func (l Label) String() string {
 }
 
 const (
+	// Unknown is the default if it cannot be determined in/outside
 	Unknown Label = iota
 	Outside
 	Inside
