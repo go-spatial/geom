@@ -1,3 +1,3 @@
 package makevalid
 
-const debug = false
+const debug = true

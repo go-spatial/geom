@@ -225,7 +225,7 @@ func Encode(geo geom.Geometry) (string, error) {
 }
 
 func strCordToPoint(points string) ([]float64, error) {
-	splitP := strings.Split(points, " ")
+	splitP := strings.Split(strings.TrimSpace(points), " ")
 	floats := make([]float64, len(splitP))
 	for i, p := range splitP {
 		if floatP, err := strconv.ParseFloat(p, 64); err != nil {
@@ -242,18 +242,18 @@ func Decode(wktInput string) (geo geom.Geometry, err error) {
 		return nil, geom.ErrUnknownGeometry{nil}
 	}
 
-	wktUpper := strings.ToUpper(strings.TrimSpace(wktInput))
+	wktUpper := strings.ToUpper(wktInput)
 
-	typeRegex := regexp.MustCompile(`(^\S*)( EMPTY)*\s+\(\s*(.*)\s*\)`)
+	typeRegex := regexp.MustCompile(`(^\S*)\s*(EMPTY|ZM|Z|M)*(?:\s*\(\s*(.*)\s*\))*`)
 	matchedGeom := typeRegex.FindStringSubmatch(wktUpper)
 	if len(matchedGeom) != 4 {
 		return nil, ErrInvalidWKT
 	}
-	if matchedGeom[2] != "" {
+
+	isEmpty := matchedGeom[2] == "EMPTY"
+	if !isEmpty && matchedGeom[2] != "" {
 		return nil, errors.New("Z and/or M is not supported")
 	}
-
-	isEmpty := matchedGeom[3] == "EMPTY"
 
 	switch matchedGeom[1] {
 	case "POINT":
@@ -261,12 +261,11 @@ func Decode(wktInput string) (geo geom.Geometry, err error) {
 			return (*geom.Point)(nil), nil
 		}
 
-		parsedPoints, err := strCordToPoint(matchedGeom[3])
-		if err != nil {
+		if parsedPoints, err := strCordToPoint(matchedGeom[3]); err != nil {
 			return nil, err
+		} else {
+			return geom.Point([2]float64{parsedPoints[0], parsedPoints[1]}), nil
 		}
-
-		return geom.Point([2]float64{parsedPoints[0], parsedPoints[1]}), nil
 	case "MULTIPOINT":
 		if isEmpty {
 			return (*geom.MultiPoint)(nil), nil
@@ -284,7 +283,7 @@ func Decode(wktInput string) (geo geom.Geometry, err error) {
 		return geom.MultiPoint(points), nil
 	case "LINESTRING":
 		if isEmpty {
-			return (*geom.MultiPoint)(nil), nil
+			return (*geom.LineString)(nil), nil
 		}
 
 		points := [][2]float64{}
@@ -297,6 +296,37 @@ func Decode(wktInput string) (geo geom.Geometry, err error) {
 		}
 
 		return geom.LineString(points), nil
+	case "MULTILINESTRING":
+		if isEmpty {
+			return (*geom.MultiLineString)(nil), nil
+		}
+
+		reg := regexp.MustCompile(`\)\s*,\s*\(`)
+		indexes := reg.FindAllStringIndex(matchedGeom[3], -1)
+		subPoints := make([]string, len(indexes))
+
+		lastHead, lastTail := 1, 0
+		for i, index := range indexes {
+			lastTail = index[0]
+			subPoints[i] = matchedGeom[3][lastHead:lastTail]
+			lastHead = index[1]
+		}
+		subPoints = append(subPoints, matchedGeom[3][lastHead:len(matchedGeom[3])-1])
+
+		multiPoints := [][][2]float64{}
+		for _, subP := range subPoints {
+			points := [][2]float64{}
+			for _, p := range strings.Split(subP, ",") {
+				if parsedPoints, err := strCordToPoint(p); err != nil {
+					return nil, err
+				} else {
+					points = append(points, [2]float64{parsedPoints[0], parsedPoints[1]})
+				}
+			}
+			multiPoints = append(multiPoints, points)
+		}
+
+		return geom.MultiLineString(multiPoints), nil
 	default:
 		return nil, nil
 	}

@@ -400,6 +400,56 @@ func TestDecode(t *testing.T) {
 			//	Rep:  "LINESTRING (10 10,9 9,0 0)",
 			//},
 		},
+		"MultiLineString": {
+			"empty nil": {
+				Geom: (*geom.MultiLineString)(nil),
+				Rep:  "MULTILINESTRING EMPTY",
+			},
+			//"one line one point": {
+			//	Geom: geom.MultiLineString{{{10, 10}}},
+			//	Rep:  "MULTILINESTRING ((10 10))",
+			//},
+			//"one line two points": {
+			//	Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
+			//	Rep:  "MULTILINESTRING ((10 10,11 11))",
+			//},
+			//"two lines zero,zero point": {
+			//	Geom: geom.MultiLineString{{}, {}},
+			//	Rep:  "MULTILINESTRING EMPTY",
+			//},
+			//"two lines zero,one point": {
+			//	Geom: geom.MultiLineString{{}, {{10, 10}}},
+			//	Rep:  "MULTILINESTRING ((10 10))",
+			//},
+			//"two lines zero,two point": {
+			//	Geom: geom.MultiLineString{{}, {{10, 10}, {20, 20}}},
+			//	Rep:  "MULTILINESTRING ((10 10,20 20))",
+			//},
+			//"two lines one,zero point": {
+			//	Geom: geom.MultiLineString{{{10, 10}}, {}},
+			//	Rep:  "MULTILINESTRING ((10 10))",
+			//},
+			//"two lines one,one point": {
+			//	Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
+			//	Rep:  "MULTILINESTRING ((10 10),(10 10))",
+			//},
+			//"two lines one,two point": {
+			//	Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
+			//	Rep:  "MULTILINESTRING ((10 10),(10 10,20 20))",
+			//},
+			//"two lines two,zero point": {
+			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {}},
+			//	Rep:  "MULTILINESTRING ((10 10,20 20))",
+			//},
+			//"two lines two,one point": {
+			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
+			//	Rep:  "MULTILINESTRING ((10 10,20 20),(10 10))",
+			//},
+			//"two lines two,two point": {
+			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
+			//	Rep:  "MULTILINESTRING ((10 10,20 20),(10 10,20 20))",
+			//},
+		},
 	}
 	for name, subtests := range tests {
 		t.Run(name, func(t *testing.T) {
