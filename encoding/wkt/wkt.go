@@ -1,12 +1,17 @@
 package wkt
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/go-spatial/geom"
 )
+
+var ErrInvalidWKT = errors.New("WKT is not in valid form")
 
 func isNil(a interface{}) bool {
 	defer func() { recover() }()
@@ -219,6 +224,82 @@ func Encode(geo geom.Geometry) (string, error) {
 	}
 }
 
-func Decode(text string) (geo geom.Geometry, err error) {
+func strCordToPoint(points string) ([]float64, error) {
+	splitP := strings.Split(points, " ")
+	floats := make([]float64, len(splitP))
+	for i, p := range splitP {
+		if floatP, err := strconv.ParseFloat(p, 64); err != nil {
+			return []float64{}, errors.New(fmt.Sprintf("Couldn't parse coordinate: %s", p))
+		} else {
+			floats[i] = floatP
+		}
+	}
+
+	return floats, nil
+}
+func Decode(wktInput string) (geo geom.Geometry, err error) {
+	if wktInput == "" { // Empty input is not an error but a nil geom
+		return nil, geom.ErrUnknownGeometry{nil}
+	}
+
+	wktUpper := strings.ToUpper(strings.TrimSpace(wktInput))
+
+	typeRegex := regexp.MustCompile(`(^\S*)( EMPTY)*\s+\(\s*(.*)\s*\)`)
+	matchedGeom := typeRegex.FindStringSubmatch(wktUpper)
+	if len(matchedGeom) != 4 {
+		return nil, ErrInvalidWKT
+	}
+	if matchedGeom[2] != "" {
+		return nil, errors.New("Z and/or M is not supported")
+	}
+
+	isEmpty := matchedGeom[3] == "EMPTY"
+
+	switch matchedGeom[1] {
+	case "POINT":
+		if isEmpty {
+			return (*geom.Point)(nil), nil
+		}
+
+		parsedPoints, err := strCordToPoint(matchedGeom[3])
+		if err != nil {
+			return nil, err
+		}
+
+		return geom.Point([2]float64{parsedPoints[0], parsedPoints[1]}), nil
+	case "MULTIPOINT":
+		if isEmpty {
+			return (*geom.MultiPoint)(nil), nil
+		}
+
+		points := [][2]float64{}
+		for _, p := range strings.Split(matchedGeom[3], ",") {
+			if parsedPoints, err := strCordToPoint(p); err != nil {
+				return nil, err
+			} else {
+				points = append(points, [2]float64{parsedPoints[0], parsedPoints[1]})
+			}
+		}
+
+		return geom.MultiPoint(points), nil
+	case "LINESTRING":
+		if isEmpty {
+			return (*geom.MultiPoint)(nil), nil
+		}
+
+		points := [][2]float64{}
+		for _, p := range strings.Split(matchedGeom[3], ",") {
+			if parsedPoints, err := strCordToPoint(p); err != nil {
+				return nil, err
+			} else {
+				points = append(points, [2]float64{parsedPoints[0], parsedPoints[1]})
+			}
+		}
+
+		return geom.LineString(points), nil
+	default:
+		return nil, nil
+	}
+
 	return nil, nil
 }

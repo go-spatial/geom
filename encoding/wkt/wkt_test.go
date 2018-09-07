@@ -317,3 +317,96 @@ func TestEncode(t *testing.T) {
 		})
 	}
 }
+
+func TestDecode(t *testing.T) {
+	type tcase struct {
+		Geom geom.Geometry
+		Rep  string
+		Err  error
+	}
+	fn := func(t *testing.T, tc tcase) {
+		t.Parallel()
+		grep, gerr := Decode(tc.Rep)
+		if tc.Err != nil {
+			if tc.Err.Error() != gerr.Error() {
+				t.Errorf("error, expected %v got %v", tc.Err.Error(), gerr.Error())
+			}
+			return
+		}
+		if tc.Err == nil && gerr != nil {
+			t.Errorf("error, expected nil got %v", gerr)
+			return
+		}
+		if tc.Geom != grep {
+			t.Errorf("representation, expected ‘%v’ got ‘%v’", tc.Rep, grep)
+		}
+
+	}
+	tests := map[string]map[string]tcase{
+		"Point": {
+			"empty nil": {
+				Err: geom.ErrUnknownGeometry{nil},
+			},
+			"empty": {
+				Geom: (*geom.Point)(nil),
+				Rep:  "POINT EMPTY",
+			},
+			"zero": {
+				Geom: geom.Point{0, 0},
+				Rep:  "POINT (0 0)",
+			},
+			"one": {
+				Geom: geom.Point{10, 0},
+				Rep:  "POINT (10 0)",
+			},
+		},
+		"MultiPoint": {
+			"empty nil": {
+				Geom: (*geom.MultiPoint)(nil),
+				Rep:  "MULTIPOINT EMPTY",
+			},
+			//"one": {
+			//	Geom: geom.MultiPoint{{0, 0}},
+			//	Rep:  "MULTIPOINT (0 0)",
+			//},
+			//"one paren": {
+			//	Geom: geom.MultiPoint{{0, 0}},
+			//	Rep:  "MULTIPOINT ((0 0))",
+			//},
+			//"two": {
+			//	Geom: geom.MultiPoint{{0, 0}, {10, 10}},
+			//	Rep:  "MULTIPOINT (0 0,10 10)",
+			//},
+			//"three": {
+			//	Geom: geom.MultiPoint{{1, 1}, {3, 3}, {4, 5}},
+			//	Rep:  "MULTIPOINT (1 1,3 3,4 5)",
+			//},
+		},
+		"LineString": {
+			"empty nil": {
+				Geom: (*geom.LineString)(nil),
+				Rep:  "LINESTRING EMPTY",
+			},
+			//"one": {
+			//	Geom: geom.LineString{{0, 0}},
+			//	Rep:  "LINESTRING (0 0)",
+			//},
+			//"two": {
+			//	Geom: geom.LineString{{10, 10}, {0, 0}},
+			//	Rep:  "LINESTRING (10 10,0 0)",
+			//},
+			//"three": {
+			//	Geom: geom.LineString{{10, 10}, {9, 9}, {0, 0}},
+			//	Rep:  "LINESTRING (10 10,9 9,0 0)",
+			//},
+		},
+	}
+	for name, subtests := range tests {
+		t.Run(name, func(t *testing.T) {
+			for subname, tc := range subtests {
+				tc := tc
+				t.Run(subname, func(t *testing.T) { fn(t, tc) })
+			}
+		})
+	}
+}
