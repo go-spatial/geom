@@ -13,16 +13,16 @@ const (
 // Line has exactly two points
 type Line [2][2]float64
 
-// IsVertical returns true if [0][0] eq [1][0]
+// IsVertical returns true if the `y` elements of the points that make up the line (l) are equal.
 func (l Line) IsVertical() bool { return l[0][0] == l[1][0] }
 
-// IsHorizontal returns true if [0][0] eq [1][1]
+// IsHorizontal returns true if the `x` elements of the points that make the line (l) are equal.
 func (l Line) IsHorizontal() bool { return l[0][1] == l[1][1] }
 
-// Point1 returns a new point from line[0]
+// Point1 returns a new copy of the first point in the line.
 func (l Line) Point1() *Point { return (*Point)(&l[0]) }
 
-// Point2 returns a new point from line[1]
+// Point2 returns a new copy of the second point in the line.
 func (l Line) Point2() *Point { return (*Point)(&l[1]) }
 
 // ContainsPoint checks to see if the given pont lines on the linesegment. (Incliding the end points.)
@@ -43,7 +43,7 @@ func (l Line) ContainsPoint(pt [2]float64) bool {
 	return minx <= pt[0] && pt[0] <= maxx && miny <= pt[1] && pt[1] <= maxy
 }
 
-// ContainsPointBigFloat checks to see if the given pont lines on the linesegment. (Incliding the end points.)
+// ContainsPointBigFloat checks to see if the given point lies on the line segment. (Including the endpoints.)
 func (l Line) ContainsPointBigFloat(pt [2]*big.Float) bool {
 	pminx, pmaxx := l[0][0], l[1][0]
 	if pminx > pmaxx {

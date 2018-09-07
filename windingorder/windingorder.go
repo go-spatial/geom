@@ -24,7 +24,7 @@ func (w WindingOrder) IsCounterClockwise() bool { return w == CounterClockwise }
 // Not returns the inverse of the winding
 func (w WindingOrder) Not() WindingOrder { return !w }
 
-// OfPoints gets the winding order of the points passed
+// OfPoints returns the winding order of the given points
 func OfPoints(pts ...[2]float64) WindingOrder {
 	sum := 0.0
 	li := len(pts) - 1

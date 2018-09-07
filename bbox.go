@@ -93,7 +93,7 @@ func (e *Extent) Max() [2]float64 {
 	return [2]float64{e[2], e[3]}
 }
 
-// XSpan is thr distance of the Extent in X or inf
+// XSpan is the distance of the Extent in X or inf
 // TODO (gdey): look at how to have this function take into account the dpi.
 func (e *Extent) XSpan() float64 {
 	if e == nil {
@@ -152,7 +152,7 @@ func (e *Extent) AddPointers(pts ...Pointer) {
 	}
 }
 
-// AddGeometry expands the specified envelop to contain p.
+// AddGeometry expands the specified envelop to contain g.
 func (e *Extent) AddGeometry(g Geometry) error {
 	return getExtent(g, e)
 }
@@ -228,7 +228,6 @@ func NewExtent(points ...[2]float64) *Extent {
 }
 
 // NewExtentFromGeometry tries to create an extent based on the geometry
-// it does this without collecting all the points up front and using getExtent
 func NewExtentFromGeometry(g Geometry) (*Extent, error) {
 	e := Extent{}
 	err := getExtent(g, &e)

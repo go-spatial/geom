@@ -14,7 +14,8 @@ type Circle struct {
 	Radius float64
 }
 
-// CircleFromPoints is calculated from ref: http://mathforum.org/library/drmath/view/55233.html
+// CircleFromPoint returns the circle from by the given points, or an error if the points are colinear.
+// REF:  Formula used gotten from http://mathforum.org/library/drmath/view/55233.html
 func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	xA, yA, xB, yB, xC, yC := a[0], a[1], b[0], b[1], c[0], c[1]
 	if ((yB - yA) * (xC - xB)) == ((yC - yB) * (xB - xA)) {
