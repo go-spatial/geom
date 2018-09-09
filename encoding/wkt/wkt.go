@@ -327,6 +327,37 @@ func Decode(wktInput string) (geo geom.Geometry, err error) {
 		}
 
 		return geom.MultiLineString(multiPoints), nil
+	case "POLYGON":
+		if isEmpty {
+			return (*geom.Polygon)(nil), nil
+		}
+
+		reg := regexp.MustCompile(`\)\s*,\s*\(`)
+		indexes := reg.FindAllStringIndex(matchedGeom[3], -1)
+		subPoints := make([]string, len(indexes))
+
+		lastHead, lastTail := 1, 0
+		for i, index := range indexes {
+			lastTail = index[0]
+			subPoints[i] = matchedGeom[3][lastHead:lastTail]
+			lastHead = index[1]
+		}
+		subPoints = append(subPoints, matchedGeom[3][lastHead:len(matchedGeom[3])-1])
+
+		multiPoints := [][][2]float64{}
+		for _, subP := range subPoints {
+			points := [][2]float64{}
+			for _, p := range strings.Split(subP, ",") {
+				if parsedPoints, err := strCordToPoint(p); err != nil {
+					return nil, err
+				} else {
+					points = append(points, [2]float64{parsedPoints[0], parsedPoints[1]})
+				}
+			}
+			multiPoints = append(multiPoints, points)
+		}
+
+		return geom.Polygon(multiPoints), nil
 	default:
 		return nil, nil
 	}

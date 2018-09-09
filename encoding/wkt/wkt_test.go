@@ -1,6 +1,7 @@
 package wkt
 
 import (
+	"github.com/go-spatial/geom/cmp"
 	"testing"
 
 	"github.com/go-spatial/geom"
@@ -337,7 +338,7 @@ func TestDecode(t *testing.T) {
 			t.Errorf("error, expected nil got %v", gerr)
 			return
 		}
-		if tc.Geom != grep {
+		if !cmp.GeometryEqual(tc.Geom, grep) {
 			t.Errorf("representation, expected ‘%v’ got ‘%v’", tc.Rep, grep)
 		}
 
@@ -365,10 +366,10 @@ func TestDecode(t *testing.T) {
 				Geom: (*geom.MultiPoint)(nil),
 				Rep:  "MULTIPOINT EMPTY",
 			},
-			//"one": {
-			//	Geom: geom.MultiPoint{{0, 0}},
-			//	Rep:  "MULTIPOINT (0 0)",
-			//},
+			"one": {
+				Geom: geom.MultiPoint{{0, 0}},
+				Rep:  "MULTIPOINT (0 0)",
+			},
 			//"one paren": {
 			//	Geom: geom.MultiPoint{{0, 0}},
 			//	Rep:  "MULTIPOINT ((0 0))",
@@ -448,6 +449,24 @@ func TestDecode(t *testing.T) {
 			//"two lines two,two point": {
 			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
 			//	Rep:  "MULTILINESTRING ((10 10,20 20),(10 10,20 20))",
+			//},
+		},
+		"Polygon": {
+			"empty nil": {
+				Geom: (*geom.Polygon)(nil),
+				Rep:  "POLYGON EMPTY",
+			},
+			//"two lines one zero": {
+			//	Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
+			//	Rep:  "POLYGON ((10 10,11 11,12 12))",
+			//},
+			//"two lines one one": {
+			//	Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
+			//	Rep:  "POLYGON ((10 10,11 11,12 12),(20 20,21 21,22 22))",
+			//},
+			//"two lines zero one": {
+			//	Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
+			//	Rep:  "POLYGON ((10 10,11 11,12 12))",
 			//},
 		},
 	}
