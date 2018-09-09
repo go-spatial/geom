@@ -786,6 +786,28 @@ func TestGeometry(t *testing.T) {
 	if GeometryEqual(nil, nil) {
 		t.Errorf(" unknown types, expected false, got true")
 	}
+
+	fn := func(tc interface{}) func(t *testing.T) {
+		return func(t *testing.T) {
+			if !GeometryEqual(tc, tc) {
+				t.Error("failed test for: %T", tc)
+			}
+		}
+	}
+
+	tests := map[string]geom.Geometry{
+		"nil point":      (*geom.Point)(nil),
+		"nil multiPoint": (*geom.MultiPoint)(nil),
+		"nil Line":       (*geom.LineString)(nil),
+		"nil MultiLine":  (*geom.MultiLineString)(nil),
+		"nil Poly":       (*geom.Polygon)(nil),
+		"nil MultiPoly":  (*geom.MultiPolygon)(nil),
+		"nil Collection": (*geom.Collection)(nil),
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
 }
 
 func TestFloat64(t *testing.T) {
