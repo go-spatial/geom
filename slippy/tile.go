@@ -4,12 +4,14 @@ import (
 	"math"
 
 	"errors"
-	"github.com/go-spatial/geom"
 	"fmt"
+	"github.com/go-spatial/geom"
 )
 
+// MaxZoom is the lowest zoom (furthest in)
 const MaxZoom = 22
 
+// NewTile returns a Tile of Z,X,Y passed in
 func NewTile(z, x, y uint) *Tile {
 	return &Tile{
 		Z: z,
@@ -28,7 +30,7 @@ type Tile struct {
 	Y uint
 }
 
-// This function returns the smallest tile which fits the
+// NewTileMinMaxer returns the smallest tile which fits the
 // geom.MinMaxer. Note: it assumes the values of ext are
 // EPSG:4326 (lat/lng)
 func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
@@ -52,7 +54,7 @@ func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
 	return ret
 }
 
-// Instantiates a tile containing the coordinate with the specified zoom
+// NewTileLatLon instantiates a tile containing the coordinate with the specified zoom
 func NewTileLatLon(z uint, lat, lon float64) *Tile {
 	x := Lon2Tile(z, lon)
 	y := Lat2Tile(z, lat)
@@ -64,6 +66,7 @@ func NewTileLatLon(z uint, lat, lon float64) *Tile {
 	}
 }
 
+// ZXY returns back the z,x,y of the tile
 func (t *Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 // Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
@@ -82,8 +85,8 @@ func (t *Tile) Extent4326() *geom.Extent {
 	)
 }
 
-// TODO (ear7h): sibling support
 // RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
+// TODO (ear7h): sibling support
 func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 	// handle ancestors and self
 	if zoom <= t.Z {
