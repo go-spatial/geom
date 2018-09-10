@@ -1,6 +1,7 @@
 package slippy_test
 
 import (
+	"github.com/go-spatial/geom/spherical"
 	"strconv"
 	"testing"
 
@@ -74,7 +75,7 @@ func TestNewTile(t *testing.T) {
 				[2]float64{-1.017529720390625e+07, 1.017529720390625e+07},
 				[2]float64{156543.03390624933, -156543.03390624933},
 			),
-			eBounds: geom.Hull(
+			eBounds: spherical.Hull(
 				[2]float64{-90, 66.51},
 				[2]float64{0, 0},
 			),
@@ -92,7 +93,7 @@ func TestNewTile(t *testing.T) {
 				[2]float64{-1.3044447051847773e+07, 3.8567162532485295e+06},
 				[2]float64{-1.3043816446364507e+07, 3.856085647765265e+06},
 			),
-			eBounds: geom.Hull(
+			eBounds: spherical.Hull(
 				[2]float64{-117.18, 32.70},
 				[2]float64{-117.17, 32.70},
 			),
@@ -267,26 +268,26 @@ func TestRangeFamilyAt(t *testing.T) {
 
 func TestNewTileMinMaxer(t *testing.T) {
 	type tcase struct {
-		mm geom.MinMaxer
+		mm   geom.MinMaxer
 		tile *slippy.Tile
 	}
 
-	fn := func (tc tcase, t *testing.T) {
+	fn := func(tc tcase, t *testing.T) {
 		tile := slippy.NewTileMinMaxer(tc.mm)
 		if !reflect.DeepEqual(tile, tc.tile) {
 			t.Errorf("unexpected tile %v, expected %v", tile, tc.tile)
 		}
 	}
 
-	testcases := map[string]tcase {
+	testcases := map[string]tcase{
 		"1": {
-			mm: geom.Segment(
+			mm: spherical.Hull(
 				[2]float64{-179.0, 85.0},
 				[2]float64{179.0, -85.0}),
-				tile: slippy.NewTile(0, 0, 0),
+			tile: slippy.NewTile(0, 0, 0),
 		},
-		"2" : {
-			mm: slippy.NewTile(15, 2, 98).Extent4326(),
+		"2": {
+			mm:   slippy.NewTile(15, 2, 98).Extent4326(),
 			tile: slippy.NewTile(15, 2, 98),
 		},
 	}
