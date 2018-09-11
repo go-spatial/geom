@@ -787,22 +787,125 @@ func TestGeometry(t *testing.T) {
 		t.Errorf(" unknown types, expected false, got true")
 	}
 
-	fn := func(tc interface{}) func(t *testing.T) {
+	type tcase struct {
+		cl1, cl2 interface{}
+		e        bool
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			if !GeometryEqual(tc, tc) {
+			if GeometryEqual(tc.cl1, tc.cl2) != tc.e {
 				t.Error("failed test for: %T", tc)
 			}
 		}
 	}
 
-	tests := map[string]geom.Geometry{
-		"nil point":      (*geom.Point)(nil),
-		"nil multiPoint": (*geom.MultiPoint)(nil),
-		"nil Line":       (*geom.LineString)(nil),
-		"nil MultiLine":  (*geom.MultiLineString)(nil),
-		"nil Poly":       (*geom.Polygon)(nil),
-		"nil MultiPoly":  (*geom.MultiPolygon)(nil),
-		"nil Collection": (*geom.Collection)(nil),
+	tests := map[string]tcase{
+		"nil point": {
+			cl1: (*geom.Point)(nil),
+			cl2: (*geom.Point)(nil),
+			e:   true,
+		},
+		"first point nil": {
+			cl1: (*geom.Point)(nil),
+			cl2: geom.Point([2]float64{0, 0}),
+			e:   false,
+		},
+		"second point nil": {
+			cl1: geom.Point([2]float64{0, 0}),
+			cl2: (*geom.Point)(nil),
+			e:   false,
+		},
+		"nil multiPoint": {
+			cl1: (*geom.MultiPoint)(nil),
+			cl2: (*geom.MultiPoint)(nil),
+			e:   true,
+		},
+		"first multiPoint nil": {
+			cl1: (*geom.MultiPoint)(nil),
+			cl2: geom.MultiPoint([][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}}),
+			e:   false,
+		},
+		"second multiPoint nil": {
+			cl1: geom.MultiPoint([][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}}),
+			cl2: (*geom.MultiPoint)(nil),
+			e:   false,
+		},
+		"nil Line": {
+			cl1: (*geom.LineString)(nil),
+			cl2: (*geom.LineString)(nil),
+			e:   true,
+		},
+		"first Line nil": {
+			cl1: (*geom.LineString)(nil),
+			cl2: geom.LineString([][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}}),
+			e:   false,
+		},
+		"second Line nil": {
+			cl1: geom.LineString([][2]float64{{1, 2}, {1, 3}, {1, 4}, {1, 5}}),
+			cl2: (*geom.LineString)(nil),
+			e:   false,
+		},
+		"nil MultiLine": {
+			cl1: (*geom.MultiLineString)(nil),
+			cl2: (*geom.MultiLineString)(nil),
+			e:   true,
+		},
+		"first MultiLine nil": {
+			cl1: (*geom.MultiLineString)(nil),
+			cl2: geom.MultiLineString([][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}),
+			e:   false,
+		},
+		"second multiline nil": {
+			cl1: geom.MultiLineString([][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}),
+			cl2: (*geom.MultiLineString)(nil),
+			e:   false,
+		},
+		"nil Poly": {
+			cl1: (*geom.Polygon)(nil),
+			cl2: (*geom.Polygon)(nil),
+			e:   true,
+		},
+		"first Poly nil": {
+			cl1: (*geom.Polygon)(nil),
+			cl2: geom.Polygon([][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}),
+			e:   false,
+		},
+		"second Poly nil": {
+			cl1: geom.Polygon([][][2]float64{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}),
+			cl2: (*geom.Polygon)(nil),
+			e:   false,
+		},
+		"nil MultiPoly": {
+			cl1: (*geom.MultiPolygon)(nil),
+			cl2: (*geom.MultiPolygon)(nil),
+			e:   true,
+		},
+		"first MultiPoly nil": {
+			cl1: (*geom.MultiPolygon)(nil),
+			cl2: geom.MultiPolygon([][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}}),
+			e:   false,
+		},
+		"second MultiPoly nil": {
+			cl1: geom.MultiPolygon([][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}}),
+			cl2: (*geom.MultiPolygon)(nil),
+			e:   false,
+		},
+		"nil Collection": {
+			cl1: (*geom.Collection)(nil),
+			cl2: (*geom.Collection)(nil),
+			e:   true,
+		},
+		"first Collection nil": {
+			cl1: (*geom.Collection)(nil),
+			cl2: geom.Collection{geom.Point{0.0, 0.0}},
+			e:   false,
+		},
+		"second Collection nil": {
+			cl1: geom.Collection{geom.Point{0.0, 0.0}},
+			cl2: (*geom.Collection)(nil),
+			e:   false,
+		},
 	}
 
 	for name, tc := range tests {
