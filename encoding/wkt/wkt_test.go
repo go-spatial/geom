@@ -169,15 +169,15 @@ func TestEncode(t *testing.T) {
 			},
 			"two lines one zero": {
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
-				Rep:  "POLYGON ((10 10,11 11,12 12))",
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 			"two lines one one": {
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
-				Rep:  "POLYGON ((10 10,11 11,12 12),(20 20,21 21,22 22))",
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10),(20 20,21 21,22 22,20 20))",
 			},
 			"two lines zero one": {
 				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
-				Rep:  "POLYGON ((10 10,11 11,12 12))",
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 		},
 		"MultiPolygon": {
@@ -215,7 +215,7 @@ func TestEncode(t *testing.T) {
 			},
 			"one polygon": {
 				Geom: geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}}},
-				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12)))",
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
 			},
 		},
 		"Collectioner": {
