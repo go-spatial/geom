@@ -10,6 +10,16 @@ import (
 // TOLERANCE is the epsilon value used in comparing floats.
 const TOLERANCE = 0.000001
 
+var (
+	NilPoint           = (*geom.Point)(nil)
+	NilMultiPoint      = (*geom.MultiPoint)(nil)
+	NilLineString      = (*geom.LineString)(nil)
+	NilMultiLineString = (*geom.MultiLineString)(nil)
+	NilPoly            = (*geom.Polygon)(nil)
+	NilMultiPoly       = (*geom.MultiPolygon)(nil)
+	NilCollection      = (*geom.Collection)(nil)
+)
+
 // FloatSlice compare two sets of float slices.
 func FloatSlice(f1, f2 []float64) bool { return Float64Slice(f1, f2, TOLERANCE) }
 
@@ -165,13 +175,21 @@ func PolygonEqual(ply1, ply2 [][][2]float64) bool {
 }
 
 // PointerEqual will check to see if the x and y of both points are the same.
-func PointerEqual(geo1, geo2 geom.Pointer) bool { return PointEqual(geo1.XY(), geo2.XY()) }
+func PointerEqual(geo1, geo2 geom.Pointer) bool {
+	if geo1Nil, geo2Nil := geo1 == NilPoint, geo2 == NilPoint; geo1Nil || geo2Nil {
+		return geo1Nil && geo2Nil
+	}
+	return PointEqual(geo1.XY(), geo2.XY())
+}
 
 // PointerLess returns weather p1 is < p2 by first comparing the X values, and if they are the same the Y values.
 func PointerLess(p1, p2 geom.Pointer) bool { return PointLess(p1.XY(), p2.XY()) }
 
 // MultiPointerEqual will check to see if the provided multipoints have the same points.
 func MultiPointerEqual(geo1, geo2 geom.MultiPointer) bool {
+	if geo1Nil, geo2Nil := geo1 == NilMultiPoint, geo2 == NilMultiPoint; geo1Nil || geo2Nil {
+		return geo1Nil && geo2Nil
+	}
 	return MultiPointEqual(geo1.Points(), geo2.Points())
 }
 
@@ -179,27 +197,38 @@ func MultiPointerEqual(geo1, geo2 geom.MultiPointer) bool {
 // there lengths are both the same, and the sequence of points are in the same order.
 // The points don't have to be in the same index point in both line strings.
 func LineStringerEqual(geo1, geo2 geom.LineStringer) bool {
+	if geo1Nil, geo2Nil := geo1 == NilLineString, geo2 == NilLineString; geo1Nil || geo2Nil {
+		return geo1Nil && geo2Nil
+	}
 	return LineStringEqual(geo1.Verticies(), geo2.Verticies())
 }
 
 // MultiLineStringerEqual will check to see if the 2 MultiLineStrings pass to it
 // are equal. This is done by converting them to lineStrings and using MultiLineEqual
 func MultiLineStringerEqual(geo1, geo2 geom.MultiLineStringer) bool {
-	l1, l2 := geo1.LineStrings(), geo2.LineStrings()
 	// Polygon and MultiLine Strings are the same at this level.
-	return MultiLineEqual(l1, l2)
+	if geo1Nil, geo2Nil := geo1 == NilMultiLineString, geo2 == NilMultiLineString; geo1Nil || geo2Nil {
+		return geo1Nil && geo2Nil
+	}
+	return MultiLineEqual(geo1.LineStrings(), geo2.LineStrings())
 }
 
 // PolygonerEqual will check to see if the Polygoners are the same, by checking
 // if the linearRings are equal.
 func PolygonerEqual(geo1, geo2 geom.Polygoner) bool {
-	lr1, lr2 := geo1.LinearRings(), geo2.LinearRings()
-	return PolygonEqual(lr1, lr2)
+	if geo1Nil, geo2Nil := geo1 == NilPoly, geo2 == NilPoly; geo1Nil || geo2Nil {
+		return geo1Nil && geo2Nil
+	}
+	return PolygonEqual(geo1.LinearRings(), geo2.LinearRings())
 }
 
 // MultiPolygonerEqual will check to see if the given multipolygoners are the same, by check each of the constitute
 // polygons to see if they match.
 func MultiPolygonerEqual(geo1, geo2 geom.MultiPolygoner) bool {
+	if geo1Nil, geo2Nil := geo1 == NilMultiPoly, geo2 == NilMultiPoly; geo1Nil || geo2Nil {
+		return geo1Nil && geo2Nil
+	}
+
 	p1, p2 := geo1.Polygons(), geo2.Polygons()
 	if len(p1) != len(p2) {
 		return false
@@ -217,6 +246,10 @@ func MultiPolygonerEqual(geo1, geo2 geom.MultiPolygoner) bool {
 // CollectionerEqual will check if the two collections are equal based on length
 // then if each geometry inside is equal. Therefor order matters.
 func CollectionerEqual(col1, col2 geom.Collectioner) bool {
+	if colNil, col2Nil := col1 == NilCollection, col2 == NilCollection; colNil || col2Nil {
+		return colNil && col2Nil
+	}
+
 	g1, g2 := col1.Geometries(), col2.Geometries()
 	if len(g1) != len(g2) {
 		return false
