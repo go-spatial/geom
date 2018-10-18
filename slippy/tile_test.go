@@ -1,14 +1,16 @@
 package slippy_test
 
 import (
-	"github.com/go-spatial/geom/spherical"
 	"strconv"
 	"testing"
+
+	"github.com/go-spatial/geom/spherical"
+
+	"reflect"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/slippy"
-	"reflect"
 )
 
 func TestNewTile(t *testing.T) {
@@ -20,46 +22,48 @@ func TestNewTile(t *testing.T) {
 		eExtent  *geom.Extent
 		eBExtent *geom.Extent
 	}
-	fn := func(t *testing.T, tc tcase) {
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
 
-		// Test the new functions.
-		tile := slippy.NewTile(tc.z, tc.x, tc.y)
-		{
-			gz, gx, gy := tile.ZXY()
-			if gz != tc.z {
-				t.Errorf("z, expected %v got %v", tc.z, gz)
-			}
-			if gx != tc.x {
-				t.Errorf("x, expected %v got %v", tc.x, gx)
-			}
-			if gy != tc.y {
-				t.Errorf("y, expected %v got %v", tc.y, gy)
-			}
-		}
-		{
-			bounds := tile.Extent4326()
-			for i := 0; i < 4; i++ {
-				if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01) {
-					t.Errorf("bounds[%v] , expected %v got %v", i, tc.eBounds[i], bounds[i])
-
+			// Test the new functions.
+			tile := slippy.NewTile(tc.z, tc.x, tc.y)
+			{
+				gz, gx, gy := tile.ZXY()
+				if gz != tc.z {
+					t.Errorf("z, expected %v got %v", tc.z, gz)
+				}
+				if gx != tc.x {
+					t.Errorf("x, expected %v got %v", tc.x, gx)
+				}
+				if gy != tc.y {
+					t.Errorf("y, expected %v got %v", tc.y, gy)
 				}
 			}
-		}
-		{
-			bufferedExtent := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, uint(tc.buffer)))
+			{
+				bounds := tile.Extent4326()
+				for i := 0; i < 4; i++ {
+					if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01) {
+						t.Errorf("bounds[%v] , expected %v got %v", i, tc.eBounds[i], bounds[i])
 
-			if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
-				t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
+					}
+				}
 			}
-		}
-		{
-			extent := tile.Extent3857()
+			{
+				bufferedExtent := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, uint(tc.buffer)))
 
-			if !cmp.GeomExtent(tc.eExtent, extent) {
-				t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
+				if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
+					t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
+				}
 			}
-		}
+			{
+				extent := tile.Extent3857()
 
+				if !cmp.GeomExtent(tc.eExtent, extent) {
+					t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
+				}
+			}
+
+		}
 	}
 	tests := [...]tcase{
 		{
@@ -100,8 +104,7 @@ func TestNewTile(t *testing.T) {
 		},
 	}
 	for i, tc := range tests {
-		tc := tc
-		t.Run(strconv.FormatUint(uint64(i), 10), func(t *testing.T) { fn(t, tc) })
+		t.Run(strconv.FormatUint(uint64(i), 10), fn(tc))
 	}
 
 }
@@ -113,23 +116,25 @@ func TestNewTileLatLon(t *testing.T) {
 		buffer   float64
 		srid     uint64
 	}
-	fn := func(t *testing.T, tc tcase) {
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
 
-		// Test the new functions.
-		tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon)
-		{
-			gz, gx, gy := tile.ZXY()
-			if gz != tc.z {
-				t.Errorf("z, expected %v got %v", tc.z, gz)
+			// Test the new functions.
+			tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon)
+			{
+				gz, gx, gy := tile.ZXY()
+				if gz != tc.z {
+					t.Errorf("z, expected %v got %v", tc.z, gz)
+				}
+				if gx != tc.x {
+					t.Errorf("x, expected %v got %v", tc.x, gx)
+				}
+				if gy != tc.y {
+					t.Errorf("y, expected %v got %v", tc.y, gy)
+				}
 			}
-			if gx != tc.x {
-				t.Errorf("x, expected %v got %v", tc.x, gx)
-			}
-			if gy != tc.y {
-				t.Errorf("y, expected %v got %v", tc.y, gy)
-			}
+
 		}
-
 	}
 	tests := map[string]tcase{
 		"zero": {
@@ -167,8 +172,7 @@ func TestNewTileLatLon(t *testing.T) {
 	}
 
 	for k, tc := range tests {
-		tc := tc
-		t.Run(k, func(t *testing.T) { fn(t, tc) })
+		t.Run(k, fn(tc))
 	}
 }
 
@@ -177,11 +181,50 @@ func TestRangeFamilyAt(t *testing.T) {
 		z, x, y uint
 	}
 
-	testcases := map[string]struct {
+	type tcase struct {
 		tile     *slippy.Tile
 		zoomAt   uint
 		expected []coord
-	}{
+	}
+
+	isIn := func(arr []coord, c coord) bool {
+		for _, v := range arr {
+			if v == c {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+
+			coordList := make([]coord, 0, len(tc.expected))
+			tc.tile.RangeFamilyAt(tc.zoomAt, func(tile *slippy.Tile) error {
+				z, x, y := tile.ZXY()
+				c := coord{z, x, y}
+
+				coordList = append(coordList, c)
+
+				return nil
+			})
+
+			if len(coordList) != len(tc.expected) {
+				t.Fatalf("coordinate list length, expected %d, got %d", len(tc.expected), len(coordList))
+			}
+
+			for _, v := range tc.expected {
+				if !isIn(coordList, v) {
+					t.Logf("coordinates: %v", coordList)
+					t.Fatalf("coordinate exists, expected %v,  got missing", v)
+				}
+			}
+
+		}
+	}
+
+	testcases := map[string]tcase{
 		"children 1": {
 			tile:   slippy.NewTile(0, 0, 0),
 			zoomAt: 1,
@@ -233,36 +276,8 @@ func TestRangeFamilyAt(t *testing.T) {
 		},
 	}
 
-	isIn := func(arr []coord, c coord) bool {
-		for _, v := range arr {
-			if v == c {
-				return true
-			}
-		}
-
-		return false
-	}
-
-	for k, tc := range testcases {
-		coordList := make([]coord, 0, len(tc.expected))
-		tc.tile.RangeFamilyAt(tc.zoomAt, func(tile *slippy.Tile) error {
-			z, x, y := tile.ZXY()
-			c := coord{z, x, y}
-
-			coordList = append(coordList, c)
-
-			return nil
-		})
-
-		if len(coordList) != len(tc.expected) {
-			t.Fatalf("[%v] expected coordinate list of length %d, got %d", k, len(tc.expected), len(coordList))
-		}
-
-		for _, v := range tc.expected {
-			if !isIn(coordList, v) {
-				t.Fatalf("[%v] expected coordinate %v missing from list %v", k, v, coordList)
-			}
-		}
+	for name, tc := range testcases {
+		t.Run(name, fn(tc))
 	}
 }
 
@@ -272,10 +287,14 @@ func TestNewTileMinMaxer(t *testing.T) {
 		tile *slippy.Tile
 	}
 
-	fn := func(tc tcase, t *testing.T) {
-		tile := slippy.NewTileMinMaxer(tc.mm)
-		if !reflect.DeepEqual(tile, tc.tile) {
-			t.Errorf("unexpected tile %v, expected %v", tile, tc.tile)
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+
+			tile := slippy.NewTileMinMaxer(tc.mm)
+			if !reflect.DeepEqual(tile, tc.tile) {
+				t.Errorf("tile, expected %v, got %v", tc.tile, tile)
+			}
+
 		}
 	}
 
@@ -292,9 +311,7 @@ func TestNewTileMinMaxer(t *testing.T) {
 		},
 	}
 
-	for k, v := range testcases {
-		t.Run(k, func(t *testing.T) {
-			fn(v, t)
-		})
+	for name, tc := range testcases {
+		t.Run(name, fn(tc))
 	}
 }
