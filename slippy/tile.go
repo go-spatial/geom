@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"errors"
-	"fmt"
+
 	"github.com/go-spatial/geom"
 )
 
@@ -32,7 +32,7 @@ type Tile struct {
 
 // NewTileMinMaxer returns the smallest tile which fits the
 // geom.MinMaxer. Note: it assumes the values of ext are
-// EPSG:4326 (lat/lng)
+// EPSG:4326 (lng/lat)
 func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
 	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX())
 	point := &geom.Point{ext.MaxX(), ext.MinY()}
@@ -50,7 +50,6 @@ func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
 		})
 
 	}
-	fmt.Println("returning", ret)
 	return ret
 }
 
@@ -66,11 +65,37 @@ func NewTileLatLon(z uint, lat, lon float64) *Tile {
 	}
 }
 
+func minmax(a, b uint) (uint, uint) {
+	if a > b {
+		return b, a
+	}
+	return a, b
+}
+
+// FromBounds returns a list of tiles that make up the bound given. The bounds should be defined as the following lng/lat points [4]float64{west,south,east,north}
+func FromBounds(bounds *geom.Extent, z uint) []Tile {
+	if bounds == nil {
+		return nil
+	}
+
+	minx, maxx := minmax(Lon2Tile(z, bounds[0]), Lon2Tile(z, bounds[2]))
+	miny, maxy := minmax(Lat2Tile(z, bounds[1]), Lat2Tile(z, bounds[3]))
+	// tiles := make([]Tile, (maxx-minx)*(maxy-miny))
+	var tiles []Tile
+	for x := minx; x <= maxx; x++ {
+		for y := miny; y <= maxy; y++ {
+			tiles = append(tiles, Tile{Z: z, X: x, Y: y})
+		}
+	}
+	return tiles
+
+}
+
 // ZXY returns back the z,x,y of the tile
-func (t *Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
+func (t Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 // Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
-func (t *Tile) Extent3857() *geom.Extent {
+func (t Tile) Extent3857() *geom.Extent {
 	return geom.NewExtent(
 		[2]float64{Tile2WebX(t.Z, t.X), Tile2WebY(t.Z, t.Y+1)},
 		[2]float64{Tile2WebX(t.Z, t.X+1), Tile2WebY(t.Z, t.Y)},
@@ -78,7 +103,7 @@ func (t *Tile) Extent3857() *geom.Extent {
 }
 
 // Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long)
-func (t *Tile) Extent4326() *geom.Extent {
+func (t Tile) Extent4326() *geom.Extent {
 	return geom.NewExtent(
 		[2]float64{Tile2Lon(t.Z, t.X), Tile2Lat(t.Z, t.Y+1)},
 		[2]float64{Tile2Lon(t.Z, t.X+1), Tile2Lat(t.Z, t.Y)},
@@ -87,7 +112,7 @@ func (t *Tile) Extent4326() *geom.Extent {
 
 // RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
 // TODO (ear7h): sibling support
-func (t *Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
+func (t Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 	// handle ancestors and self
 	if zoom <= t.Z {
 		mag := t.Z - zoom
