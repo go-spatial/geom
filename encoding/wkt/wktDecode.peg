@@ -1,0 +1,58 @@
+{
+package wkt
+
+func toIfaceSlice(v interface{}) []interface{} {
+    if v == nil {
+        return nil
+    }
+    return v.([]interface{})
+}
+}
+
+Input <- expr:Expr EOF {
+    cntCodeBlocks++
+    return expr, nil
+}
+
+Expr <- first:GeomClass _ empty:( "EMPTY" )* _ rest:( Point / MultiPoint) {
+    return rest, nil
+}
+
+GeomClass <- exp:( "POINT" / "MULTIPOINT" )  {
+    return exp, nil
+}
+
+Point <- _ '(' _ first:( Number ) _ second:( Number ) _ ')' {
+    return geom.Point{first.(float64), second.(float64)}, nil
+}
+
+MultiPoint <- _ '(' _ vals:(( Point ) _ [,]? )* ')' {
+    geo := make([][2]float64, 0)
+   for _, x := range toIfaceSlice(vals) {
+      for _, y := range toIfaceSlice(x) {
+         w := y.(geom.Point)
+         if len(w) != 2 {
+            continue
+         }
+         geo = append(geo, w)
+         break
+      }
+   }
+   g := geom.MultiPoint{}
+   err := g.SetPoints(geo)
+   return g, err
+}
+
+Number ← '-'? Integer ( '.' DecimalDigit+ )? {
+    return strconv.ParseFloat(string(c.text), 64)
+}
+
+Integer ← '0' / NonZeroDecimalDigit DecimalDigit*
+
+DecimalDigit ← [0-9]
+
+NonZeroDecimalDigit ← [1-9]
+
+_ "whitespace" <- [ \n\t\r]*
+
+EOF <- !.

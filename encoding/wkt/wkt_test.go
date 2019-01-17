@@ -345,13 +345,6 @@ func TestDecode(t *testing.T) {
 	}
 	tests := map[string]map[string]tcase{
 		"Point": {
-			"empty nil": {
-				Err: geom.ErrUnknownGeometry{nil},
-			},
-			"empty": {
-				Geom: (*geom.Point)(nil),
-				Rep:  "POINT EMPTY",
-			},
 			"zero": {
 				Geom: geom.Point{0, 0},
 				Rep:  "POINT (0 0)",
@@ -362,18 +355,14 @@ func TestDecode(t *testing.T) {
 			},
 		},
 		"MultiPoint": {
-			"empty nil": {
-				Geom: (*geom.MultiPoint)(nil),
-				Rep:  "MULTIPOINT EMPTY",
-			},
 			"one": {
 				Geom: geom.MultiPoint{{0, 0}},
 				Rep:  "MULTIPOINT (0 0)",
 			},
-			//"one paren": {
-			//	Geom: geom.MultiPoint{{0, 0}},
-			//	Rep:  "MULTIPOINT ((0 0))",
-			//},
+			"one paren": {
+				Geom: geom.MultiPoint{{0, 0}},
+				Rep:  "MULTIPOINT ((0 0))",
+			},
 			//"two": {
 			//	Geom: geom.MultiPoint{{0, 0}, {10, 10}},
 			//	Rep:  "MULTIPOINT (0 0,10 10)",
