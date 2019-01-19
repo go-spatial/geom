@@ -345,6 +345,10 @@ func TestDecode(t *testing.T) {
 	}
 	tests := map[string]map[string]tcase{
 		"Point": {
+			"empty": {
+				Geom: (*geom.Point)(nil),
+				Rep:  "POINT EMPTY",
+			},
 			"zero": {
 				Geom: geom.Point{0, 0},
 				Rep:  "POINT (0 0)",
@@ -355,110 +359,120 @@ func TestDecode(t *testing.T) {
 			},
 		},
 		"MultiPoint": {
-			"one": {
-				Geom: geom.MultiPoint{{0, 0}},
-				Rep:  "MULTIPOINT (0 0)",
+			"empty nil": {
+				Geom: (*geom.MultiPoint)(nil),
+				Rep:  "MULTIPOINT EMPTY",
 			},
 			"one paren": {
-				Geom: geom.MultiPoint{{0, 0}},
-				Rep:  "MULTIPOINT ((0 0))",
+				Geom: geom.MultiPoint{{0, 0}, {1, 2}},
+				Rep:  "MULTIPOINT (0 0, 1 2)",
 			},
-			//"two": {
-			//	Geom: geom.MultiPoint{{0, 0}, {10, 10}},
-			//	Rep:  "MULTIPOINT (0 0,10 10)",
-			//},
-			//"three": {
-			//	Geom: geom.MultiPoint{{1, 1}, {3, 3}, {4, 5}},
-			//	Rep:  "MULTIPOINT (1 1,3 3,4 5)",
-			//},
+			"point format": {
+				Geom: geom.MultiPoint{{10, 20}, {30, 40}, {50, 60}},
+				Rep:  "MULTIPOINT (10 20, 30 40, 50 60)",
+			},
 		},
 		"LineString": {
 			"empty nil": {
 				Geom: (*geom.LineString)(nil),
 				Rep:  "LINESTRING EMPTY",
 			},
-			//"one": {
-			//	Geom: geom.LineString{{0, 0}},
-			//	Rep:  "LINESTRING (0 0)",
-			//},
-			//"two": {
-			//	Geom: geom.LineString{{10, 10}, {0, 0}},
-			//	Rep:  "LINESTRING (10 10,0 0)",
-			//},
-			//"three": {
-			//	Geom: geom.LineString{{10, 10}, {9, 9}, {0, 0}},
-			//	Rep:  "LINESTRING (10 10,9 9,0 0)",
-			//},
+			"one": {
+				Geom: geom.LineString{{0, 0}},
+				Rep:  "LINESTRING (0 0)",
+			},
+			"two": {
+				Geom: geom.LineString{{10, 10}, {0, 0}},
+				Rep:  "LINESTRING (10 10,0 0)",
+			},
+			"three": {
+				Geom: geom.LineString{{10, 10}, {9, 9}, {0, 0}},
+				Rep:  "LINESTRING (10 10,9 9,0 0)",
+			},
+			"negative": {
+				Geom: geom.LineString{{-10, -10}, {-9, -9}, {0, 0}},
+				Rep:  "LINESTRING (-10 -10, -9 -9 ,0 0)",
+			},
 		},
 		"MultiLineString": {
 			"empty nil": {
 				Geom: (*geom.MultiLineString)(nil),
 				Rep:  "MULTILINESTRING EMPTY",
 			},
-			//"one line one point": {
-			//	Geom: geom.MultiLineString{{{10, 10}}},
-			//	Rep:  "MULTILINESTRING ((10 10))",
-			//},
-			//"one line two points": {
-			//	Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
-			//	Rep:  "MULTILINESTRING ((10 10,11 11))",
-			//},
-			//"two lines zero,zero point": {
-			//	Geom: geom.MultiLineString{{}, {}},
-			//	Rep:  "MULTILINESTRING EMPTY",
-			//},
-			//"two lines zero,one point": {
-			//	Geom: geom.MultiLineString{{}, {{10, 10}}},
-			//	Rep:  "MULTILINESTRING ((10 10))",
-			//},
-			//"two lines zero,two point": {
-			//	Geom: geom.MultiLineString{{}, {{10, 10}, {20, 20}}},
-			//	Rep:  "MULTILINESTRING ((10 10,20 20))",
-			//},
-			//"two lines one,zero point": {
-			//	Geom: geom.MultiLineString{{{10, 10}}, {}},
-			//	Rep:  "MULTILINESTRING ((10 10))",
-			//},
-			//"two lines one,one point": {
-			//	Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
-			//	Rep:  "MULTILINESTRING ((10 10),(10 10))",
-			//},
-			//"two lines one,two point": {
-			//	Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
-			//	Rep:  "MULTILINESTRING ((10 10),(10 10,20 20))",
-			//},
-			//"two lines two,zero point": {
-			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {}},
-			//	Rep:  "MULTILINESTRING ((10 10,20 20))",
-			//},
-			//"two lines two,one point": {
-			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
-			//	Rep:  "MULTILINESTRING ((10 10,20 20),(10 10))",
-			//},
-			//"two lines two,two point": {
-			//	Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
-			//	Rep:  "MULTILINESTRING ((10 10,20 20),(10 10,20 20))",
-			//},
+			"one line one point": {
+				Geom: geom.MultiLineString{{{10, 10}}},
+				Rep:  "MULTILINESTRING ((10 10))",
+			},
+			"one line two points": {
+				Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
+				Rep:  "MULTILINESTRING ((10 10,11 11))",
+			},
+			"two lines one,one point": {
+				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
+				Rep:  "MULTILINESTRING ((10 10),(10 10))",
+			},
+			"two lines one,two point": {
+				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
+				Rep:  "MULTILINESTRING ((10 10),(10 10,20 20))",
+			},
+			"two lines two,one point": {
+				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
+				Rep:  "MULTILINESTRING ((10 10,20 20),(10 10))",
+			},
+			"two lines two,two point": {
+				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
+				Rep:  "MULTILINESTRING ((10 10,20 20),(10 10,20 20))",
+			},
 		},
 		"Polygon": {
 			"empty nil": {
 				Geom: (*geom.Polygon)(nil),
 				Rep:  "POLYGON EMPTY",
 			},
-			//"two lines one zero": {
-			//	Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
-			//	Rep:  "POLYGON ((10 10,11 11,12 12))",
-			//},
-			//"two lines one one": {
-			//	Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
-			//	Rep:  "POLYGON ((10 10,11 11,12 12),(20 20,21 21,22 22))",
-			//},
-			//"two lines zero one": {
-			//	Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
-			//	Rep:  "POLYGON ((10 10,11 11,12 12))",
+			"two lines one zero": {
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12))",
+			},
+			"two lines one one": {
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12),(20 20,21 21,22 22))",
+			},
+			"two lines zero one": {
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12))",
+			},
+		},
+		"MultiPolygon": {
+			"empty nil": {
+				Geom: (*geom.MultiPolygon)(nil),
+				Rep:  "MULTIPOLYGON EMPTY",
+			},
+			//"two polygon": {
+			//	Geom: geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}, {{20, 35}, {{10, 30}, {10, 10}, {30, 5}, {45, 20}, {20, 35}}, {{10, 10}}}}},
+			//	Rep:  "MULTIPOLYGON (((10 10,11 11,12 12)), ((20 35, 10 30, 10 10, 30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
 			//},
 		},
+		"Collectioner": {
+			"empty nil": {
+				Geom: (*geom.Collection)(nil),
+				Rep:  "GEOMETRYCOLLECTION EMPTY",
+			},
+			"point": {
+				Geom: geom.Collection{
+					geom.Point{10, 10},
+				},
+				Rep: "GEOMETRYCOLLECTION (POINT (10 10))",
+			},
+			"point and linestring": {
+				Geom: geom.Collection{
+					geom.Point{10, 10},
+					geom.LineString{{11, 11}, {22, 22}},
+				},
+				Rep: "GEOMETRYCOLLECTION (POINT (10 10),LINESTRING (11 11,22 22))",
+			},
+		},
 	}
+
 	for name, subtests := range tests {
 		t.Run(name, func(t *testing.T) {
 			for subname, tc := range subtests {

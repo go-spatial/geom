@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/go-spatial/geom"
@@ -224,10 +222,10 @@ func Encode(geo geom.Geometry) (string, error) {
 	}
 }
 
-func Decode(wktInput string) (geo geom.Geometry, err error) {
-	geo, err := ParseReader("", strings.NewReader(wktInput)
+func Decode(wktInput string) (geom.Geometry, error) {
+	geo, err := ParseReader("", strings.NewReader(wktInput))
 	if err != nil || geo == nil {
 		return geo, err
 	}
-	geo.(geom.Geometry), err
+	return geo.(geom.Geometry), err
 }

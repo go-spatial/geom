@@ -1,0 +1,157 @@
+{
+package wkt
+
+func toIfaceSlice(v interface{}) []interface{} {
+    if v == nil {
+        return nil
+    }
+    return v.([]interface{})
+}
+}
+
+Input <- expr:AcceptedShapes EOF {
+    return expr, nil
+}
+
+AcceptedShapes <-
+( "GEOMETRYCOLLECTION" _ exp:GeomCollection ) /
+( "CIRCLE" _ exp:Circle ) /
+( "TRIANGLE" _ exp:Triangle ) /
+( "MULTIPOLYGON" _ exp:MultiPolygon ) /
+( "POLYGON" _ exp:Polygon ) /
+( "MULTILINESTRING" _ exp:MultiLineString ) /
+( "LINESTRING" _ exp:LineString ) /
+( "MULTIPOINT" _ exp:MultiPoint ) /
+( "POINT" _ exp:Point ) {
+    return exp, nil
+}
+
+GeomCollection <- EmptySet {
+    return (*geom.Collection)(nil), nil
+} / ( LeftParen _ exp:( AcceptedShapes _ ( Comma _ AcceptedShapes )* ) RightParen ) {
+    return exp, nil
+}
+
+Circle <- EmptySet {
+    return (*geom.Circle)(nil), nil
+} / ( LeftParen _ exp:( Point _ Comma _ Number ) _ RightParen ) {
+    return exp, nil
+}
+
+Triangle <- EmptySet {
+    return (*geom.Triangle)(nil), nil
+} / ( LeftParen _ exp:( LineString ) _ RightParen ) {
+    return exp, nil
+}
+
+MultiPolygon <- EmptySet {
+    return (*geom.MultiPolygon)(nil), nil
+} / ( LeftParen _ exp:( Polygon _ ( Comma _ Polygon )* ) RightParen ) {
+    geo := make([][][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i < len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.MultiPoint))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.MultiPoint))
+            }
+        }
+    }
+    g := geom.Polygon{}
+    g.SetLinearRings(geo)
+    return g, nil
+}
+
+Polygon <- EmptySet {
+    return (*geom.Polygon)(nil), nil
+} / ( LeftParen _ exp:( MultiPoint _ ( Comma _ MultiPoint )* ) RightParen ) {
+    geo := make([][][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i < len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.MultiPoint))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.MultiPoint))
+            }
+        }
+    }
+    g := geom.Polygon{}
+    g.SetLinearRings(geo)
+    return g, nil
+}
+
+MultiLineString <- EmptySet {
+    return (*geom.MultiLineString)(nil), nil
+} / ( LeftParen _ exp:( LineString _ ( Comma _ LineString )* ) RightParen ) {
+    geo := make([][][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i < len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.LineString))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.LineString))
+            }
+        }
+    }
+    g := geom.MultiLineString{}
+    err := g.SetLineStrings(geo)
+    return g, err
+}
+
+LineString <- EmptySet {
+    return (*geom.LineString)(nil), nil
+} / exp:MultiPoint {
+	g := geom.LineString{}
+	g.SetVerticies(exp.(geom.MultiPoint))
+	return g, nil
+}
+
+MultiPoint <- EmptySet {
+    return (*geom.MultiPoint)(nil), nil
+} / ( LeftParen _ exp:( PointTuple _ ( Comma _ PointTuple )* ) RightParen ) {
+    geo := make([][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i <  len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.Point))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.Point))
+            }
+        }
+    }
+    g := geom.MultiPoint{}
+    err := g.SetPoints(geo)
+    return g, err
+}
+
+PointTuple <- _ first:( Number ) _ second:( Number ) _  {
+    return geom.Point{first.(float64), second.(float64)}, nil
+}
+
+Point <- EmptySet {
+    return (*geom.Point)(nil), nil
+} / ( LeftParen _ exp:( PointTuple ) _ RightParen )  {
+    return exp, nil
+}
+
+Number <- '-'? Integer ( '.' DecimalDigit+ )? {
+    return strconv.ParseFloat(string(c.text), 64)
+}
+
+Integer <- '0' / NonZeroDecimalDigit DecimalDigit*
+DecimalDigit <- [0-9]
+NonZeroDecimalDigit <- [1-9]
+_ "whitespace" <- [ \n\t\r]*
+EmptySet <- "EMPTY"
+LeftParen <- '('
+RightParen <- ')'
+Comma <- ','
+EOF <- !.
