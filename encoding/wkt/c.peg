@@ -1,0 +1,104 @@
+{
+package wkt
+
+func toIfaceSlice(v interface{}) []interface{} {
+    if v == nil {
+        return nil
+    }
+    return v.([]interface{})
+}
+
+func makeEmpty(class string) geom.Geometry {
+	switch class {
+	case "POINT":
+		return (*geom.Point)(nil)
+	case "MULTIPOINT":
+		return (*geom.MultiPoint)(nil)
+	case "LINESTRING":
+	    return (*geom.LineString)(nil)
+	case "MULTILINESTRING":
+	    return (*geom.MultiLineString)(nil)
+	}
+	return nil
+}
+
+func eval(class string, isEmpty, values interface{}) geom.Geometry {
+    if isEmpty.(bool) { return makeEmpty(class) }
+
+	switch class {
+	case "MULTIPOINT":
+		switch values.(type) {
+		case geom.Pointer:
+			geo := geom.MultiPoint{}
+			geo.SetPoints([][2]float64{values.(geom.Point)})
+			return geo
+		}
+	case "LINESTRING":
+        geo := geom.LineString{}
+        switch values.(type) {
+        case geom.Pointer:
+            err := geo.SetVerticies([][2]float64{values.(geom.Point)})
+            return geo
+        default:
+            geo.SetVerticies(values.(geom.MultiPoint))
+            return geo
+        }
+    }
+	return values
+}
+}
+
+Input <- expr:Expr EOF {
+    return expr, nil
+}
+
+Expr <- first:GeomClass _ isEmpty:Empty _ rest:( Point / MultiPoint)? {
+    return eval(first.(string), isEmpty, rest), nil
+}
+
+Empty <- empty:( "EMPTY" )* {
+    txt := string(c.text)
+    return txt == "EMPTY", nil
+}
+
+GeomClass <- exp:( "POINT" / "MULTIPOINT" / "LINESTRING" / "MULTILINESTRING" )  {
+    return string(c.text), nil
+}
+
+MultiPoint <- _ '(' _ vals:( ( Point / PointTuple) ( ',' ( Point / PointTuple ) )* )+ ')' {
+	geo := make([][2]float64, 0)
+	for i, x := range toIfaceSlice(toIfaceSlice(vals)[0]) {
+		if i == 0 {
+			geo = append(geo, x.(geom.Point))
+		} else {
+			for _, y := range toIfaceSlice(x) {
+				geo = append(geo, toIfaceSlice(y)[1].(geom.Point))
+			}
+		}
+	}
+	g := geom.MultiPoint{}
+	err := g.SetPoints(geo)
+	return g, err
+}
+
+PointTuple <- _ first:( Number ) _ second:( Number ) _  {
+    return geom.Point{first.(float64), second.(float64)}, nil
+}
+
+Point <- _ '(' val:PointTuple ')' {
+    return val, nil
+}
+
+Number ← '-'? Integer ( '.' DecimalDigit+ )? {
+    return strconv.ParseFloat(string(c.text), 64)
+}
+
+Integer ← '0' / NonZeroDecimalDigit DecimalDigit*
+
+DecimalDigit ← [0-9]
+
+NonZeroDecimalDigit ← [1-9]
+
+_ "whitespace" <- [ \n\t\r]*
+
+EOF <- !.

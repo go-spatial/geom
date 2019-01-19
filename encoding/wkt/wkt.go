@@ -219,6 +219,10 @@ func Encode(geo geom.Geometry) (string, error) {
 	}
 }
 
-func Decode(text string) (geo geom.Geometry, err error) {
-	return nil, nil
+func Decode(text string) (geom.Geometry, error) {
+	geo, err := ParseReader("", strings.NewReader(text))
+	if err != nil || geo == nil {
+		return geo, err
+	}
+	return geo.(geom.Geometry), err
 }

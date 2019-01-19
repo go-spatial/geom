@@ -1,6 +1,7 @@
 package cmp
 
 import (
+	"fmt"
 	"math"
 	"sort"
 
@@ -265,9 +266,11 @@ func CollectionerEqual(col1, col2 geom.Collectioner) bool {
 // GeometryEqualChecks if the two geometries are of the same type and then
 // calls the type method to check if they are equal
 func GeometryEqual(g1, g2 geom.Geometry) bool {
+	fmt.Printf("beep %#v, %#v\n", g1, g2)
 	switch pg1 := g1.(type) {
 	case geom.Pointer:
-		if pg2, ok := g2.(geom.Pointer); ok {
+		pg2, ok := g2.(geom.Pointer)
+		if ok {
 			return PointerEqual(pg1, pg2)
 		}
 	case geom.MultiPointer:
