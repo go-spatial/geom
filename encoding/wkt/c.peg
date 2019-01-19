@@ -7,98 +7,144 @@ func toIfaceSlice(v interface{}) []interface{} {
     }
     return v.([]interface{})
 }
-
-func makeEmpty(class string) geom.Geometry {
-	switch class {
-	case "POINT":
-		return (*geom.Point)(nil)
-	case "MULTIPOINT":
-		return (*geom.MultiPoint)(nil)
-	case "LINESTRING":
-	    return (*geom.LineString)(nil)
-	case "MULTILINESTRING":
-	    return (*geom.MultiLineString)(nil)
-	}
-	return nil
 }
 
-func eval(class string, isEmpty, values interface{}) geom.Geometry {
-    if isEmpty.(bool) { return makeEmpty(class) }
-
-	switch class {
-	case "MULTIPOINT":
-		switch values.(type) {
-		case geom.Pointer:
-			geo := geom.MultiPoint{}
-			geo.SetPoints([][2]float64{values.(geom.Point)})
-			return geo
-		}
-	case "LINESTRING":
-        geo := geom.LineString{}
-        switch values.(type) {
-        case geom.Pointer:
-            err := geo.SetVerticies([][2]float64{values.(geom.Point)})
-            return geo
-        default:
-            geo.SetVerticies(values.(geom.MultiPoint))
-            return geo
-        }
-    }
-	return values
-}
-}
-
-Input <- expr:Expr EOF {
+Input <- expr:( PointText / MultiPointText / LineStringText / MultiLineStringText / PolygonText / MultiPolygonText )  EOF {
     return expr, nil
 }
 
-Expr <- first:GeomClass _ isEmpty:Empty _ rest:( Point / MultiPoint)? {
-    return eval(first.(string), isEmpty, rest), nil
+MultiPolygonText <- "MULTIPOLYGON" _ exp:MultiPolygon {
+    return exp, nil
 }
 
-Empty <- empty:( "EMPTY" )* {
-    txt := string(c.text)
-    return txt == "EMPTY", nil
+MultiPolygon <- EmptySet {
+    return (*geom.MultiPolygon)(nil), nil
+} / ( LeftParen _ exp:( Polygon _ ( Comma _ Polygon )* ) RightParen ) {
+    geo := make([][][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i < len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.MultiPoint))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.MultiPoint))
+            }
+        }
+    }
+    g := geom.Polygon{}
+    g.SetLinearRings(geo)
+    return g, nil
 }
 
-GeomClass <- exp:( "POINT" / "MULTIPOINT" / "LINESTRING" / "MULTILINESTRING" )  {
-    return string(c.text), nil
+PolygonText <- "POLYGON" _ exp:Polygon {
+    return exp, nil
 }
 
-MultiPoint <- _ '(' _ vals:( ( Point / PointTuple) ( ',' ( Point / PointTuple ) )* )+ ')' {
-	geo := make([][2]float64, 0)
-	for i, x := range toIfaceSlice(toIfaceSlice(vals)[0]) {
-		if i == 0 {
-			geo = append(geo, x.(geom.Point))
-		} else {
-			for _, y := range toIfaceSlice(x) {
-				geo = append(geo, toIfaceSlice(y)[1].(geom.Point))
-			}
-		}
-	}
-	g := geom.MultiPoint{}
-	err := g.SetPoints(geo)
-	return g, err
+Polygon <- EmptySet {
+    return (*geom.Polygon)(nil), nil
+} / ( LeftParen _ exp:( MultiPoint _ ( Comma _ MultiPoint )* ) RightParen ) {
+    geo := make([][][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i < len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.MultiPoint))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.MultiPoint))
+            }
+        }
+    }
+    g := geom.Polygon{}
+    g.SetLinearRings(geo)
+    return g, nil
+}
+
+MultiLineStringText <- "MULTILINESTRING" _ exp:MultiLineString {
+    return exp, nil
+}
+
+MultiLineString <- EmptySet {
+    return (*geom.MultiLineString)(nil), nil
+} / ( LeftParen _ exp:( LineString _ ( Comma _ LineString )* ) RightParen ) {
+    geo := make([][][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i < len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.LineString))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.LineString))
+            }
+        }
+    }
+    g := geom.MultiLineString{}
+    err := g.SetLineStrings(geo)
+    return g, err
+}
+
+LineStringText <- "LINESTRING" _ exp:LineString {
+    return exp, nil
+}
+
+LineString <- EmptySet {
+    return (*geom.LineString)(nil), nil
+} / exp:MultiPoint {
+	g := geom.LineString{}
+	g.SetVerticies(exp.(geom.MultiPoint))
+	return g, nil
+}
+
+MultiPointText <- "MULTIPOINT" _ exp:MultiPoint {
+    return exp, nil
+}
+
+MultiPoint <- EmptySet {
+    return (*geom.MultiPoint)(nil), nil
+} / ( LeftParen _ exp:( PointTuple _ ( Comma _ PointTuple )* ) RightParen ) {
+    geo := make([][2]float64, 0)
+    values := toIfaceSlice(exp)
+    for i := 0; i <  len(values); i += 2 {
+        value := values[i]
+        if i == 0 {
+            geo = append(geo, value.(geom.Point))
+        } else {
+            for _, subValue := range toIfaceSlice(value) {
+                geo = append(geo, toIfaceSlice(subValue)[2].(geom.Point))
+            }
+        }
+    }
+    g := geom.MultiPoint{}
+    err := g.SetPoints(geo)
+    return g, err
+}
+
+PointText <- "POINT" _ exp:Point {
+    return exp, nil
 }
 
 PointTuple <- _ first:( Number ) _ second:( Number ) _  {
     return geom.Point{first.(float64), second.(float64)}, nil
 }
 
-Point <- _ '(' val:PointTuple ')' {
-    return val, nil
+Point <- EmptySet {
+    return (*geom.Point)(nil), nil
+} / ( LeftParen _ exp:( PointTuple ) _ RightParen )  {
+    return exp, nil
 }
 
-Number ← '-'? Integer ( '.' DecimalDigit+ )? {
+Number <- '-'? Integer ( '.' DecimalDigit+ )? {
     return strconv.ParseFloat(string(c.text), 64)
 }
 
-Integer ← '0' / NonZeroDecimalDigit DecimalDigit*
-
-DecimalDigit ← [0-9]
-
-NonZeroDecimalDigit ← [1-9]
-
+Integer <- '0' / NonZeroDecimalDigit DecimalDigit*
+DecimalDigit <- [0-9]
+NonZeroDecimalDigit <- [1-9]
 _ "whitespace" <- [ \n\t\r]*
-
+EmptySet <- "EMPTY"
+LeftParen <- '('
+RightParen <- ')'
+Comma <- ','
 EOF <- !.
