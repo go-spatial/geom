@@ -9,11 +9,38 @@ func toIfaceSlice(v interface{}) []interface{} {
 }
 }
 
-Input <- expr:( PointText / MultiPointText / LineStringText / MultiLineStringText / PolygonText / MultiPolygonText )  EOF {
+Input <- expr:AcceptedShapes EOF {
     return expr, nil
 }
 
-MultiPolygonText <- "MULTIPOLYGON" _ exp:MultiPolygon {
+AcceptedShapes <-
+( "GEOMETRYCOLLECTION" _ exp:GeomCollection ) /
+( "CIRCLE" _ exp:Circle ) /
+( "TRIANGLE" _ exp:Triangle ) /
+( "MULTIPOLYGON" _ exp:MultiPolygon ) /
+( "POLYGON" _ exp:Polygon ) /
+( "MULTILINESTRING" _ exp:MultiLineString ) /
+( "LINESTRING" _ exp:LineString ) /
+( "MULTIPOINT" _ exp:MultiPoint ) /
+( "POINT" _ exp:Point ) {
+    return exp, nil
+}
+
+GeomCollection <- EmptySet {
+    return (*geom.Collection)(nil), nil
+} / ( LeftParen _ exp:( AcceptedShapes _ ( Comma _ AcceptedShapes )* ) RightParen ) {
+    return exp, nil
+}
+
+Circle <- EmptySet {
+    return (*geom.Circle)(nil), nil
+} / ( LeftParen _ exp:( Point _ Comma _ Number ) _ RightParen ) {
+    return exp, nil
+}
+
+Triangle <- EmptySet {
+    return (*geom.Triangle)(nil), nil
+} / ( LeftParen _ exp:( LineString ) _ RightParen ) {
     return exp, nil
 }
 
@@ -37,10 +64,6 @@ MultiPolygon <- EmptySet {
     return g, nil
 }
 
-PolygonText <- "POLYGON" _ exp:Polygon {
-    return exp, nil
-}
-
 Polygon <- EmptySet {
     return (*geom.Polygon)(nil), nil
 } / ( LeftParen _ exp:( MultiPoint _ ( Comma _ MultiPoint )* ) RightParen ) {
@@ -59,10 +82,6 @@ Polygon <- EmptySet {
     g := geom.Polygon{}
     g.SetLinearRings(geo)
     return g, nil
-}
-
-MultiLineStringText <- "MULTILINESTRING" _ exp:MultiLineString {
-    return exp, nil
 }
 
 MultiLineString <- EmptySet {
@@ -85,20 +104,12 @@ MultiLineString <- EmptySet {
     return g, err
 }
 
-LineStringText <- "LINESTRING" _ exp:LineString {
-    return exp, nil
-}
-
 LineString <- EmptySet {
     return (*geom.LineString)(nil), nil
 } / exp:MultiPoint {
 	g := geom.LineString{}
 	g.SetVerticies(exp.(geom.MultiPoint))
 	return g, nil
-}
-
-MultiPointText <- "MULTIPOINT" _ exp:MultiPoint {
-    return exp, nil
 }
 
 MultiPoint <- EmptySet {
@@ -119,10 +130,6 @@ MultiPoint <- EmptySet {
     g := geom.MultiPoint{}
     err := g.SetPoints(geo)
     return g, err
-}
-
-PointText <- "POINT" _ exp:Point {
-    return exp, nil
 }
 
 PointTuple <- _ first:( Number ) _ second:( Number ) _  {

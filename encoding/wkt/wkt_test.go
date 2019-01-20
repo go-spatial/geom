@@ -219,95 +219,25 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12)))",
 			},
 		},
-		"Collectioner": {
-			"empty nil": {
-				Geom: (*geom.Collection)(nil),
-				Rep:  "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty": {
-				Geom: geom.Collection{},
-				Rep:  "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty nil point": {
-				Geom: geom.Collection{
-					(*geom.Point)(nil),
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty nil MultiPoint": {
-				Geom: geom.Collection{
-					(*geom.MultiPoint)(nil),
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty nil LineString": {
-				Geom: geom.Collection{
-					(*geom.LineString)(nil),
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty nil MultiLineString": {
-				Geom: geom.Collection{
-					(*geom.MultiLineString)(nil),
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty nil Polygon": {
-				Geom: geom.Collection{
-					(*geom.Polygon)(nil),
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty nil MultiPolygon": {
-				Geom: geom.Collection{
-					(*geom.MultiPolygon)(nil),
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty MultiPoint": {
-				Geom: geom.Collection{
-					geom.MultiPoint{},
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty LineString": {
-				Geom: geom.Collection{
-					geom.LineString{},
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty MultiLineString": {
-				Geom: geom.Collection{
-					geom.MultiLineString{},
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty Polygon": {
-				Geom: geom.Collection{
-					geom.Polygon{},
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"empty MultiPolygon": {
-				Geom: geom.Collection{
-					geom.MultiPolygon{},
-				},
-				Rep: "GEOMETRYCOLLECTION EMPTY",
-			},
-			"point": {
-				Geom: geom.Collection{
-					geom.Point{10, 10},
-				},
-				Rep: "GEOMETRYCOLLECTION (POINT (10 10))",
-			},
-			"point and linestring": {
-				Geom: geom.Collection{
-					geom.Point{10, 10},
-					geom.LineString{{11, 11}, {22, 22}},
-				},
-				Rep: "GEOMETRYCOLLECTION (POINT (10 10),LINESTRING (11 11,22 22))",
-			},
-		},
+		//"Collectioner": {
+		//	"empty nil": {
+		//		Geom: (*geom.Collection)(nil),
+		//		Rep:  "GEOMETRYCOLLECTION EMPTY",
+		//	},
+		//	"point": {
+		//		Geom: geom.Collection{
+		//			geom.Point{10, 10},
+		//		},
+		//		Rep: "GEOMETRYCOLLECTION (POINT (10 10))",
+		//	},
+		//	"point and linestring": {
+		//		Geom: geom.Collection{
+		//			geom.Point{10, 10},
+		//			geom.LineString{{11, 11}, {22, 22}},
+		//		},
+		//		Rep: "GEOMETRYCOLLECTION (POINT (10 10),LINESTRING (11 11,22 22))",
+		//	},
+		//},
 	}
 	for name, subtests := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -443,41 +373,32 @@ func TestDecode(t *testing.T) {
 			},
 		},
 		"MultiPolygon": {
-			//"empty nil": {
-			//	Geom: (*geom.MultiPolygon)(nil),
-			//	Rep:  "MULTIPOLYGON EMPTY",
+			"empty nil": {
+				Geom: (*geom.MultiPolygon)(nil),
+				Rep:  "MULTIPOLYGON EMPTY",
+			},
+			//"two polygon": {
+			//	Geom: geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}, {{20, 35}, {{10, 30}, {10, 10}, {30, 5}, {45, 20}, {20, 35}}, {{10, 10}}}}},
+			//	Rep:  "MULTIPOLYGON (((10 10,11 11,12 12)), ((20 35, 10 30, 10 10, 30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
 			//},
-			//"empty MultiPolygon": {
-			//	Geom: geom.MultiPolygon{},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			//"empty one polygon": {
-			//	Geom: geom.MultiPolygon{{}},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			//"empty one polygon one line": {
-			//	Geom: geom.MultiPolygon{{{}}},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			//"empty two polygon 0": {
-			//	Geom: geom.MultiPolygon{{}, {}},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			//"empty two polygon 1": {
-			//	Geom: geom.MultiPolygon{{{}}, {}},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			//"empty two polygon 2": {
-			//	Geom: geom.MultiPolygon{{}, {{}}},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			//"empty two polygon 3": {
-			//	Geom: geom.MultiPolygon{{{}}, {{}}},
-			//	Rep:  "MULTIPOLYGON EMPTY",
-			//},
-			"two polygon": {
-				Geom: geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}, {{20, 35}, {{10, 30}, {10, 10}, {30, 5}, {45, 20}, {20, 35}}, {{10, 10}}}}},
-				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12)), ((20 35, 10 30, 10 10, 30 5, 45 20, 20 35), (30 20, 20 15, 20 25, 30 20)))",
+		},
+		"Collectioner": {
+			"empty nil": {
+				Geom: (*geom.Collection)(nil),
+				Rep:  "GEOMETRYCOLLECTION EMPTY",
+			},
+			"point": {
+				Geom: geom.Collection{
+					geom.Point{10, 10},
+				},
+				Rep: "GEOMETRYCOLLECTION (POINT (10 10))",
+			},
+			"point and linestring": {
+				Geom: geom.Collection{
+					geom.Point{10, 10},
+					geom.LineString{{11, 11}, {22, 22}},
+				},
+				Rep: "GEOMETRYCOLLECTION (POINT (10 10),LINESTRING (11 11,22 22))",
 			},
 		},
 	}
