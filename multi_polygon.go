@@ -2,6 +2,7 @@ package geom
 
 import "errors"
 
+// ErrNilMultiPolygon is thrown when a MultiPolygon is nul but shouldn't be
 var ErrNilMultiPolygon = errors.New("geom: nil MultiPolygon")
 
 // MultiPolygon is a geometry of multiple polygons.

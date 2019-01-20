@@ -1,15 +1,13 @@
 package wkt
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 
 	"github.com/go-spatial/geom"
 )
-
-var ErrInvalidWKT = errors.New("WKT is not in valid form")
 
 func isNil(a interface{}) bool {
 	defer func() { recover() }()
@@ -222,8 +220,8 @@ func Encode(geo geom.Geometry) (string, error) {
 	}
 }
 
-func Decode(wktInput string) (geom.Geometry, error) {
-	geo, err := ParseReader("", strings.NewReader(wktInput))
+func Decode(wktReader io.Reader) (geom.Geometry, error) {
+	geo, err := ParseReader("", wktReader)
 	if err != nil || geo == nil {
 		return geo, err
 	}

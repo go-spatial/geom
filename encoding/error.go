@@ -6,10 +6,12 @@ import (
 	"github.com/go-spatial/geom"
 )
 
+// ErrUnknownGeometry is a wrapper around a geom.Geometry that is invalid
 type ErrUnknownGeometry struct {
 	Geom geom.Geometry
 }
 
+// ErrInvalidGeoJSON is a wrapper around a []byte that is invalid GeoJson
 type ErrInvalidGeoJSON struct {
 	GJSON []byte
 }

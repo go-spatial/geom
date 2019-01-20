@@ -1,5 +1,6 @@
 package cmp
 
+// Lesser used to check if the object is less than
 type Lesser interface {
 	// Is the number of elements in an Element
 	Len() int
@@ -19,7 +20,7 @@ func FindMinIdx(ln Lesser) (min int) {
 	return min
 }
 
-// XYLessPoint
+// XYLessPoint compares the x then y points to see if pt1 is less than pt2
 func XYLessPoint(pt1, pt2 [2]float64) bool {
 	if pt1[0] != pt2[0] {
 		return pt1[0] < pt2[0]
@@ -42,7 +43,7 @@ func FindMinPointIdx(ln [][2]float64) (min int) {
 	return min
 }
 
-// RoateToIdx
+// RotateToIdx modifies the ln to be rotated by idx
 func RotateToIdx(idx int, ln [][2]float64) {
 	if len(ln) == 0 {
 		return
@@ -51,7 +52,6 @@ func RotateToIdx(idx int, ln [][2]float64) {
 	copy(tmp, ln[idx:])
 	copy(tmp[len(ln[idx:]):], ln)
 	copy(ln, tmp)
-
 }
 
 // RotateToLeftMostPoint will rotate the points in the linestring so that the smallest

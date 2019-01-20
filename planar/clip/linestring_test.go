@@ -70,6 +70,15 @@ func TestClipLineString(t *testing.T) {
 	}
 
 	tests := [...]tcase{
+		{
+			/* 000  geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}), */
+			extent:  geom.NewExtent([2]float64{0, 0}, [2]float64{10, 10}),
+			linestr: [][2]float64{{-2, 1}, {2, 1}, {2, 2}, {-1, 2}, {-1, 11}, {2, 11}, {2, 4}, {4, 4}, {4, 13}, {-2, 13}},
+			expected: [][][2]float64{
+				{{0, 1}, {2, 1}, {2, 2}, {0, 2}},
+				{{2, 10}, {2, 4}, {4, 4}, {4, 10}},
+			},
+		},
 		{ /* 000 */
 			extent:  testExtents[0],
 			linestr: [][2]float64{{-2, 1}, {2, 1}, {2, 2}, {-1, 2}, {-1, 11}, {2, 11}, {2, 4}, {4, 4}, {4, 13}, {-2, 13}},

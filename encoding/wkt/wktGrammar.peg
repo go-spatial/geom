@@ -7,57 +7,61 @@ func toIfaceSlice(v interface{}) []interface{} {
     }
     return v.([]interface{})
 }
+
+func geometryValues(exp interface{}) []interface{} {
+    values := toIfaceSlice(exp)
+    geometryInterfaces := make([]interface{}, 0)
+
+    // Values always appear on index 0 and 2.
+    // The grammar is: 0 -> Value, 1 -> space, 2 -> List of values
+    if len(values) > 0 {
+       geometryInterfaces = append(geometryInterfaces, values[0])
+    }
+    if len(values) > 2 {
+       for _, subValue := range toIfaceSlice(values[2]) {
+            // Grammar is: 0 -> Comma, 1 -> space, 2 -> Value
+            geometryInterfaces = append(geometryInterfaces, toIfaceSlice(subValue)[2])
+        }
+    }
+    return geometryInterfaces
+}
 }
 
-Input <- expr:AcceptedShapes EOF {
-    return expr, nil
+Input <- exp:( AcceptedShapes / GeomCollectionText ) EOF {
+    return exp, nil
 }
 
-AcceptedShapes <-
-( "GEOMETRYCOLLECTION" _ exp:GeomCollection ) /
-( "CIRCLE" _ exp:Circle ) /
-( "TRIANGLE" _ exp:Triangle ) /
-( "MULTIPOLYGON" _ exp:MultiPolygon ) /
-( "POLYGON" _ exp:Polygon ) /
-( "MULTILINESTRING" _ exp:MultiLineString ) /
+AcceptedShapes <- exp:( ( "POINT" _ Point ) /
+( "MULTIPOINT" _ MultiPoint ) /
 ( "LINESTRING" _ exp:LineString ) /
-( "MULTIPOINT" _ exp:MultiPoint ) /
-( "POINT" _ exp:Point ) {
+( "MULTILINESTRING" _ exp:MultiLineString ) /
+( "POLYGON" _ exp:Polygon ) /
+( "MULTIPOLYGON" _ exp:MultiPolygon ) ) {
+    return toIfaceSlice(exp)[2], nil
+}
+
+GeomCollectionText <- "GEOMETRYCOLLECTION" _ exp:GeomCollection {
     return exp, nil
 }
 
 GeomCollection <- EmptySet {
     return (*geom.Collection)(nil), nil
 } / ( LeftParen _ exp:( AcceptedShapes _ ( Comma _ AcceptedShapes )* ) RightParen ) {
-    return exp, nil
-}
-
-Circle <- EmptySet {
-    return (*geom.Circle)(nil), nil
-} / ( LeftParen _ exp:( Point _ Comma _ Number ) _ RightParen ) {
-    return exp, nil
-}
-
-Triangle <- EmptySet {
-    return (*geom.Triangle)(nil), nil
-} / ( LeftParen _ exp:( LineString ) _ RightParen ) {
-    return exp, nil
+    geo := make([]geom.Geometry, 0)
+    for _, v := range geometryValues(exp) {
+        geo = append(geo, v.(geom.Geometry))
+    }
+    g := geom.Collection{}
+    g.SetGeometries(geo)
+    return g, nil
 }
 
 MultiPolygon <- EmptySet {
     return (*geom.MultiPolygon)(nil), nil
 } / ( LeftParen _ exp:( Polygon _ ( Comma _ Polygon )* ) RightParen ) {
     geo := make([][][2]float64, 0)
-    values := toIfaceSlice(exp)
-    for i := 0; i < len(values); i += 2 {
-        value := values[i]
-        if i == 0 {
-            geo = append(geo, value.(geom.MultiPoint))
-        } else {
-            for _, subValue := range toIfaceSlice(value) {
-                geo = append(geo, toIfaceSlice(subValue)[2].(geom.MultiPoint))
-            }
-        }
+    for _, v := range geometryValues(exp) {
+        geo = append(geo, v.(geom.MultiPoint))
     }
     g := geom.Polygon{}
     g.SetLinearRings(geo)
@@ -68,16 +72,8 @@ Polygon <- EmptySet {
     return (*geom.Polygon)(nil), nil
 } / ( LeftParen _ exp:( MultiPoint _ ( Comma _ MultiPoint )* ) RightParen ) {
     geo := make([][][2]float64, 0)
-    values := toIfaceSlice(exp)
-    for i := 0; i < len(values); i += 2 {
-        value := values[i]
-        if i == 0 {
-            geo = append(geo, value.(geom.MultiPoint))
-        } else {
-            for _, subValue := range toIfaceSlice(value) {
-                geo = append(geo, toIfaceSlice(subValue)[2].(geom.MultiPoint))
-            }
-        }
+    for _, v := range geometryValues(exp) {
+        geo = append(geo, v.(geom.MultiPoint))
     }
     g := geom.Polygon{}
     g.SetLinearRings(geo)
@@ -88,16 +84,8 @@ MultiLineString <- EmptySet {
     return (*geom.MultiLineString)(nil), nil
 } / ( LeftParen _ exp:( LineString _ ( Comma _ LineString )* ) RightParen ) {
     geo := make([][][2]float64, 0)
-    values := toIfaceSlice(exp)
-    for i := 0; i < len(values); i += 2 {
-        value := values[i]
-        if i == 0 {
-            geo = append(geo, value.(geom.LineString))
-        } else {
-            for _, subValue := range toIfaceSlice(value) {
-                geo = append(geo, toIfaceSlice(subValue)[2].(geom.LineString))
-            }
-        }
+    for _, v := range geometryValues(exp) {
+        geo = append(geo, v.(geom.LineString))
     }
     g := geom.MultiLineString{}
     err := g.SetLineStrings(geo)
@@ -116,16 +104,8 @@ MultiPoint <- EmptySet {
     return (*geom.MultiPoint)(nil), nil
 } / ( LeftParen _ exp:( PointTuple _ ( Comma _ PointTuple )* ) RightParen ) {
     geo := make([][2]float64, 0)
-    values := toIfaceSlice(exp)
-    for i := 0; i <  len(values); i += 2 {
-        value := values[i]
-        if i == 0 {
-            geo = append(geo, value.(geom.Point))
-        } else {
-            for _, subValue := range toIfaceSlice(value) {
-                geo = append(geo, toIfaceSlice(subValue)[2].(geom.Point))
-            }
-        }
+    for _, v := range geometryValues(exp) {
+        geo = append(geo, v.(geom.Point))
     }
     g := geom.MultiPoint{}
     err := g.SetPoints(geo)

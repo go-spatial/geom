@@ -9,6 +9,7 @@ type Extenter interface {
 	Extent() (extent [4]float64)
 }
 
+// MinMaxer is a wrapper for an Extent that gets min/max of the extent
 type MinMaxer interface {
 	MinX() float64
 	MinY() float64
@@ -92,6 +93,7 @@ func (e *Extent) Max() [2]float64 {
 	return [2]float64{e[2], e[3]}
 }
 
+// XSpan is the distance of the Extent in X or inf
 // TODO (gdey): look at how to have this function take into account the dpi.
 func (e *Extent) XSpan() float64 {
 	if e == nil {
@@ -99,6 +101,8 @@ func (e *Extent) XSpan() float64 {
 	}
 	return e[2] - e[0]
 }
+
+// YSpan is the distance of the Extent in Y or Inf
 func (e *Extent) YSpan() float64 {
 	if e == nil {
 		return math.Inf(1)
@@ -106,11 +110,13 @@ func (e *Extent) YSpan() float64 {
 	return e[3] - e[1]
 }
 
+// Extent returns back the min and max of the Extent
 func (e *Extent) Extent() [4]float64 {
 	return [4]float64{e.MinX(), e.MinY(), e.MaxX(), e.MaxY()}
 }
 
 /* ========================= EXPANDING BOUNDING BOX ========================= */
+
 // Add will expand the extent to contain the given extent.
 func (e *Extent) Add(extent MinMaxer) {
 	if e == nil {
@@ -139,13 +145,14 @@ func (e *Extent) AddPoints(points ...[2]float64) {
 	}
 }
 
+// AddPointers will expand the Extent if a point is outside it
 func (e *Extent) AddPointers(pts ...Pointer) {
 	for i := range pts {
 		e.AddPoints(pts[i].XY())
 	}
 }
 
-// AddPointer expands the specified envelop to contain p.
+// AddGeometry expands the specified envelop to contain g.
 func (e *Extent) AddGeometry(g Geometry) error {
 	return getExtent(g, e)
 }
@@ -189,6 +196,7 @@ func NewExtent(points ...[2]float64) *Extent {
 	return &extent
 }
 
+// NewExtentFromGeometry tries to create an extent based on the geometry
 func NewExtentFromGeometry(g Geometry) (*Extent, error) {
 	e := Extent{}
 	err := getExtent(g, &e)
@@ -269,6 +277,7 @@ func (e *Extent) ExpandBy(s float64) *Extent {
 	)
 }
 
+// Clone returns a new Extent with contents copied.
 func (e *Extent) Clone() *Extent {
 	if e == nil {
 		return nil
