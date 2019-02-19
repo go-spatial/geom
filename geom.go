@@ -1,6 +1,8 @@
 // Package geom describes geometry interfaces.
 package geom
 
+import "errors"
+
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
 type Geometry interface{}
@@ -132,23 +134,28 @@ func GetCoordinates(g Geometry) (pts []Point, err error) {
 // getExtent is a helper function to efficiently build an Extent without
 // collecting all coordinates first.
 func getExtent(g Geometry, e *Extent) error {
+	if e == nil {
+		return errors.New("nil extent point passed")
+	}
 	switch gg := g.(type) {
 
 	default:
 
 		return ErrUnknownGeometry{g}
 
+	case []Point:
+		for _, pt := range gg  {
+		e.AddPoints(pt.XY())
+	}
+
 	case Pointer:
 		e.AddPoints(gg.XY())
-		return nil
 
 	case MultiPointer:
 		e.AddPoints(gg.Points()...)
-		return nil
 
 	case LineStringer:
 		e.AddPoints(gg.Verticies()...)
-		return nil
 
 	case MultiLineStringer:
 
@@ -157,7 +164,6 @@ func getExtent(g Geometry, e *Extent) error {
 				return err
 			}
 		}
-		return nil
 
 	case Polygoner:
 
@@ -166,7 +172,6 @@ func getExtent(g Geometry, e *Extent) error {
 				return err
 			}
 		}
-		return nil
 
 	case MultiPolygoner:
 
@@ -175,7 +180,6 @@ func getExtent(g Geometry, e *Extent) error {
 				return err
 			}
 		}
-		return nil
 
 	case Collectioner:
 
@@ -184,9 +188,9 @@ func getExtent(g Geometry, e *Extent) error {
 				return err
 			}
 		}
-		return nil
 
 	}
+	return nil
 }
 
 // extractLines is a helper function for ExtractLines to avoid too many

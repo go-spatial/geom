@@ -502,9 +502,12 @@ Loop:
 	}
 	return nil, fmt.Errorf("Expected linestring or '}' not end of file.")
 }
-func (t *T) ParseMultiPolygon() (pys geom.MultiPolygon, err error) {
+func (t *T) ParseMultiPolygon() (*geom.MultiPolygon, error) {
 	//  {{ { [ XXX.xxx,YYY.yyy XXX.xxx,YYY.yyy ] } }}
-	var started bool
+	var (
+		pys     geom.MultiPolygon
+		started bool
+	)
 Loop:
 	for !t.AtEnd() {
 		switch t.Peek() {
@@ -531,7 +534,8 @@ Loop:
 			pys = append(pys, py)
 		case symbol.Cdbrace:
 			t.Scan()
-			return pys, nil
+			return &pys, nil
+
 		case parsing.EOF:
 			break Loop
 
@@ -547,6 +551,7 @@ Loop:
 	}
 	return nil, fmt.Errorf("Expected polygon or '}}' not end of file.")
 }
+
 func (t *T) ParseCollection() (geo geom.Collection, err error) {
 	//  {{ { [ XXX.xxx,YYY.yyy XXX.xxx,YYY.yyy ] } }}
 	var started bool

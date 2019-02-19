@@ -2,11 +2,11 @@ package makevalid
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay"
 )
@@ -16,16 +16,25 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 		log.Printf("Step   3 : generate triangles")
 	}
 	builder := delaunay.NewConstrained(delaunay.TOLERANCE, []geom.Point{}, segs)
-	start := time.Now()
-	allTriangles, err := builder.Triangles(false)
-	fmt.Printf("triangulations of segs(%v) took %v\n", len(segs), time.Since(start))
-	//fmt.Printf("Wkt alltriangles:\n%v\n", wkt.MustEncode(allTriangles))
+	var start time.Time
+	if debug {
+		start = time.Now()
+	}
 
+	allTriangles, err := builder.Triangles(false)
 	if err != nil {
 		if debug {
 			log.Println("Step     3a: got error", err)
 		}
 		return nil, err
+	}
+
+	if debug {
+		log.Printf("triangulations took %v\n", time.Since(start))
+		log.Printf("Got %v trinangles\n", len(allTriangles))
+		for i, tri := range allTriangles {
+			log.Printf("% 4d: %v\n", i, wkt.MustEncode(tri))
+		}
 	}
 	if debug {
 		log.Printf("Step   4 : label triangles and discard outside triangles")

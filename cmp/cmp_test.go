@@ -567,23 +567,27 @@ func TestPolygon(t *testing.T) {
 }
 
 func TestMultiPolygon(t *testing.T) {
-	type tc struct {
+	type tcase struct {
 		mp1, mp2 [][][][2]float64
 		e        bool
 	}
 
-	fn := func(t *testing.T, tc tc) {
-		g1, g2 := geom.MultiPolygon(tc.mp1), geom.MultiPolygon(tc.mp2)
-		if tc.e != MultiPolygonerEqual(g1, g2) {
-			t.Errorf("polygoner equal, expected %v got %v", tc.e, !tc.e)
-		}
-		if tc.e != GeometryEqual(g1, g2) {
-			t.Errorf("geometry equal, expected %v got %v", tc.e, !tc.e)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			g1, g2 := geom.MultiPolygon(tc.mp1), geom.MultiPolygon(tc.mp2)
+			if tc.e != MultiPolygonerEqual(&g1, &g2) {
+				t.Errorf("polygoner equal, expected %v got %v", tc.e, !tc.e)
+				return
+			}
+			if tc.e != GeometryEqual(&g1, &g2) {
+				t.Errorf("geometry equal, expected %v got %v", tc.e, !tc.e)
+				return
+			}
 		}
 	}
 
 	/***** TEST CASES ******/
-	tests := map[string]tc{
+	tests := map[string]tcase{
 		"0": {
 			// Simple test.
 			mp1: [][][][2]float64{{{{1, 2}, {1, 3}, {1, 4}, {1, 5}}}},
@@ -734,8 +738,7 @@ func TestMultiPolygon(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }
 

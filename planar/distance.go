@@ -11,6 +11,19 @@ func PointDistance(p1 geom.Pointer, p2 geom.Pointer) float64 {
 	return math.Sqrt(PointDistance2(p1, p2))
 }
 
+
+/*
+Distance returns the euclidean distance between two points squared.
+
+This can be a useful optimization in some routines where d^2 is good
+enough.
+*/
+func FloatPointDistance2(p1,p2 [2]float64) float64 {
+	v1 := p1[0] - p2[0]
+	v2 := p1[1] - p2[1]
+	return v1*v1 + v2*v2
+}
+
 /*
 Distance returns the euclidean distance between two points squared.
 
@@ -18,10 +31,9 @@ This can be a useful optimization in some routines where d^2 is good
 enough.
 */
 func PointDistance2(p1 geom.Pointer, p2 geom.Pointer) float64 {
-	v1 := p1.XY()[0] - p2.XY()[0]
-	v2 := p1.XY()[1] - p2.XY()[1]
-	return v1*v1 + v2*v2
+	return FloatPointDistance2(p1.XY(),p2.XY())
 }
+
 
 /*
 distanceToLineSegment calculates the distance from point p to line segment

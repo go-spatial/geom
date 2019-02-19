@@ -975,7 +975,7 @@ Returns a MultiPolygon of triangular Polygons
 
 If qes is nil a panic will occur.
 */
-func (qes *QuadEdgeSubdivision) GetTriangles() (geom.MultiPolygon, error) {
+func (qes *QuadEdgeSubdivision) GetTriangles() (*geom.MultiPolygon, error) {
 	tris, err := qes.GetTriangleCoordinates(false)
 	if err != nil {
 		return nil, err
@@ -984,7 +984,7 @@ func (qes *QuadEdgeSubdivision) GetTriangles() (geom.MultiPolygon, error) {
 	for i := 0; i < len(tris); i++ {
 		gc = append(gc, tris[i])
 	}
-	return gc, nil
+	return &gc, nil
 }
 
 // 	/**

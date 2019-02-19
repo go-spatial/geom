@@ -17,6 +17,8 @@ type makevalidCase struct {
 	MultiPolygon *geom.MultiPolygon
 	// The expected valid MultiPolygon for the Multipolygon
 	ExpectedMultiPolygon *geom.MultiPolygon
+	// ClipBox the extent to use to clip the geometry before making valid
+	ClipBox *geom.Extent
 }
 
 // Segments returns the flattened segments of the MultiPolygon, on an error it will panic.
@@ -24,7 +26,7 @@ func (mvc makevalidCase) Segments() (segments []geom.Line) {
 	if debug {
 		log.Printf("MakeValidTestCase Polygon: %+v", mvc.MultiPolygon)
 	}
-	segs, err := Destructure(context.Background(), nil, mvc.MultiPolygon)
+	segs, err := Destructure(context.Background(), mvc.ClipBox, mvc.MultiPolygon)
 	if err != nil {
 		panic(err)
 	}
@@ -75,4 +77,50 @@ var makevalidTestCases = [...]makevalidCase{
 		MultiPolygon:         &geom.MultiPolygon{{{{0, 0}, {4096, 0}, {4096, 4096}, {0, 4096}}}},
 		ExpectedMultiPolygon: &geom.MultiPolygon{{{{0, 0}, {4096, 0}, {4096, 4096}, {0, 4096}}}},
 	}, // (3) Square
+
+	{ // (4) Henry Circle one
+		Description: "circle one",
+		MultiPolygon: &geom.MultiPolygon{
+			{ // Polygon
+				{ // Ring
+					{1286956.1422558832, 6138803.15957211},
+					{1286957.5138675969, 6138809.6399925},
+					{1286961.0222077654, 6138815.252628375},
+					{1286966.228733862, 6138819.3396373615},
+					{1286972.5176202222, 6138821.397139203},
+					{1286979.1330808033, 6138821.173193399},
+					{1286985.2820067848, 6138818.695793352},
+					{1286990.1992814348, 6138814.272866236},
+					{1286993.3157325392, 6138808.436285537},
+					{1286994.2394710402, 6138801.885883152},
+					{1286992.8678593265, 6138795.40546864},
+					{1286989.3781805448, 6138789.792845784},
+					{1286984.1623237533, 6138785.719847463},
+					{1286977.864106701, 6138783.662354196},
+					{1286971.2486461198, 6138783.872302467},
+					{1286965.1183815224, 6138786.349692439},
+					{1286960.1824454917, 6138790.7726051165},
+					{1286957.084655768, 6138796.623170342},
+				},
+			},
+		},
+		ClipBox: geom.NewExtent(
+			[2]float64{1286940.46060967, 6138830.2432236},
+			[2]float64{1286969.19030943, 6138807.58852643},
+		),
+		ExpectedMultiPolygon: &geom.MultiPolygon{
+			{ // Polygon
+				{ // Ring
+					{1.2869570796631747e+06, 6.138807588546207e+06},
+					{1286969.19030943, 6138807.58852643},
+					{1.2869691902517593e+06, 6.138820308571075e+06},
+					{1.2869662290238445e+06, 6.138819339761728e+06},
+					{1.286966228733862e+06, 6.1388193396373615e+06},
+					{1.2869610222077654e+06, 6.138815252628375e+06},
+					{1.2869610219360471e+06, 6.138815252311821e+06},
+					{1.286957513896204e+06, 6.138809640156404e+06},
+				},
+			},
+		},
+	},
 }

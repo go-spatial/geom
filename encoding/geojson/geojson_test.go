@@ -16,22 +16,24 @@ func TestFeatureMarshalJSON(t *testing.T) {
 		expectedErr json.MarshalerError
 	}
 
-	fn := func(t *testing.T, tc tcase) {
-		// t.Parallel()
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			// t.Parallel()
 
-		f := geojson.Feature{
-			Geometry: geojson.Geometry{tc.geom},
-		}
+			f := geojson.Feature{
+				Geometry: geojson.Geometry{tc.geom},
+			}
 
-		output, err := json.Marshal(f)
-		if err != nil && err.Error() != tc.expectedErr.Error() {
-			t.Errorf("expected err %v got %v", tc.expectedErr.Error(), err)
-			return
-		}
+			output, err := json.Marshal(f)
+			if err != nil && err.Error() != tc.expectedErr.Error() {
+				t.Errorf("expected err %v got %v", tc.expectedErr.Error(), err)
+				return
+			}
 
-		if !reflect.DeepEqual(tc.expected, output) {
-			t.Errorf("expected %v got %v", string(tc.expected), string(output))
-			return
+			if !reflect.DeepEqual(tc.expected, output) {
+				t.Errorf("expected %v got %v", string(tc.expected), string(output))
+				return
+			}
 		}
 	}
 
@@ -65,7 +67,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 			expected: []byte(`{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9],[3.2,4.3]]]},"properties":null}`),
 		},
 		"multi polygon": {
-			geom: geom.MultiPolygon{
+			geom: &geom.MultiPolygon{
 				// Polygon 1 w/ holes
 				geom.Polygon{
 					// Outer ring
@@ -114,8 +116,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc) )
 	}
 }
 

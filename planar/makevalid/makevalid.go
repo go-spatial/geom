@@ -3,13 +3,12 @@ package makevalid
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"sort"
-	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/intersect"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
@@ -98,12 +97,18 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	// Let's see if our clip box is bigger then our polygon.
 	// if it is we don't need the clip box.
 	hasClipbox := clipbox != nil && !clipbox.Contains(gext)
+	if debug {
+		log.Printf("\thasClipbox: %v && !%v", clipbox != nil, clipbox.Contains(gext))
+	}
 	var clpbx *geom.Extent
 	// Let's get the edges of our clipbox; as segments and add it to the begining.
 	if hasClipbox {
 		var ok bool
 		// Let get the intersection of the clipbox and the extent of the geometry.
 		if clpbx, ok = clipbox.Intersect(gext); !ok {
+			if debug {
+				log.Printf("\tGeometry Extent does not intersect the clipbox?\nGeometry Extent:%#v\n%v\n clipbox Extent:%#v\n%v\n ", gext, wkt.MustEncode(gext), clipbox, wkt.MustEncode(clipbox))
+			}
 			return []geom.Line{}, nil
 		}
 
@@ -125,9 +130,11 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 
 	// Time to start splitting lines. if we have a clip box we can ignore the first 4 (0,1,2,3) lines.
 	offset := 0
-	if hasClipbox {
-		offset = 4
-	}
+	/*
+		if hasClipbox {
+			offset = 4
+		}
+	*/
 
 	nsegs := make([]geom.Line, 0, len(segments))
 
@@ -153,8 +160,73 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 		}
 	}
 
-	unique(nsegs)
+	//unique(nsegs)
+	nsegs = keepShortestOfSameSlopeSPoint(nsegs)
 	return nsegs, nil
+}
+
+// keepShortestOfSameSlopeSPoint will keep the frist line with the shortest length
+// within a set of lines with the same slope and start point.
+func keepShortestOfSameSlopeSPoint(segs []geom.Line) (newSegs []geom.Line) {
+	if debug {
+		for i, seg := range segs {
+			log.Printf("starting seg(% 4d):%v", i, wkt.MustEncode(geom.Line(seg)))
+		}
+	}
+
+	type key struct {
+		x, y, slope  float64
+		slopeDefined bool
+	}
+	type value struct {
+		idx    int
+		length float64
+	}
+	lineKeeper := make(map[key]value)
+	keyForLine := func(l geom.Line, ipt, jpt int) key {
+		s, _, sd := planar.Slope([2][2]float64{l[ipt], l[jpt]})
+		return key{
+			x:            l[ipt][0],
+			y:            l[ipt][1],
+			slope:        s,
+			slopeDefined: sd,
+		}
+	}
+	for i, seg := range segs {
+		shouldAppend := true
+		idx := len(newSegs)
+		ipt, jpt := 0, 1
+		// find the top left most point of the line.
+		if !cmp.PointLess(seg[0], seg[1]) {
+			ipt, jpt = 1, 0
+		}
+		segKey := keyForLine(seg, ipt, jpt)
+		length := planar.FloatPointDistance2(seg[ipt], seg[jpt])
+		// look at the distance to see if we should keep
+		// the segment that in there.
+		if cseg, ok := lineKeeper[segKey]; ok && cseg.length <= length {
+			continue
+		} else if ok {
+			shouldAppend = false
+			idx = cseg.idx
+		}
+		if shouldAppend {
+			newSegs = append(newSegs, segs[i])
+		} else {
+			log.Printf("idx: %v len newSegs %v", idx, len(newSegs))
+			newSegs[idx] = segs[i]
+		}
+		lineKeeper[segKey] = value{
+			idx:    idx,
+			length: length,
+		}
+	}
+	if debug {
+		for i, seg := range newSegs {
+			log.Printf("ending seg(% 4d):%v", i, wkt.MustEncode(geom.Line(seg)))
+		}
+	}
+	return newSegs
 }
 
 // unique sorts segments by XY and filters out duplicate segments.
@@ -200,13 +272,16 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 		return nil, err
 	}
 
-	start := time.Now()
-	fmt.Printf("triangulating segs(%v)\n", len(segs))
-	//fmt.Printf("segs:\n%+v\n", segs)
-	//fmt.Printf("Wkt segs:\n%v\n", wkt.MustEncode(segs))
+	if debug {
+		log.Printf("triangulating segs(%v)\n", len(segs))
+		for i, seg := range segs {
+			log.Printf("seg(% 4d):%v", i, wkt.MustEncode(geom.Line(seg)))
+		}
+	}
 	triangles, err := InsideTrianglesForGeometry(ctx, segs, hm)
-	fmt.Printf("triangulations of segs(%v) took %v\n", len(segs), time.Since(start))
-
+	if err != nil {
+		return nil, err
+	}
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}

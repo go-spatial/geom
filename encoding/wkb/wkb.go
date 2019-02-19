@@ -68,7 +68,7 @@ func Decode(r io.Reader) (geo geom.Geometry, err error) {
 		return geom.Polygon(pl), err
 	case MultiPolygon:
 		mpl, err := decode.MultiPolygon(r, bom)
-		return geom.MultiPolygon(mpl), err
+		return (*geom.MultiPolygon)(mpl), err
 	case Collection:
 		col, err := decode.Collection(r, bom)
 		return col, err

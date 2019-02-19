@@ -1,6 +1,7 @@
 package geom
 
 import (
+	"log"
 	"math"
 )
 
@@ -151,7 +152,9 @@ func (e *Extent) AddGeometry(g Geometry) error {
 }
 
 // AsPolygon will return the extent as a Polygon
-func (e *Extent) AsPolygon() Polygon { return Polygon{e.Vertices()} }
+func (e *Extent) AsPolygon() Polygon {
+	return Polygon{e.Vertices()}
+}
 
 // Area returns the area of the extent, if the extent is nil, it will return 0
 func (e *Extent) Area() float64 {
@@ -190,9 +193,19 @@ func NewExtent(points ...[2]float64) *Extent {
 }
 
 func NewExtentFromGeometry(g Geometry) (*Extent, error) {
-	e := Extent{}
-	err := getExtent(g, &e)
+
+	pts, err := GetCoordinates(g)
 	if err != nil {
+		return nil, err
+	}
+	if len(pts) == 0 {
+		return nil, nil
+	}
+	e := Extent{pts[0][0], pts[0][1], pts[0][0], pts[0][1]}
+	if len(pts) == 1 {
+		return &e, nil
+	}
+	if err = getExtent(g, &e); err != nil {
 		return nil, err
 	}
 	return &e, nil
@@ -310,6 +323,9 @@ func (e *Extent) Intersect(ne *Extent) (*Extent, bool) {
 	}
 	// The boxes don't intersect.
 	if minx >= maxx {
+		if debug {
+			log.Printf("Minx(%v) >= maxx(%v)", minx, maxx)
+		}
 		return nil, false
 	}
 	miny := e.MinY()
@@ -323,6 +339,9 @@ func (e *Extent) Intersect(ne *Extent) (*Extent, bool) {
 
 	// The boxes don't intersect.
 	if miny >= maxy {
+		if debug {
+			log.Printf("Miny(%v) >= maxy(%v)", miny, maxy)
+		}
 		return nil, false
 	}
 	return &Extent{minx, miny, maxx, maxy}, true

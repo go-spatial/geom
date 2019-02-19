@@ -251,7 +251,7 @@ func Encode(geo geom.Geometry) (string, error) {
 		return Encode(mp)
 
 	case geom.Triangle:
-		// We will treat Triangles as polygons
+		// treat a triangle as polygon
 		return Encode(geom.Polygon{g[:]})
 	case []geom.Triangle:
 		mp := make(geom.MultiPolygon, len(g))
@@ -259,7 +259,15 @@ func Encode(geo geom.Geometry) (string, error) {
 			mp[i] = geom.Polygon{g[i][:]}
 		}
 		return Encode(mp)
-
+	case geom.Extent:
+		// treat an extent as a ploygon
+		return Encode(g.AsPolygon())
+	case *geom.Extent:
+		// treat an extent as a ploygon
+		if g != nil {
+			return Encode(g.AsPolygon())
+		}
+		return Encode(geom.Polygon{})
 	}
 }
 func MustEncode(geo geom.Geometry) (str string) {

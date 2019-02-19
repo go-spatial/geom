@@ -314,7 +314,7 @@ func TestParseMultiPolygon(t *testing.T) {
 		if tc.err != err {
 			t.Errorf("error, expected: %v got %v", tc.err, err)
 		}
-		if !reflect.DeepEqual(tc.exp, f) {
+		if !reflect.DeepEqual(tc.exp, *f) {
 			t.Errorf("parse multi-polygon expected (%#v) %[1]v got (%#v) %[2]v", tc.exp, f)
 		}
 	}
@@ -387,7 +387,7 @@ func TestParseCollection(t *testing.T) {
 			}
 		}}))`,
 			exp: geom.Collection{
-				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}}}}),
+				&geom.MultiPolygon{{{{1.0, -12.0}}}},
 			},
 		},
 		"2": {
@@ -396,14 +396,14 @@ func TestParseCollection(t *testing.T) {
 		} }}
 	))`,
 			exp: geom.Collection{
-				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}}}}),
+				&geom.MultiPolygon{{{{1.0, -12.0}, {0.0, 1.0}}}},
 			},
 		},
 		"3": {
 			input: `((
 			{{ { [ 1,-12 0,1 1,2 ] } }} ))`,
 			exp: geom.Collection{
-				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}}}),
+				&geom.MultiPolygon{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}}},
 			},
 		},
 		"4": {
@@ -411,7 +411,7 @@ func TestParseCollection(t *testing.T) {
 			{{{ [ 1,-12 0,1 1,2 ] [ 1, 2]} 
 		}}))`,
 			exp: geom.Collection{
-				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}, {{1.0, 2.0}}}}),
+				&geom.MultiPolygon{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2.0}}, {{1.0, 2.0}}}},
 			},
 		},
 		"5": {
@@ -424,7 +424,7 @@ func TestParseCollection(t *testing.T) {
 			] /* Why the end why? */}
 		}} ))`,
 			exp: geom.Collection{
-				geom.MultiPolygon([][][][2]float64{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}}}),
+				&geom.MultiPolygon{{{{1.0, -12.0}, {0.0, 1.0}, {1.0, 2000.0}}}},
 			},
 		},
 	}

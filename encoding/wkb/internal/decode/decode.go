@@ -144,25 +144,29 @@ func Polygon(r io.Reader, bom binary.ByteOrder) (ply geom.Polygon, err error) {
 	return ply, err
 }
 
-func MultiPolygon(r io.Reader, bom binary.ByteOrder) (plys geom.MultiPolygon, err error) {
-	var num uint32
+func MultiPolygon(r io.Reader, bom binary.ByteOrder) (*geom.MultiPolygon,error) {
+	var (
+		plys geom.MultiPolygon
+		err error
+		num uint32
+	)
 	if err = binary.Read(r, bom, &num); err != nil {
-		return plys, err
+		return &plys, err
 	}
 	plys = make([][][][2]float64, num)
 	for i := range plys {
 		bom, typ, err := ByteOrderType(r)
 		if err != nil {
-			return plys, err
+			return &plys, err
 		}
 		if typ != consts.Polygon {
-			return plys, ErrInvalidType{"multipolygon", typ}
+			return &plys, ErrInvalidType{"multipolygon", typ}
 		}
 		if plys[i], err = Polygon(r, bom); err != nil {
-			return plys, err
+			return &plys, err
 		}
 	}
-	return plys, err
+	return &plys, err
 }
 
 func Collection(r io.Reader, bom binary.ByteOrder) (col geom.Collection, err error) {
