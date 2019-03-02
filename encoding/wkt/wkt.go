@@ -113,6 +113,10 @@ func _encode(geo geom.Geometry) string {
 		xy := g.XY()
 		return fmt.Sprintf("%v %v", xy[0], xy[1])
 
+	case [2]float64:
+		return fmt.Sprintf("%v %v", g[0], g[1])
+
+
 	case geom.MultiPointer:
 		var points []string
 		for _, p := range g.Points() {
@@ -180,6 +184,11 @@ func Encode(geo geom.Geometry) (string, error) {
 			return "POINT EMPTY", nil
 		}
 		return "POINT (" + _encode(geo) + ")", nil
+
+	case [2]float64:
+
+		return "POINT (" + _encode(geo) + ")", nil
+
 
 	case geom.MultiPointer:
 

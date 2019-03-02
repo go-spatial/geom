@@ -153,7 +153,7 @@ func (eq *EventQueue) FindIntersects(ctx context.Context, connected bool, fn fun
 				continue
 			}
 			// we need to see if , the ipt is the endpoint of both lines, (it's a connecting point) and
-			// the polygonCheck is true, then it should not count as an intersect.
+			// the connected is true, then it should not count as an intersect.
 			if connected {
 				matchseg := cmp.PointEqual(ipt, seg.Point1().XY()) || cmp.PointEqual(ipt, seg.Point2().XY())
 				matchseg1 := cmp.PointEqual(ipt, seg1.Point1().XY()) || cmp.PointEqual(ipt, seg1.Point2().XY())

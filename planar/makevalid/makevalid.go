@@ -72,7 +72,91 @@ type ByXYLine []geom.Line
 func (a ByXYLine) Len() int      { return len(a) }
 func (a ByXYLine) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByXYLine) Less(i, j int) bool {
-	return cmp.PointLess(a[i][0], a[j][0]) || (cmp.PointEqual(a[i][0], a[j][0]) && cmp.PointLess(a[i][1], a[j][1]))
+	return cmp.PointLess(a[i][0], a[j][0]) || cmp.PointLess(a[i][1], a[j][1])
+}
+
+// filterLinesbyClipbox will iterate through all the given lines returning only lines that
+// intersect with the clipbox. A nil clipbox is assumed to indicate a clipbox containing the
+// whole universe, and so all lines are returned unfiltered.
+func filterLinesByClipbox(clipbox *geom.Extent, lines []geom.Line) (nlines []geom.Line) {
+
+	if clipbox == nil {
+		nlines = make([]geom.Line, len(lines))
+		copy(nlines, lines)
+		return nlines
+	}
+
+	for _, ln := range lines {
+		gext, err := geom.NewExtentFromGeometry(ln)
+		if err != nil {
+			log.Printf("Got an error trying to find the extent of %v: %v", wkt.MustEncode(ln), err)
+			continue
+		}
+		if _, ok := clipbox.Intersect(gext); ok {
+			// Keep lines that intersect our clipbox in some way.
+			nlines = append(nlines, ln)
+		}
+	}
+	return nlines
+}
+
+// splitIntersectingLines will split the given set of lines so that in any lines that intersect
+// each other are split into new lines. If a clipbox is provided (not nil) then any line not
+// wholly contained by the clip box will be discarded.
+func splitIntersectingLines(clipbox *geom.Extent, lines []geom.Line) (nlines []geom.Line) {
+
+	ctx := context.Background()
+	matchEndPoint := func(l geom.Line, pt [2]float64) bool {
+		return cmp.PointEqual(pt, l[0]) || cmp.PointEqual(pt, l[1])
+	}
+
+	// This will hold all the points that will make up the parts of the lines
+	// to split, not including the end points.
+	newPartialSegments := make([][][2]float64, len(lines))
+
+	eq := intersect.NewEventQueue(lines)
+	eq.FindIntersects(ctx, true, func(src, dst int, pt [2]float64) error {
+		if !matchEndPoint(lines[src], pt) {
+			newPartialSegments[src] = append(newPartialSegments[src], pt)
+		}
+		if !matchEndPoint(lines[dst], pt) {
+			newPartialSegments[dst] = append(newPartialSegments[dst], pt)
+		}
+		return nil
+	})
+	for idx, pseg := range newPartialSegments {
+
+		// Sort points
+		sort.Sort(ByXYPoint(pseg))
+
+		if debug {
+			log.Printf("Points for %v -- %v", idx, pseg)
+			log.Printf("For %04v: %v", idx, wkt.MustEncode(lines[idx]))
+		}
+
+		// Generate new segments
+		i := 0
+		for j := 1; j < len(pseg); j++ {
+			if cmp.PointEqual(pseg[i], pseg[j]) {
+				continue
+			}
+			// found a line
+			ln := [2][2]float64{pseg[i], pseg[j]}
+			if debug {
+				log.Printf("\t Would add (%v,%v): %v", i, j, wkt.MustEncode(geom.Line(ln)))
+			}
+			i = j
+			if clipbox != nil && !clipbox.ContainsLine(ln) {
+				// Does not intersect the clipbox skip
+				if debug {
+					log.Println("did not add")
+				}
+				continue
+			}
+			nlines = append(nlines, geom.Line(ln))
+		}
+	}
+	return nlines
 }
 
 // Destructure will take a multipolygon, break up the polygon into a set of segments that have the following characteristics:
@@ -88,6 +172,12 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 			log.Printf("asSegments returned error: %v", err)
 		}
 		return nil, err
+	}
+	if debug {
+		log.Printf("The original segments are:\n")
+		for i, seg := range segments {
+			log.Printf("\t%03d:%s\n", i, wkt.MustEncode(seg))
+		}
 	}
 	gext, err := geom.NewExtentFromGeometry(multipolygon)
 	if err != nil {
@@ -111,57 +201,29 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 			}
 			return []geom.Line{}, nil
 		}
+		filteredSegments := filterLinesByClipbox(clipbox, segments)
 
 		edges := clpbx.Edges(nil)
 		segments = append([]geom.Line{
 			geom.Line(edges[0]), geom.Line(edges[1]),
 			geom.Line(edges[2]), geom.Line(edges[3]),
-		}, segments...)
+		}, filteredSegments...)
 	}
-	ipts := make(map[int][][2]float64)
 
-	// Lets find all the places we need to split the lines on.
-	eq := intersect.NewEventQueue(segments)
-	eq.FindIntersects(ctx, true, func(src, dest int, pt [2]float64) error {
-		ipts[src] = append(ipts[src], pt)
-		ipts[dest] = append(ipts[dest], pt)
-		return nil
-	})
-
-	// Time to start splitting lines. if we have a clip box we can ignore the first 4 (0,1,2,3) lines.
-	offset := 0
-	/*
-		if hasClipbox {
-			offset = 4
+	if debug {
+		log.Printf("The segments to work on are:\n")
+		for i, seg := range segments {
+			log.Printf("\t%03d:%s\n", i, wkt.MustEncode(seg))
 		}
-	*/
-
-	nsegs := make([]geom.Line, 0, len(segments))
-
-	for i := offset; i < len(segments); i++ {
-		pts := append([][2]float64{segments[i][0], segments[i][1]}, ipts[i]...)
-
-		// Normalize the direction of the points.
-		sort.Sort(ByXYPoint(pts))
-
-		for j := 1; j < len(pts); j++ {
-			if cmp.PointEqual(pts[j-1], pts[j]) {
-				continue
-			}
-			nl := geom.Line{pts[j-1], pts[j]}
-			if hasClipbox && !clpbx.ContainsLine(nl) {
-				// Not in clipbox discard segment.
-				continue
-			}
-			nsegs = append(nsegs, nl)
-		}
-		if ctx.Err() != nil {
-			return nil, err
+	}
+	nsegs := splitIntersectingLines(clipbox, segments)
+	if debug {
+		log.Printf("The new segments after split are:\n")
+		for i, seg := range nsegs {
+			log.Printf("\t%03d:%s\n", i, wkt.MustEncode(seg))
 		}
 	}
 
-	//unique(nsegs)
-	nsegs = keepShortestOfSameSlopeSPoint(nsegs)
 	return nsegs, nil
 }
 
@@ -267,17 +329,18 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 		log.Printf("Step   2 : Convert segments to linestrings to use in triangleuation.")
 	}
 
-	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
-	if err != nil {
-		return nil, err
-	}
-
 	if debug {
 		log.Printf("triangulating segs(%v)\n", len(segs))
 		for i, seg := range segs {
 			log.Printf("seg(% 4d):%v", i, wkt.MustEncode(geom.Line(seg)))
 		}
 	}
+
+	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
+	if err != nil {
+		return nil, err
+	}
+
 	triangles, err := InsideTrianglesForGeometry(ctx, segs, hm)
 	if err != nil {
 		return nil, err

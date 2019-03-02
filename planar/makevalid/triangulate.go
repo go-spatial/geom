@@ -41,11 +41,21 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 	}
 	triangles := make([]geom.Triangle, 0, len(allTriangles))
 
-	for _, triangle := range allTriangles {
+	for i, triangle := range allTriangles {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		if hm.LabelFor(triangle.Center()) == planar.Outside {
+		cpt := triangle.Center()
+		lbl := hm.LabelFor(cpt)
+		if debug {
+			log.Printf("For %04v Triangle: %v\n\tCPoint: %v\n\tLabel:%v",
+				i,
+				wkt.MustEncode(triangle),
+				wkt.MustEncode(cpt),
+				lbl,
+			)
+		}
+		if lbl == planar.Outside {
 			continue
 		}
 		triangles = append(triangles, triangle)
