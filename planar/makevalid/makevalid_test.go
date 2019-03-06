@@ -39,16 +39,20 @@ func checkMakeValid(tb testing.TB) {
 		didClip              bool
 	}
 
-	fn := func(tc tcase) func(t testing.TB) {
+	fn := func(ctx context.Context, tc tcase) func(t testing.TB) {
 		return func(t testing.TB) {
+
 			hm, err := hitmap.NewFromPolygons(tc.ClipBox, tc.MultiPolygon.Polygons()...)
 			if err != nil {
 				panic("Was not expecting the hitmap to return error.")
 			}
+
 			mv := &Makevalid{
 				Hitmap: hm,
 			}
-			gmp, didClip, gerr := mv.Makevalid(context.Background(), tc.MultiPolygon, tc.ClipBox)
+
+
+			gmp, didClip, gerr := mv.Makevalid(ctx, tc.MultiPolygon, tc.ClipBox)
 			if tc.err != nil {
 				if tc.err != gerr {
 					t.Errorf("error, expected %v got %v", tc.err, gerr)
@@ -67,6 +71,12 @@ func checkMakeValid(tb testing.TB) {
 			if !ok {
 				t.Errorf("return MultiPolygon, expected MultiPolygon got %T", gmp)
 				return
+			}
+			if debug {
+				debugRecordEntity(ctx, "Original Polygon", "input", tc.MultiPolygon)
+				debugRecordEntity(ctx, "Result Polygon", "got", mp)
+				debugRecordEntity(ctx, "Expected Polygon", "expected", tc.ExpectedMultiPolygon)
+				debugRecordEntity(ctx, "Original Clipbox", "input", tc.ClipBox)
 			}
 			if !cmp.MultiPolygonerEqual(tc.ExpectedMultiPolygon, mp) {
 				t.Errorf("mulitpolygon, expected %v got %v", tc.ExpectedMultiPolygon, mp)
@@ -104,13 +114,23 @@ Original Geometry:
 		}
 	}
 
+	ctx := context.Background()
+
+	if debug {
+		if _, ok := tb.(*testing.T); ok {
+			ctx = debugContext("", ctx)
+			defer debugClose(ctx)
+		}
+	}
+
 	for name, tc := range tests {
 		tc := tc
 		switch t := tb.(type) {
 		case *testing.T:
-			t.Run(name, asT(fn(tc)))
+			name, ctx = debugAddTestName(ctx, name)
+			t.Run(name, asT(fn(ctx, tc)))
 		case *testing.B:
-			t.Run(name, asB(fn(tc)))
+			t.Run(name, asB(fn(ctx, tc)))
 		}
 	}
 }
@@ -124,8 +144,11 @@ func TestDestructure(t *testing.T) {
 		Segs []geom.Line
 		Err  error
 	}
-	ctx := context.Background()
-	fn := func(tc tcase) func(*testing.T) {
+
+	ctx := debugContext("", context.Background())
+	defer debugClose(ctx)
+
+	fn := func(ctx context.Context, tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 			segs, err := Destructure(ctx, tc.ClipBox, tc.MultiPolygon)
 			if tc.Err == nil && err != nil {
@@ -141,34 +164,27 @@ func TestDestructure(t *testing.T) {
 				return
 			}
 			sort.Sort(planar.LinesByXY(segs))
-			if len(segs) != len(tc.Segs) {
-				if debug {
-					tcSegs := true
-					maxi := len(tc.Segs)
-					if len(segs) > maxi {
-						maxi = len(segs)
-						tcSegs = false
-					}
-
-					t.Logf("Expected segs:")
-					for i := 0; i < maxi; i++ {
-						if tcSegs {
-							if i < len(segs) {
-								t.Logf("%04d : %v | %v\n", i, wkt.MustEncode(tc.Segs[i]), wkt.MustEncode(segs[i]))
-							} else {
-								t.Logf("%04d : %v | \n", i, wkt.MustEncode(tc.Segs[i]))
-							}
-
-						} else {
-							if i < len(tc.Segs) {
-								t.Logf("%04d : %v | %v\n", i, wkt.MustEncode(tc.Segs[i]), wkt.MustEncode(segs[i]))
-							} else {
-								t.Logf("%04d : \t | %v\n", i, wkt.MustEncode(segs[i]))
-							}
-						}
-					}
+			if debug {
+				debugRecordEntity(ctx, "Clipbox", "input", tc.ClipBox)
+				debugRecordEntity(ctx, "MultiPolygon", "input", tc.MultiPolygon)
+				for i := range tc.Segs {
+					debugRecordEntity(ctx, fmt.Sprintf("Segments #%v", i), "expected", tc.Segs[i])
 				}
-				t.Errorf("number of segs, expected %v, got %v", len(tc.Segs), len(segs))
+				for i := range segs {
+					debugRecordEntity(ctx, fmt.Sprintf("Segments #%v", i), "got", segs[i])
+				}
+			}
+
+			if !cmp.GeomLineEqual(tc.Segs, segs) {
+				if debug {
+					t.Logf("Expected segs:")
+					t.Logf(dumpWKTLineSegments("", tc.Segs, segs))
+				}
+				if len(tc.Segs) != len(segs) {
+					t.Errorf("number of segs, expected %v, got %v", len(tc.Segs), len(segs))
+				} else {
+					t.Errorf("segs, expected %v, got %v", tc.Segs, segs)
+				}
 				return
 			}
 
@@ -176,40 +192,55 @@ func TestDestructure(t *testing.T) {
 	}
 	tests := []tcase{
 		{
-			MultiPolygon: &geom.MultiPolygon{
-				{ // Polygon
-					{ // Ring
-						{1286956.1422558832, 6138803.15957211},
-						{1286957.5138675969, 6138809.6399925},
-						{1286961.0222077654, 6138815.252628375},
-						{1286966.228733862, 6138819.3396373615},
-						{1286972.5176202222, 6138821.397139203},
-						{1286979.1330808033, 6138821.173193399},
-						{1286985.2820067848, 6138818.695793352},
-						{1286990.1992814348, 6138814.272866236},
-						{1286993.3157325392, 6138808.436285537},
-						{1286994.2394710402, 6138801.885883152},
-						{1286992.8678593265, 6138795.40546864},
-						{1286989.3781805448, 6138789.792845784},
-						{1286984.1623237533, 6138785.719847463},
-						{1286977.864106701, 6138783.662354196},
-						{1286971.2486461198, 6138783.872302467},
-						{1286965.1183815224, 6138786.349692439},
-						{1286960.1824454917, 6138790.7726051165},
-						{1286957.084655768, 6138796.623170342},
-					},
-				},
+			MultiPolygon: makevalidTestCases[4].MultiPolygon,
+			ClipBox:      makevalidTestCases[4].ClipBox,
+			Segs: []geom.Line{
+				geom.Line{{1.2869404610000001e+06, 6.138807589e+06}, {1.2869404610000001e+06, 6.138830243e+06}},
+				geom.Line{{1.2869404610000001e+06, 6.138807589e+06}, {1.28695708e+06, 6.138807589e+06}},
+				geom.Line{{1.2869404610000001e+06, 6.138830243e+06}, {1.28696919e+06, 6.138830243e+06}},
+				geom.Line{{1.28695708e+06, 6.138807589e+06}, {1.286957514e+06, 6.13880964e+06}},
+				geom.Line{{1.28695708e+06, 6.138807589e+06}, {1.28696919e+06, 6.138807589e+06}},
+				geom.Line{{1.286957514e+06, 6.13880964e+06}, {1.286961022e+06, 6.138815252e+06}},
+				geom.Line{{1.286961022e+06, 6.138815252e+06}, {1.286966229e+06, 6.13881934e+06}},
+				geom.Line{{1.286966229e+06, 6.13881934e+06}, {1.28696919e+06, 6.138820309e+06}},
+				geom.Line{{1.28696919e+06, 6.138807589e+06}, {1.28696919e+06, 6.138820309e+06}},
+				geom.Line{{1.28696919e+06, 6.138820309e+06}, {1.28696919e+06, 6.138830243e+06}},
 			},
-			ClipBox: geom.NewExtent(
-				[2]float64{1286940.46060967, 6138830.2432236},
-				[2]float64{1286969.19030943, 6138807.58852643},
-			),
+		},
+		{
+			MultiPolygon: makevalidTestCases[0].MultiPolygon,
+			ClipBox:      makevalidTestCases[0].ClipBox,
+			Segs: []geom.Line{
+				geom.Line{{10, 20}, {1, 1}},
+				geom.Line{{1, 1}, {15, 10}},
+				geom.Line{{15, 10}, {10, 20}},
+			},
 		},
 	}
 
 	for i, tc := range tests {
 		sort.Sort(planar.LinesByXY(tc.Segs))
-		t.Run(strconv.Itoa(i), fn(tc))
+		name, ctx := debugAddTestName(ctx, strconv.Itoa(i))
+		t.Run(name, fn(ctx, tc))
 	}
 
+}
+
+func TestSplitIntersectingLines(t *testing.T) {
+	type tcase struct {
+		Lines   []geom.Line
+		ClipBox *geom.Extent
+
+		NewLines []geom.Line
+	}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+
+		}
+	}
+	tests := [...]tcase{}
+	for i, tc := range tests {
+		sort.Sort(planar.LinesByXY(tc.NewLines))
+		t.Run(strconv.Itoa(i), fn(tc))
+	}
 }

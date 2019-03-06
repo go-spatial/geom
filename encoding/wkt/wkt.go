@@ -111,10 +111,10 @@ func _encode(geo geom.Geometry) string {
 
 	case geom.Pointer:
 		xy := g.XY()
-		return fmt.Sprintf("%v %v", xy[0], xy[1])
+		return fmt.Sprintf("%.2f %.2f", xy[0], xy[1])
 
 	case [2]float64:
-		return fmt.Sprintf("%v %v", g[0], g[1])
+		return fmt.Sprintf("%.2f %.2f", g[0], g[1])
 
 
 	case geom.MultiPointer:

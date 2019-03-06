@@ -2,17 +2,20 @@ package makevalid
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay"
 )
 
 func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
 	if debug {
+		ctx = debugContext("", ctx)
+		defer debugClose(ctx)
+
 		log.Printf("Step   3 : generate triangles")
 	}
 	builder := delaunay.NewConstrained(delaunay.TOLERANCE, []geom.Point{}, segs)
@@ -30,10 +33,10 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 	}
 
 	if debug {
-		log.Printf("triangulations took %v\n", time.Since(start))
+		log.Printf("triangulation took %v\n", time.Since(start))
 		log.Printf("Got %v trinangles\n", len(allTriangles))
 		for i, tri := range allTriangles {
-			log.Printf("% 4d: %v\n", i, wkt.MustEncode(tri))
+			debugRecordEntity(ctx, fmt.Sprintf("triangle #%v", i), "builder.Triangles", tri)
 		}
 	}
 	if debug {
@@ -48,11 +51,15 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 		cpt := triangle.Center()
 		lbl := hm.LabelFor(cpt)
 		if debug {
-			log.Printf("For %04v Triangle: %v\n\tCPoint: %v\n\tLabel:%v",
-				i,
-				wkt.MustEncode(triangle),
-				wkt.MustEncode(cpt),
-				lbl,
+			debugRecordEntity(ctx,
+				fmt.Sprintf("triangle #%v", i),
+				fmt.Sprintf("triangle:%v", lbl),
+				triangle,
+			)
+			debugRecordEntity(ctx,
+				fmt.Sprintf("center pt triangle #%v", i),
+				fmt.Sprintf("triangle:%v", lbl),
+				cpt,
 			)
 		}
 		if lbl == planar.Outside {

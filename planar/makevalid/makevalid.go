@@ -3,7 +3,9 @@ package makevalid
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"math"
 	"sort"
 
 	"github.com/go-spatial/geom"
@@ -72,7 +74,10 @@ type ByXYLine []geom.Line
 func (a ByXYLine) Len() int      { return len(a) }
 func (a ByXYLine) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByXYLine) Less(i, j int) bool {
-	return cmp.PointLess(a[i][0], a[j][0]) || cmp.PointLess(a[i][1], a[j][1])
+	if !cmp.PointEqual(a[i][0], a[j][0]) {
+		return cmp.PointLess(a[i][0], a[j][0])
+	}
+	return cmp.PointLess(a[i][1], a[j][1])
 }
 
 // filterLinesbyClipbox will iterate through all the given lines returning only lines that
@@ -100,15 +105,22 @@ func filterLinesByClipbox(clipbox *geom.Extent, lines []geom.Line) (nlines []geo
 	return nlines
 }
 
+func round(x, unit float64) float64 {
+	return math.Round(x/unit) * unit
+}
+
+func roundPoint(pt [2]float64, unit float64) (npt [2]float64) {
+	npt[0], npt[1] = round(pt[0], unit), round(pt[1], unit)
+	return npt
+}
+
 // splitIntersectingLines will split the given set of lines so that in any lines that intersect
 // each other are split into new lines. If a clipbox is provided (not nil) then any line not
 // wholly contained by the clip box will be discarded.
 func splitIntersectingLines(clipbox *geom.Extent, lines []geom.Line) (nlines []geom.Line) {
 
+	const tolerance = 0.001
 	ctx := context.Background()
-	matchEndPoint := func(l geom.Line, pt [2]float64) bool {
-		return cmp.PointEqual(pt, l[0]) || cmp.PointEqual(pt, l[1])
-	}
 
 	// This will hold all the points that will make up the parts of the lines
 	// to split, not including the end points.
@@ -116,41 +128,32 @@ func splitIntersectingLines(clipbox *geom.Extent, lines []geom.Line) (nlines []g
 
 	eq := intersect.NewEventQueue(lines)
 	eq.FindIntersects(ctx, true, func(src, dst int, pt [2]float64) error {
-		if !matchEndPoint(lines[src], pt) {
-			newPartialSegments[src] = append(newPartialSegments[src], pt)
-		}
-		if !matchEndPoint(lines[dst], pt) {
-			newPartialSegments[dst] = append(newPartialSegments[dst], pt)
-		}
+		newPartialSegments[src] = append(newPartialSegments[src], roundPoint(pt, tolerance))
+		newPartialSegments[dst] = append(newPartialSegments[dst], roundPoint(pt, tolerance))
 		return nil
 	})
 	for idx, pseg := range newPartialSegments {
 
+		// Add the end points to the pseg
+		pseg = append(pseg, roundPoint(lines[idx][0], tolerance), roundPoint(lines[idx][1], tolerance))
+
 		// Sort points
 		sort.Sort(ByXYPoint(pseg))
-
-		if debug {
-			log.Printf("Points for %v -- %v", idx, pseg)
-			log.Printf("For %04v: %v", idx, wkt.MustEncode(lines[idx]))
-		}
 
 		// Generate new segments
 		i := 0
 		for j := 1; j < len(pseg); j++ {
-			if cmp.PointEqual(pseg[i], pseg[j]) {
-				continue
-			}
+			dst := planar.FloatPointDistance2(pseg[i], pseg[j])
 			// found a line
 			ln := [2][2]float64{pseg[i], pseg[j]}
-			if debug {
-				log.Printf("\t Would add (%v,%v): %v", i, j, wkt.MustEncode(geom.Line(ln)))
+			
+			// using the squared distance
+			if dst <= tolerance {
+				continue
 			}
 			i = j
 			if clipbox != nil && !clipbox.ContainsLine(ln) {
 				// Does not intersect the clipbox skip
-				if debug {
-					log.Println("did not add")
-				}
 				continue
 			}
 			nlines = append(nlines, geom.Line(ln))
@@ -166,19 +169,28 @@ func splitIntersectingLines(clipbox *geom.Extent, lines []geom.Line) (nlines []g
 // 4. line segments outside of the clipbox will be clipped
 func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) ([]geom.Line, error) {
 
+	if debug {
+		ctx = debugContext("", ctx)
+		defer debugClose(ctx)
+	}
+
 	segments, err := asSegments(*multipolygon)
 	if err != nil {
+
 		if debug {
 			log.Printf("asSegments returned error: %v", err)
 		}
+
 		return nil, err
+
 	}
+
 	if debug {
-		log.Printf("The original segments are:\n")
 		for i, seg := range segments {
-			log.Printf("\t%03d:%s\n", i, wkt.MustEncode(seg))
+			debugRecordEntity(ctx, fmt.Sprintf("Original Segment #%v", i), "asSegment", seg)
 		}
 	}
+
 	gext, err := geom.NewExtentFromGeometry(multipolygon)
 	if err != nil {
 		return nil, err
@@ -187,40 +199,34 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	// Let's see if our clip box is bigger then our polygon.
 	// if it is we don't need the clip box.
 	hasClipbox := clipbox != nil && !clipbox.Contains(gext)
+
 	if debug {
 		log.Printf("\thasClipbox: %v && !%v", clipbox != nil, clipbox.Contains(gext))
 	}
-	var clpbx *geom.Extent
+
+	// var clpbx *geom.Extent
 	// Let's get the edges of our clipbox; as segments and add it to the begining.
 	if hasClipbox {
-		var ok bool
-		// Let get the intersection of the clipbox and the extent of the geometry.
-		if clpbx, ok = clipbox.Intersect(gext); !ok {
-			if debug {
-				log.Printf("\tGeometry Extent does not intersect the clipbox?\nGeometry Extent:%#v\n%v\n clipbox Extent:%#v\n%v\n ", gext, wkt.MustEncode(gext), clipbox, wkt.MustEncode(clipbox))
-			}
-			return []geom.Line{}, nil
-		}
+
 		filteredSegments := filterLinesByClipbox(clipbox, segments)
 
-		edges := clpbx.Edges(nil)
+		edges := clipbox.Edges(nil)
 		segments = append([]geom.Line{
 			geom.Line(edges[0]), geom.Line(edges[1]),
 			geom.Line(edges[2]), geom.Line(edges[3]),
 		}, filteredSegments...)
-	}
-
-	if debug {
-		log.Printf("The segments to work on are:\n")
-		for i, seg := range segments {
-			log.Printf("\t%03d:%s\n", i, wkt.MustEncode(seg))
+		if debug {
+			for i, seg := range segments {
+				debugRecordEntity(ctx, fmt.Sprintf("Filtered Segment #%v", i), "filterLinesByClipbox", seg)
+			}
 		}
 	}
+
 	nsegs := splitIntersectingLines(clipbox, segments)
+
 	if debug {
-		log.Printf("The new segments after split are:\n")
 		for i, seg := range nsegs {
-			log.Printf("\t%03d:%s\n", i, wkt.MustEncode(seg))
+			debugRecordEntity(ctx, fmt.Sprintf("Split Segments #%v", i), "splitIntersectintLines", seg)
 		}
 	}
 
@@ -325,15 +331,9 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 		}
 		return nil, nil
 	}
-	if debug {
-		log.Printf("Step   2 : Convert segments to linestrings to use in triangleuation.")
-	}
 
 	if debug {
-		log.Printf("triangulating segs(%v)\n", len(segs))
-		for i, seg := range segs {
-			log.Printf("seg(% 4d):%v", i, wkt.MustEncode(geom.Line(seg)))
-		}
+		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
 	}
 
 	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
