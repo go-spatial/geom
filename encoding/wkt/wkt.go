@@ -3,6 +3,7 @@ package wkt
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/go-spatial/geom"
@@ -99,6 +100,19 @@ func isCollectionerEmpty(col geom.Collectioner) bool {
 	return true
 }
 
+func formatFloat(f float64) string {
+	s := strconv.FormatFloat(f, 'f', 3, 64)
+	if s[len(s)-3:] == "000" {
+		// remove the .
+		return s[:len(s)-4]
+	}
+	return s
+}
+
+func formatPoint(pt [2]float64) string {
+	return formatFloat(pt[0]) + " " + formatFloat(pt[1])
+}
+
 /*
 This purpose of this file is to house the wkt functions. These functions are
 use to take a tagola.Geometry and convert it to a wkt string. It will, also,
@@ -110,12 +124,10 @@ func _encode(geo geom.Geometry) string {
 	switch g := geo.(type) {
 
 	case geom.Pointer:
-		xy := g.XY()
-		return fmt.Sprintf("%.2f %.2f", xy[0], xy[1])
+		return formatPoint(g.XY())
 
 	case [2]float64:
-		return fmt.Sprintf("%.2f %.2f", g[0], g[1])
-
+		return formatPoint(g)
 
 	case geom.MultiPointer:
 		var points []string
@@ -189,7 +201,6 @@ func Encode(geo geom.Geometry) (string, error) {
 
 		return "POINT (" + _encode(geo) + ")", nil
 
-
 	case geom.MultiPointer:
 
 		if isNil(g) || len(g.Points()) == 0 {
@@ -244,6 +255,10 @@ func Encode(geo geom.Geometry) (string, error) {
 
 		return Encode(geom.LineString(g[:]))
 
+	case [][2]float64:
+
+		return Encode(geom.LineString(g))
+
 	case []geom.Line:
 
 		ml := make(geom.MultiLineString, len(g))
@@ -282,7 +297,7 @@ func Encode(geo geom.Geometry) (string, error) {
 func MustEncode(geo geom.Geometry) (str string) {
 	var err error
 	if str, err = Encode(geo); err != nil {
-		panic(fmt.Sprintf("unable to encode %v as wkt", geo))
+		panic(fmt.Sprintf("unable to encode %T as wkt", geo))
 	}
 	return str
 }
