@@ -35,7 +35,7 @@ func Float64Slice(f1, f2 []float64, tolerance float64) bool {
 }
 
 func round(x, unit float64) float64 {
-    return math.Round(x/unit) * unit
+	return math.Round(x/unit) * unit
 }
 
 // Float64 compares two floats to see if they are within the given tolerance.
@@ -52,8 +52,9 @@ func Float64(f1, f2, tolerance float64) bool {
 	if math.IsInf(f2, -1) {
 		return math.IsInf(f1, -1)
 	}
-	rf1, rf2 := round(f1,tolerance), round(f2,tolerance)
-	return math.Abs(rf1-rf2) < tolerance
+	rf1, rf2 := round(f1, tolerance), round(f2, tolerance)
+	diff := round(math.Abs(rf1-rf2), tolerance)
+	return diff < tolerance
 }
 
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
@@ -61,6 +62,10 @@ func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
 
 // Extent will check to see if the Extents's are the same.
 func Extent(extent1, extent2 [4]float64) bool {
+	ext1, ext2 := geom.Extent(extent1), geom.Extent(extent2)
+	if ext1.IsUniverse() && ext2.IsUniverse() {
+		return true
+	}
 	return Float(extent1[0], extent2[0]) && Float(extent1[1], extent2[1]) &&
 		Float(extent1[2], extent2[2]) && Float(extent1[3], extent2[3])
 }
@@ -144,7 +149,7 @@ func GeomLineEqual(gml1, gml2 []geom.Line) bool {
 	if len(gml1) != len(gml2) {
 		return false
 	}
-	LOOP:
+LOOP:
 	for i := range gml1 {
 		for j := range gml2 {
 			if LineStringEqual(gml1[i][:], gml2[j][:]) {
@@ -159,6 +164,7 @@ func GeomLineEqual(gml1, gml2 []geom.Line) bool {
 
 // Polygon will return weather the two polygons are the same.
 func PolygonEqual(ply1, ply2 [][][2]float64) bool {
+
 	if len(ply1) != len(ply2) {
 		return false
 	}
