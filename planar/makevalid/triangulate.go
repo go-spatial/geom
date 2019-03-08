@@ -2,27 +2,24 @@ package makevalid
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"time"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay"
 )
 
 func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
+
 	if debug {
-		ctx = debugContext("", ctx)
-		defer debugClose(ctx)
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
 
 		log.Printf("Step   3 : generate triangles")
 	}
+
 	builder := delaunay.NewConstrained(delaunay.TOLERANCE, []geom.Point{}, segs)
-	var start time.Time
-	if debug {
-		start = time.Now()
-	}
 
 	allTriangles, err := builder.Triangles(false)
 	if err != nil {
@@ -33,15 +30,9 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 	}
 
 	if debug {
-		log.Printf("triangulation took %v\n", time.Since(start))
-		log.Printf("Got %v trinangles\n", len(allTriangles))
-		for i, tri := range allTriangles {
-			debugRecordEntity(ctx, fmt.Sprintf("triangle #%v", i), "builder.Triangles", tri)
-		}
-	}
-	if debug {
 		log.Printf("Step   4 : label triangles and discard outside triangles")
 	}
+
 	triangles := make([]geom.Triangle, 0, len(allTriangles))
 
 	for i, triangle := range allTriangles {
@@ -50,18 +41,13 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 		}
 		cpt := triangle.Center()
 		lbl := hm.LabelFor(cpt)
+
 		if debug {
-			debugRecordEntity(ctx,
-				fmt.Sprintf("triangle #%v", i),
-				fmt.Sprintf("triangle:%v", lbl),
-				triangle,
-			)
-			debugRecordEntity(ctx,
-				fmt.Sprintf("center pt triangle #%v", i),
-				fmt.Sprintf("triangle:%v", lbl),
-				cpt,
-			)
+			category := debuggerCategoryTriangle.With(lbl)
+			debugger.Record(ctx, triangle, category, "triangle %v", i)
+			debugger.Record(ctx, cpt, category, "triangle %v", i)
 		}
+
 		if lbl == planar.Outside {
 			continue
 		}

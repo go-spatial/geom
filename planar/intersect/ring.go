@@ -63,8 +63,16 @@ func (r *Ring) Extent() *geom.Extent {
 	return &r.bbox
 }
 
-func (r *Ring) Segments() []geom.Line {
-	return r.segs 
+func (r *Ring) Segments() (segs []geom.Line) {
+
+	lrsegs := len(r.segs)
+	if lrsegs > 0 {
+		segs = make([]geom.Line, lrsegs+1)
+		copy(segs, r.segs)
+		segs[lrsegs][0] = r.segs[lrsegs-1][1]
+		segs[lrsegs][1] = r.segs[0][0]
+	}
+	return segs
 }
 
 // Static indices for Ring.ContainsPoint. We build our result slice from this

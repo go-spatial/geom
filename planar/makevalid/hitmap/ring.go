@@ -56,6 +56,13 @@ func (r *Ring) MaxY() float64 {
 	return r.r.Extent().MaxY()
 }
 
+func (r *Ring) Segments() []geom.Line {
+	if r == nil || r.r == nil {
+		return []geom.Line{}
+	}
+	return r.r.Segments()
+}
+
 // Contains returns weather the point is contained by the ring, if the point is on the border it is considered not contained.
 func (r Ring) ContainsPoint(pt [2]float64) bool { return r.r.ContainsPoint(pt) }
 

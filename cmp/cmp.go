@@ -52,9 +52,8 @@ func Float64(f1, f2, tolerance float64) bool {
 	if math.IsInf(f2, -1) {
 		return math.IsInf(f1, -1)
 	}
-	rf1, rf2 := round(f1, tolerance), round(f2, tolerance)
-	diff := round(math.Abs(rf1-rf2), tolerance)
-	return diff < tolerance
+	diff := math.Abs(f1 - f2)
+	return diff <= tolerance
 }
 
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.

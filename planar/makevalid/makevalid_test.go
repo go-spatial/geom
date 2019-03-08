@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 )
@@ -25,6 +24,10 @@ func asB(fn func(b testing.TB)) func(b *testing.B) {
 			fn(b)
 		}
 	}
+}
+
+func init() {
+	debugger.DefaultOutputDir = "_test_output"
 }
 
 func TestMakeValid(t *testing.T)      { checkMakeValid(t) }
@@ -42,15 +45,12 @@ func checkMakeValid(tb testing.TB) {
 	fn := func(ctx context.Context, tc tcase) func(t testing.TB) {
 		return func(t testing.TB) {
 
-			hm, err := hitmap.NewFromPolygons(tc.ClipBox, tc.MultiPolygon.Polygons()...)
+			hm, err := hitmap.NewFromPolygons(ctx, tc.ClipBox, tc.MultiPolygon.Polygons()...)
 			if err != nil {
 				panic("Was not expecting the hitmap to return error.")
 			}
 
-			mv := &Makevalid{
-				Hitmap: hm,
-			}
-
+			mv := &Makevalid{Hitmap: hm}
 
 			gmp, didClip, gerr := mv.Makevalid(ctx, tc.MultiPolygon, tc.ClipBox)
 			if tc.err != nil {
@@ -73,31 +73,14 @@ func checkMakeValid(tb testing.TB) {
 				return
 			}
 			if debug {
-				debugRecordEntity(ctx, "Original Polygon", "input", tc.MultiPolygon)
-				debugRecordEntity(ctx, "Result Polygon", "got", mp)
-				debugRecordEntity(ctx, "Expected Polygon", "expected", tc.ExpectedMultiPolygon)
-				debugRecordEntity(ctx, "Original Clipbox", "input", tc.ClipBox)
+				debugger.Record(ctx, tc.MultiPolygon, debugger.CategoryInput, "Original Polygon")
+				debugger.Record(ctx, tc.ClipBox, debugger.CategoryInput, "Original Clipbox")
+				debugger.Record(ctx, mp, debugger.CategoryGot, "Result Polygon")
+				debugger.Record(ctx, tc.ExpectedMultiPolygon, debugger.CategoryExpected, "Expected Polygon")
 			}
+
 			if !cmp.MultiPolygonerEqual(tc.ExpectedMultiPolygon, mp) {
 				t.Errorf("mulitpolygon, expected %v got %v", tc.ExpectedMultiPolygon, mp)
-				if debug {
-					t.Logf(strings.TrimSpace(`
-Got:
-%v
-Expected:
-%v
-ClipBox:
-%v
-Original Geometry:
-%v
-`),
-						wkt.MustEncode(mp),
-						wkt.MustEncode(tc.ExpectedMultiPolygon),
-						wkt.MustEncode(tc.ClipBox),
-						wkt.MustEncode(tc.MultiPolygon),
-					)
-
-				}
 				return
 			}
 		}
@@ -118,8 +101,8 @@ Original Geometry:
 
 	if debug {
 		if _, ok := tb.(*testing.T); ok {
-			ctx = debugContext("", ctx)
-			defer debugClose(ctx)
+			ctx = debugger.AugmentContext(ctx, "makevalid.TestMakeValid")
+			defer debugger.Close(ctx)
 		}
 	}
 
@@ -127,7 +110,9 @@ Original Geometry:
 		tc := tc
 		switch t := tb.(type) {
 		case *testing.T:
-			name, ctx = debugAddTestName(ctx, name)
+			if debug {
+				ctx = debugger.SetTestName(ctx, name)
+			}
 			t.Run(name, asT(fn(ctx, tc)))
 		case *testing.B:
 			t.Run(name, asB(fn(ctx, tc)))
@@ -145,11 +130,12 @@ func TestDestructure(t *testing.T) {
 		Err  error
 	}
 
-	ctx := debugContext("", context.Background())
-	defer debugClose(ctx)
-
 	fn := func(ctx context.Context, tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
+			if debug {
+				ctx = debugger.SetTestName(ctx, t.Name())
+			}
+
 			segs, err := Destructure(ctx, tc.ClipBox, tc.MultiPolygon)
 			if tc.Err == nil && err != nil {
 				t.Errorf("error, expected nil, got %v", err)
@@ -164,22 +150,19 @@ func TestDestructure(t *testing.T) {
 				return
 			}
 			sort.Sort(planar.LinesByXY(segs))
+
 			if debug {
-				debugRecordEntity(ctx, "Clipbox", "input", tc.ClipBox)
-				debugRecordEntity(ctx, "MultiPolygon", "input", tc.MultiPolygon)
+				debugger.Record(ctx, tc.ClipBox, debugger.CategoryInput, "Clipbox")
+				debugger.Record(ctx, tc.MultiPolygon, debugger.CategoryInput, "MultiPolygon")
 				for i := range tc.Segs {
-					debugRecordEntity(ctx, fmt.Sprintf("Segments #%v", i), "expected", tc.Segs[i])
+					debugger.Record(ctx, tc.Segs[i], debugger.CategoryExpected, "Segments #%v", i)
 				}
 				for i := range segs {
-					debugRecordEntity(ctx, fmt.Sprintf("Segments #%v", i), "got", segs[i])
+					debugger.Record(ctx, segs[i], debugger.CategoryGot, "Segments #%v", i)
 				}
 			}
 
 			if !cmp.GeomLineEqual(tc.Segs, segs) {
-				if debug {
-					t.Logf("Expected segs:")
-					t.Logf(dumpWKTLineSegments("", tc.Segs, segs))
-				}
 				if len(tc.Segs) != len(segs) {
 					t.Errorf("number of segs, expected %v, got %v", len(tc.Segs), len(segs))
 				} else {
@@ -218,9 +201,16 @@ func TestDestructure(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+	}
+
 	for i, tc := range tests {
 		sort.Sort(planar.LinesByXY(tc.Segs))
-		name, ctx := debugAddTestName(ctx, strconv.Itoa(i))
+		name := strconv.Itoa(i)
 		t.Run(name, fn(ctx, tc))
 	}
 

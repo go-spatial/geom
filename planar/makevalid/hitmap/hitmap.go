@@ -1,6 +1,7 @@
 package hitmap
 
 import (
+	"context"
 	"log"
 	"math"
 	"sort"
@@ -67,7 +68,7 @@ func (hms OrderedHM) Area() float64 {
 }
 
 // NewOrderdHM will add the provided hitmaps in reverse order so that the last hit map is always tried first.
-func NewOrderedHM(hms ...planar.HitMapper) OrderedHM {
+func NewOrderedHM(ctx context.Context, hms ...planar.HitMapper) OrderedHM {
 	ohm := make(OrderedHM, len(hms))
 	size := len(hms) - 1
 	for i := size; i >= 0; i-- {
@@ -76,8 +77,8 @@ func NewOrderedHM(hms ...planar.HitMapper) OrderedHM {
 	return ohm
 }
 
-func MustNew(clipbox *geom.Extent, geo geom.Geometry) planar.HitMapper {
-	hm, err := New(clipbox, geo)
+func MustNew(ctx context.Context, clipbox *geom.Extent, geo geom.Geometry) planar.HitMapper {
+	hm, err := New(ctx, clipbox, geo)
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +86,7 @@ func MustNew(clipbox *geom.Extent, geo geom.Geometry) planar.HitMapper {
 }
 
 // NewHitMap will return a Polygon Hit map, a Ordered Hit Map, or a nil Hit map based on the geomtry type.
-func New(clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
+func New(ctx context.Context, clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
 
 	switch g := geo.(type) {
 	case geom.Polygoner:
@@ -97,14 +98,14 @@ func New(clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
 			log.Printf("Polygon rings: %v", len(plyg))
 		}
 
-		return NewFromPolygons(nil, plyg)
+		return NewFromPolygons(ctx, nil, plyg)
 
 	case geom.MultiPolygoner:
 
 		if debug {
 			log.Printf("Settup up MultiPolygon Hitmap")
 		}
-		return NewFromPolygons(nil, g.Polygons()...)
+		return NewFromPolygons(ctx, nil, g.Polygons()...)
 
 	case geom.Collectioner:
 
@@ -114,7 +115,7 @@ func New(clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
 		geometries := g.Geometries()
 		ghms := make([]planar.HitMapper, 0, len(geometries))
 		for i := range geometries {
-			g, err := New(clipbox, geometries[i])
+			g, err := New(ctx, clipbox, geometries[i])
 			if err != nil {
 				return nil, err
 			}
@@ -125,7 +126,7 @@ func New(clipbox *geom.Extent, geo geom.Geometry) (planar.HitMapper, error) {
 			ghms = append(ghms, g)
 		}
 		sort.Sort(ByAreaDec(ghms))
-		return NewOrderedHM(ghms...), nil
+		return NewOrderedHM(ctx, ghms...), nil
 
 	case geom.Pointer, geom.MultiPointer, geom.LineStringer, geom.MultiLineStringer:
 		return nil, nil

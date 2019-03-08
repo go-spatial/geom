@@ -5,6 +5,10 @@ import (
 	"math"
 )
 
+func round(x, unit float64) float64 {
+	return math.Round(x/unit) * unit
+}
+
 var ErrPointsAreCoLinear = errors.New("given points are colinear")
 
 type Circle struct {
@@ -83,7 +87,7 @@ func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	r := math.Sqrt((vA * vA) + (vB * vB))
 	return Circle{
 		Center: [2]float64{x, y},
-		Radius: r,
+		Radius: round(r,0.0001),
 	}, nil
 }
 
