@@ -255,6 +255,10 @@ func Encode(geo geom.Geometry) (string, error) {
 
 		return Encode(geom.LineString(g[:]))
 
+	case [2][2]float64:
+
+		return Encode(geom.LineString(g[:]))
+
 	case [][2]float64:
 
 		return Encode(geom.LineString(g))

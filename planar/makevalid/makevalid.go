@@ -121,6 +121,11 @@ func splitIntersectingLines(ctx context.Context, clipbox *geom.Extent, lines []g
 
 	const tolerance = 0.001
 
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+	}
+
 	// This will hold all the points that will make up the parts of the lines
 	// to split, not including the end points.
 	newPartialSegments := make([][][2]float64, len(lines))
@@ -129,6 +134,13 @@ func splitIntersectingLines(ctx context.Context, clipbox *geom.Extent, lines []g
 	eq.FindIntersects(ctx, true, func(src, dst int, pt [2]float64) error {
 		newPartialSegments[src] = append(newPartialSegments[src], roundPoint(pt, tolerance))
 		newPartialSegments[dst] = append(newPartialSegments[dst], roundPoint(pt, tolerance))
+		if debug {
+			debugger.Record(ctx,
+				pt,
+				"IntersectPoint",
+				"An Intersection point %v %v", src, dst,
+			)
+		}
 		return nil
 	})
 	for idx, pseg := range newPartialSegments {
@@ -153,7 +165,21 @@ func splitIntersectingLines(ctx context.Context, clipbox *geom.Extent, lines []g
 			i = j
 			if clipbox != nil && !clipbox.ContainsLine(ln) {
 				// Does not intersect the clipbox skip
+				if debug {
+					debugger.Record(ctx,
+						ln,
+						"line:filtered",
+						"line (%v)", dst,
+					)
+				}
 				continue
+			}
+			if debug {
+				debugger.Record(ctx,
+					ln,
+					"line",
+					"line (%v)", dst,
+				)
 			}
 			nlines = append(nlines, geom.Line(ln))
 		}

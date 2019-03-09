@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
@@ -247,8 +248,15 @@ func TestSplitIntersectingLines(t *testing.T) {
 			}
 
 			if !cmp.GeomLineEqual(tc.newLines, segs) {
-				t.Errorf("lines, expected %v got %v", tc.newLines, segs)
+				if len(tc.newLines) != len(segs) {
+					t.Errorf("number of segs, expected %d, got %d", len(tc.newLines), len(segs))
+				} else {
+					t.Errorf("segs, expected\n%#v\n\t,\n\t got\n%#v\n", tc.newLines, segs)
+					t.Logf(dumpWKTLineSegments("", tc.newLines, segs))
+				}
+				return
 			}
+
 		}
 	}
 	tests := [...]tcase{
@@ -269,16 +277,15 @@ func TestSplitIntersectingLines(t *testing.T) {
 			),
 			newLines: []geom.Line{
 
-				{{1286957.75, 6138810.018}, {1286970.842, 6138810.018}},
-				{{1286970.842, 6138810.018}, {1286970.842, 6138820.849}},
-				{{1286970.842, 6138820.849}, {1286970.842, 6138849.43}},
-				{{1286957.75, 6138810.018}, {1286961.022, 6138815.252}},
-				{{1286961.022, 6138815.252}, {1286966.229, 6138819.34}},
-				{{1286966.229, 6138819.34}, {1286970.842, 6138820.849}},
-
-				{{1286970.842, 6138849.43}, {1286931.429, 6138849.43}},
-				{{1286931.429, 6138849.43}, {1286931.429, 6138810.018}},
-				{{1286931.429, 6138810.018}, {1286957.75, 6138810.018}},
+				geom.Line{[2]float64{1.286931429e+06, 6.138810018e+06}, [2]float64{1.286931429e+06, 6.13884943e+06}},
+				geom.Line{[2]float64{1.286931429e+06, 6.138810018e+06}, [2]float64{1.28695775e+06, 6.138810018e+06}},
+				geom.Line{[2]float64{1.286931429e+06, 6.13884943e+06}, [2]float64{1.286970842e+06, 6.13884943e+06}},
+				geom.Line{[2]float64{1.28695775e+06, 6.138810018e+06}, [2]float64{1.286961022e+06, 6.1388152530000005e+06}},
+				geom.Line{[2]float64{1.28695775e+06, 6.138810018e+06}, [2]float64{1.286970842e+06, 6.138810018e+06}},
+				geom.Line{[2]float64{1.286961022e+06, 6.1388152530000005e+06}, [2]float64{1.286966229e+06, 6.13881934e+06}},
+				geom.Line{[2]float64{1.286966229e+06, 6.13881934e+06}, [2]float64{1.286970842e+06, 6.138820849e+06}},
+				geom.Line{[2]float64{1.286970842e+06, 6.138810018e+06}, [2]float64{1.286970842e+06, 6.138820849e+06}},
+				geom.Line{[2]float64{1.286970842e+06, 6.138820849e+06}, [2]float64{1.286970842e+06, 6.13884943e+06}},
 			},
 		},
 	}

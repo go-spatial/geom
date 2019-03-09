@@ -226,13 +226,40 @@ func (e *Extent) Contains(ne MinMaxer) bool {
 		e.MaxY() >= ne.MaxY()
 }
 
+// Float64 compares two floats to see if they are within the given tolerance.
+func cmpFloat64(f1, f2, tolerance float64) bool {
+	if math.IsInf(f1, 1) {
+		return math.IsInf(f2, 1)
+	}
+	if math.IsInf(f2, 1) {
+		return math.IsInf(f1, 1)
+	}
+	if math.IsInf(f1, -1) {
+		return math.IsInf(f2, -1)
+	}
+	if math.IsInf(f2, -1) {
+		return math.IsInf(f1, -1)
+	}
+	diff := math.Abs(f1 - f2)
+	return diff <= tolerance
+}
+
+func floatLessOrEqual(pt1, pt2 float64) bool {
+	if cmpFloat64(pt1, pt2, 0.001) {
+		return true
+	}
+	return pt1 < pt2
+}
+
 // ContainsPoint will return whether the given point is inside of the extent.
 func (e *Extent) ContainsPoint(pt [2]float64) bool {
 	if e == nil {
 		return true
 	}
-	return e.MinX() <= pt[0] && pt[0] <= e.MaxX() &&
-		e.MinY() <= pt[1] && pt[1] <= e.MaxY()
+
+	return floatLessOrEqual(e.MinX(), pt[0]) && floatLessOrEqual(pt[0], e.MaxX()) &&
+		floatLessOrEqual(e.MinY(), pt[1]) && floatLessOrEqual(pt[1], e.MaxY())
+
 }
 
 // ContainsLine will return weather the given line completely inside of the extent.
