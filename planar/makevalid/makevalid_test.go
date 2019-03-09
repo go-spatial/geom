@@ -218,19 +218,83 @@ func TestDestructure(t *testing.T) {
 
 func TestSplitIntersectingLines(t *testing.T) {
 	type tcase struct {
-		Lines   []geom.Line
-		ClipBox *geom.Extent
+		description string
+		lines       []geom.Line
+		clipbox     *geom.Extent
 
-		NewLines []geom.Line
+		newLines []geom.Line
 	}
-	fn := func(tc tcase) func(*testing.T) {
+	fn := func(ctx context.Context, tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
+			if debug {
+				ctx = debugger.SetTestName(ctx, t.Name())
+			}
 
+			segs := splitIntersectingLines(ctx, tc.clipbox, tc.lines)
+
+			sort.Sort(planar.LinesByXY(segs))
+			if debug {
+				debugger.Record(ctx, tc.clipbox, debugger.CategoryInput, "clipbox")
+				for i := range tc.lines {
+					debugger.Record(ctx, tc.lines[i], debugger.CategoryInput, "original line #%v", i)
+				}
+				for i := range tc.newLines {
+					debugger.Record(ctx, tc.newLines[i], debugger.CategoryExpected, "line #%v", i)
+				}
+				for i := range segs {
+					debugger.Record(ctx, segs[i], debugger.CategoryGot, "Segments #%v", i)
+				}
+			}
+
+			if !cmp.GeomLineEqual(tc.newLines, segs) {
+				t.Errorf("lines, expected %v got %v", tc.newLines, segs)
+			}
 		}
 	}
-	tests := [...]tcase{}
+	tests := [...]tcase{
+		{
+			description: "Github Issue 32",
+			lines: []geom.Line{
+				{{1286931.429, 6138810.018}, {1286970.842, 6138810.018}},
+				{{1286970.842, 6138810.018}, {1286970.842, 6138849.43}},
+				{{1286970.842, 6138849.43}, {1286931.429, 6138849.43}},
+				{{1286931.429, 6138849.43}, {1286931.429, 6138810.018}},
+				{{1286957.514, 6138809.64}, {1286961.022, 6138815.253}},
+				{{1286961.022, 6138815.253}, {1286966.229, 6138819.34}},
+				{{1286966.229, 6138819.34}, {1286972.518, 6138821.397}},
+			},
+			clipbox: geom.NewExtent(
+				[2]float64{1.2869314293799447e+06, 6.138810017620263e+06},
+				[2]float64{1.286970842222649e+06, 6.138849430462967e+06},
+			),
+			newLines: []geom.Line{
+
+				{{1286957.75, 6138810.018}, {1286970.842, 6138810.018}},
+				{{1286970.842, 6138810.018}, {1286970.842, 6138820.849}},
+				{{1286970.842, 6138820.849}, {1286970.842, 6138849.43}},
+				{{1286957.75, 6138810.018}, {1286961.022, 6138815.252}},
+				{{1286961.022, 6138815.252}, {1286966.229, 6138819.34}},
+				{{1286966.229, 6138819.34}, {1286970.842, 6138820.849}},
+
+				{{1286970.842, 6138849.43}, {1286931.429, 6138849.43}},
+				{{1286931.429, 6138849.43}, {1286931.429, 6138810.018}},
+				{{1286931.429, 6138810.018}, {1286957.75, 6138810.018}},
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+	}
 	for i, tc := range tests {
-		sort.Sort(planar.LinesByXY(tc.NewLines))
-		t.Run(strconv.Itoa(i), fn(tc))
+		sort.Sort(planar.LinesByXY(tc.newLines))
+		name := tc.description
+		if name == "" {
+			name = strconv.Itoa(i)
+		}
+		t.Run(name, fn(ctx, tc))
 	}
 }
