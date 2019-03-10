@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
