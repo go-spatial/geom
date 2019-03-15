@@ -80,7 +80,7 @@ func checkMakeValid(tb testing.TB) {
 			}
 
 			if !cmp.MultiPolygonerEqual(tc.ExpectedMultiPolygon, mp) {
-				t.Errorf("mulitpolygon, expected %v got %v", tc.ExpectedMultiPolygon, mp)
+				t.Errorf("mulitpolygon,\n\t expected\n\t\t%#v\n\t got\n\t\t%#v", tc.ExpectedMultiPolygon, mp)
 				return
 			}
 		}

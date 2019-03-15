@@ -14,4 +14,6 @@ func FuncFileLine(lvl uint) (string, string, int) {
 	return ffl.Func, ffl.File, ffl.LineNumber
 }
 
+func FFL(lvl uint) FuncFileLineType { return recdr.FuncFileLine(lvl + 1) }
+
 func funcFileLine() FuncFileLineType { return recdr.FuncFileLine(1) }

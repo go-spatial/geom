@@ -51,18 +51,17 @@ func GetRecorderFromContext(ctx context.Context) Recorder {
 	return r
 }
 
-// AugmentContext is will add and configure the recorder used to track the
-// debugging entries into the context.
-// A Close call should be supplied along with the AugmentContext  call, this
-// is usually done using a defer
+// AugmentRecorder is will create and configure a new recorder (if needed) to
+// be used to track the debugging entries
+// A Close call on the recoder should be supplied along with the
+// AugmentRecorder call, this is usually done using a defer
 // If the testFilename is "", then the function name of the calling function
 // will be used as the filename for the database file.
-func AugmentContext(ctx context.Context, testFilename string) context.Context {
-	if rec := GetRecorderFromContext(ctx); rec.IsValid() {
+func AugmentRecorder(rec Recorder, testFilename string) (Recorder, bool) {
+	if rec.IsValid() {
 		rec.IncrementCount()
-		return ctx
+		return rec, false
 	}
-
 	if testFilename == "" {
 		testFilename = funcFileLine().Func
 	}
@@ -76,12 +75,24 @@ func AugmentContext(ctx context.Context, testFilename string) context.Context {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to created spatialite db: %v", err))
 	}
-	log.Println("Write debugger output to", filename)
-	return context.WithValue(
-		ctx,
-		ContextRecorderKey,
-		Recorder{recorder: &recorder{Interface: rcd}},
-	)
+	log.Println("Writing debugger output to", filename)
+	return Recorder{recorder: &recorder{Interface: rcd}}, true
+}
+
+// AugmentContext is will add and configure the recorder used to track the
+// debugging entries into the context.
+// A Close call should be supplied along with the AugmentContext  call, this
+// is usually done using a defer
+// If the testFilename is "", then the function name of the calling function
+// will be used as the filename for the database file.
+func AugmentContext(ctx context.Context, testFilename string) context.Context {
+	if testFilename == "" {
+		testFilename = funcFileLine().Func
+	}
+	if rec, newRec := AugmentRecorder(GetRecorderFromContext(ctx), testFilename); newRec {
+		return context.WithValue(ctx, ContextRecorderKey, rec)
+	}
+	return ctx
 }
 
 // Close allows the recorder to release any resources it as, each
@@ -98,16 +109,24 @@ func SetTestName(ctx context.Context, name string) context.Context {
 
 // Record records the geom and descriptive attributes into the debugging system
 func Record(ctx context.Context, geom interface{}, category string, descriptionFormat string, data ...interface{}) {
-	rec := GetRecorderFromContext(ctx)
+	RecordFFLOn(GetRecorderFromContext(ctx), FFL(1), geom, category, descriptionFormat, data...)
+}
+
+// RecordOn records the geom and descriptive attributes into the debugging system
+func RecordOn(rec Recorder, geom interface{}, category string, descriptionFormat string, data ...interface{}) {
+	RecordFFLOn(rec, FFL(1), geom, category, descriptionFormat, data...)
+}
+
+// RecordFFLOn records the geom and descriptive attributes into the debugging system with the give Func File Line values
+func RecordFFLOn(rec Recorder, ffl FuncFileLineType, geom interface{}, category string, descriptionFormat string, data ...interface{}) {
 	if !rec.IsValid() {
 		return
 	}
-
 	description := fmt.Sprintf(descriptionFormat, data...)
 
 	err := rec.Record(
 		geom,
-		funcFileLine(),
+		ffl,
 		TestDescription{
 			Category:    category,
 			Description: description,

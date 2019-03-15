@@ -1,12 +1,14 @@
 package delaunay
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
 )
 
 func TestConstrainedDelaunayTriangulation(t *testing.T) {
@@ -18,13 +20,13 @@ func TestConstrainedDelaunayTriangulation(t *testing.T) {
 		triangles []geom.Triangle
 		err       error
 	}
-	fn := func(tc tcase) func(t *testing.T) {
+	fn := func(ctx context.Context, tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 
 			t.Logf("Constraints:\n%v", wkt.MustEncode(tc.constraints))
 			t.Logf("points:%v", tc.points)
 
-			builder := NewConstrained(TOLERANCE, tc.points, tc.constraints)
+			builder := NewConstrainedWithCtx(ctx, TOLERANCE, tc.points, tc.constraints)
 			start := time.Now()
 			triangles, err := builder.Triangles(tc.withFrame)
 			t.Logf("triangulations of segs(%v) took %v\n", len(tc.constraints), time.Since(start))
@@ -39,6 +41,21 @@ func TestConstrainedDelaunayTriangulation(t *testing.T) {
 			if err != nil {
 				t.Errorf("error, expected %v got %v", tc.err, err)
 				return
+			}
+
+			if debug {
+				for i, pt := range tc.points {
+					debugger.Record(ctx, pt, debugger.CategoryInput, "Original point: %v", i)
+				}
+				for i, cnst := range tc.constraints {
+					debugger.Record(ctx, cnst, debugger.CategoryInput, "Original constraint: %v", i)
+				}
+				for i, tri := range tc.triangles {
+					debugger.Record(ctx, tri, debugger.CategoryExpected, "Expected Triangles with frame (%v): %v", tc.withFrame, i)
+				}
+				for i, tri := range triangles {
+					debugger.Record(ctx, tri, debugger.CategoryGot, "Result Triangles: %v", i)
+				}
 			}
 
 			if !reflect.DeepEqual(tc.triangles, triangles) {
@@ -4262,8 +4279,15 @@ func TestConstrainedDelaunayTriangulation(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "delaunay.constrained")
+		defer debugger.Close(ctx)
+	}
+
 	for name, tc := range tests {
-		t.Run(name, fn(tc))
+		t.Run(name, fn(ctx, tc))
 	}
 
 }

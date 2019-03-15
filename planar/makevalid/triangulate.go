@@ -19,7 +19,7 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 		log.Printf("Step   3 : generate triangles")
 	}
 
-	builder := delaunay.NewConstrained(delaunay.TOLERANCE, []geom.Point{}, segs)
+	builder := delaunay.NewConstrainedWithCtx(ctx, delaunay.TOLERANCE, []geom.Point{}, segs)
 
 	allTriangles, err := builder.Triangles(false)
 	if err != nil {
