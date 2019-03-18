@@ -235,3 +235,17 @@ This output should help identifiy where the code is failing. In our example abov
 the destructured line segments or the labeling. Taking the WKT output and putting it into qGIS can help visualize where the issues may lie.
 
 
+## running tests in docker-environment
+
+In case you don't have go installed, you can also run these tests inside a docker-container.
+
+grab some go-image: `docker pull golang:1.11.0-alpine3.8`
+cd into your `geom` folder and startup a container: `docker run --rm -ti -v $(pwd):/go/src/geom/vendor/github.com/go-spatial/geom golang:1.11.0-alpine3.8`
+
+```
+apk add git build-base
+cd /go/src/geom/vendor/github.com
+git clone --branch master --depth 1 https://github.com/mattn/go-sqlite3.git mattn/go-sqlite3
+cd /go/src/geom/vendor/github.com/go-spatial/geom/planar/makevalid
+go test -v -run "TestMakeValid"
+```
