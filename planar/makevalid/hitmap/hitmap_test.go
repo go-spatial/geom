@@ -1,12 +1,18 @@
 package hitmap
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 )
+
+func init() {
+	debugger.DefaultOutputDir = "_test_output"
+}
 
 func TestRingContains(t *testing.T) {
 	type pt struct {
@@ -122,33 +128,56 @@ func TestNewFromPolygon(t *testing.T) {
 		polygon geom.Polygon
 		err     error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		t.Parallel()
-		hm, err := NewFromPolygons(nil, tc.polygon.LinearRings())
-		if tc.err != nil {
-			if err == nil {
-				t.Errorf("error, expected %v got nil", tc.err)
-			} else if err.Error() != tc.err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err.Error(), err.Error())
+	fn := func(ctx context.Context, tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+
+			if debug {
+				ctx = debugger.SetTestName(ctx, t.Name())
 			}
-			return
+
+			t.Parallel()
+
+			hm, err := NewFromPolygons(ctx, nil, tc.polygon.LinearRings())
+			if tc.err != nil {
+				if err == nil {
+					t.Errorf("error, expected %v got nil", tc.err)
+				} else if err.Error() != tc.err.Error() {
+					t.Errorf("error, expected %v got %v", tc.err.Error(), err.Error())
+				}
+				return
+			}
+			if debug {
+				debugger.Record(ctx,
+					tc.polygon,
+					debugger.CategoryInput,
+					"new polygon.",
+				)
+			}
+			if err != nil {
+				t.Errorf("error, expected nil got %v", err)
+				return
+			}
+			// Don't want hm to be optimized away.
+			_ = hm
 		}
-		if err != nil {
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
-		// Don't want hm to be optimized away.
-		_ = hm
 	}
 	tests := map[string]tcase{
 		"Nil Polygon":                 {polygon: nil},
-		"Basic Polygon":               {polygon: geom.Polygon{}},
+		"Basic Empty Polygon":         {polygon: geom.Polygon{}},
 		"With one nil":                {polygon: geom.Polygon{nil}, err: geom.ErrInvalidLineString},
 		"With one empty line":         {polygon: geom.Polygon{[][2]float64{}}, err: geom.ErrInvalidLineString},
 		"With one one non-empty line": {polygon: geom.Polygon{[][2]float64{{10, 10}, {20, 10}, {20, 20}, {10, 20}}}},
 	}
+
+	ctx := context.Background()
+
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+	}
+
+
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(ctx, tc))
 	}
 }

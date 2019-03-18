@@ -1,6 +1,7 @@
 package delaunay
 
 import (
+	"context"
 	"errors"
 	"log"
 	"sort"
@@ -8,6 +9,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
@@ -15,16 +17,42 @@ import (
 type ConstrainedBuilder struct {
 	Builder
 	constraints edgeMap
+
+	// This is for debugging purposes
+	recorder debugger.Recorder
 }
 
 const TOLERANCE = 0.0001
 
-func NewConstrained(tolerance float64, points []geom.Point, constraints []geom.Line) (cb ConstrainedBuilder) {
+func NewConstrained(tolerance float64, points []geom.Point, constraints []geom.Line) ConstrainedBuilder {
+	return NewConstrainedWithCtx(
+		context.Background(),
+		tolerance,
+		points,
+		constraints,
+	)
+}
+func NewConstrainedWithCtx(ctx context.Context, tolerance float64, points []geom.Point, constraints []geom.Line) (cb ConstrainedBuilder) {
+
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+		for i, pt := range points {
+			debugger.Record(ctx, pt, DebuggerCategoryConstrained.With("points", "initial", i), "Original points %v", i)
+		}
+		cb.recorder = debugger.GetRecorderFromContext(ctx)
+	}
 
 	sort.Sort(sort.Reverse(byLength(constraints)))
 	// We need to normalize and unique the constraints
+	// TODO(gdey): We should check the constraints here to see if they are co-linear here, and if they
+	// are combine them. This would reduce the number of constraints and points the model has to deail
+	// with.
 	cb.constraints = make(edgeMap, len(constraints))
 	for i := range constraints {
+		if debug {
+			debugger.Record(ctx, constraints[i], DebuggerCategoryConstrained.With("constraints", "initial", i), "Original constraints %v", i)
+		}
 		cb.constraints.AddEdge(constraints[i])
 	}
 
@@ -42,9 +70,24 @@ func NewConstrained(tolerance float64, points []geom.Point, constraints []geom.L
 
 	// free up memory.
 	for i := range uniquePoints {
+		if debug {
+			debugger.Record(ctx, uniquePoints[i], DebuggerCategoryConstrained.With("points", "final", i), "final points %v", i)
+		}
 		cb.Builder.siteCoords[i] = quadedge.Vertex(uniquePoints[i])
 	}
 	return cb
+}
+
+func (cb *ConstrainedBuilder) debugRecord(geom interface{}, category string, descriptionFormat string, data ...interface{}) {
+	if debug {
+		debugger.RecordFFLOn(
+			cb.recorder,
+			debugger.FFL(1),
+			geom,
+			category,
+			descriptionFormat, data...,
+		)
+	}
 }
 
 func (cb *ConstrainedBuilder) addConstraint(l geom.Line) error {
@@ -154,7 +197,8 @@ func intersectedEdges(startingQE *quadedge.QuadEdge, end quadedge.Vertex) (inter
 	// Find the triangle t ∈ T that contains a and is cut by ab
 	t, err := quadedge.FindIntersectingTriangle(startingQE, end)
 
-	// TODO(gdey): ConincidentEdges
+	// TODO(gdey): ConincidentEdges -- We should be combining conincidental edges.
+	// This should probaly happend before we get here.
 	if err != nil {
 		if debug {
 			log.Println("returning error:", err)
@@ -210,12 +254,21 @@ func intersectedEdges(startingQE *quadedge.QuadEdge, end quadedge.Vertex) (inter
 
 func (cb *ConstrainedBuilder) insertConstraint(constraint geom.Line, i int) error {
 
+	if debug {
+		cb.recorder, _ = debugger.AugmentRecorder(cb.recorder, "")
+		defer cb.recorder.Close()
+	}
+
 	debugEdge := 472
 
 	// Let's build our lookup table
 	vertexIndex := cb.subdiv.VertexIndex()
 
 	if debug {
+		cb.debugRecord(constraint,
+			DebuggerCategoryConstrained.With("insert", i),
+			"insert constraint %v", i,
+		)
 		log.Printf("Constraint(%v)\n%v", i, wkt.MustEncode(constraint))
 	}
 	startingQE := vertexIndex[quadedge.Vertex(constraint[0])]
@@ -274,6 +327,8 @@ func (cb *ConstrainedBuilder) insertConstraint(constraint geom.Line, i int) erro
 					log.Printf("Constraint(%v):\n%v\n", i, wkt.MustEncode(constraint))
 					log.Printf("Constraints:\n%v\n", wkt.MustEncode(cb.constraints.Edges()))
 					log.Printf("Raw Constraints:\n%#v\n", cb.constraints.Edges())
+					// TODO:(gdey) should we keep this die statment. Also, need to
+					// use the new debugger facility here.
 					panic("Die!!!")
 				}
 			}
@@ -336,8 +391,11 @@ func (cb *ConstrainedBuilder) insertConstraint(constraint geom.Line, i int) erro
 func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, err error) {
 
 	if debug {
+		cb.recorder, _ = debugger.AugmentRecorder(cb.recorder, "")
+		defer cb.recorder.Close()
 		log.Println("Building Constraint Triangles")
 	}
+
 	if err = cb.Builder.initSubdiv(); err != nil {
 		if debug {
 			log.Println("returning error:", err)
@@ -346,9 +404,11 @@ func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, e
 	}
 
 	// Let's print out the triangulated polygon.
-	if debug {
-		log.Printf("Initial triangulation\n%v", cb.subdiv.DebugDumpEdges())
-	}
+	cb.debugRecord(
+		cb.subdiv.GetEdgesAsMultiLineString(),
+		DebuggerCategoryConstrained.With("triangulation"),
+		"initial triangulation",
+	)
 
 	for i, constraint := range cb.constraints.Edges() {
 		if err := cb.insertConstraint(constraint, i); err != nil {
@@ -366,10 +426,24 @@ func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, e
 				v := triEdges[i].Orig()
 				pts = append(pts, geom.Point(v))
 			}
-			log.Printf("Points:\n%v", wkt.MustEncode(pts))
-			log.Printf("Current triangulation edges\n%v", cb.subdiv.DebugDumpEdges())
-			log.Printf("Constraints: %#v", edges)
-			log.Printf("Constraints:\n%v", wkt.MustEncode(edges))
+			if debug {
+				cat := DebuggerCategoryConstrained.With("something_weird")
+				cb.debugRecord(
+					cb.subdiv.GetEdgesAsMultiLineString(),
+					cat,
+					"current triangulation edges",
+				)
+				cb.debugRecord(
+					pts,
+					cat,
+					"Points",
+				)
+				cb.debugRecord(
+					edges,
+					cat,
+					"Constraints",
+				)
+			}
 			return
 
 		}

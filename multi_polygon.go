@@ -8,11 +8,8 @@ var ErrNilMultiPolygon = errors.New("geom: nil MultiPolygon")
 type MultiPolygon [][][][2]float64
 
 // Polygons returns the array of polygons.
-func (mp *MultiPolygon) Polygons() [][][][2]float64 {
-	if mp == nil {
-		return [][][][2]float64{}
-	}
-	return *mp
+func (mp MultiPolygon) Polygons() [][][][2]float64 {
+	return [][][][2]float64(mp)
 }
 
 // SetPolygons modifies the array of 2D coordinates

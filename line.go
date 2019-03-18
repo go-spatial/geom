@@ -17,6 +17,8 @@ func (l Line) IsHorizontal() bool { return l[0][1] == l[1][1] }
 func (l Line) Point1() *Point     { return (*Point)(&l[0]) }
 func (l Line) Point2() *Point     { return (*Point)(&l[1]) }
 
+func (l Line) Verticies() [][2]float64 { return l[:] }
+
 // ContainsPoint checks to see if the given pont lines on the linesegment. (Incliding the end points.)
 func (l Line) ContainsPoint(pt [2]float64) bool {
 	minx, maxx := l[0][0], l[1][0]

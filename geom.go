@@ -3,6 +3,8 @@ package geom
 
 import "errors"
 
+const TOLERANCE = 0.000001
+
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
 type Geometry interface{}

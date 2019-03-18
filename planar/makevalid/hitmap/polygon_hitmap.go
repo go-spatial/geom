@@ -1,11 +1,13 @@
 package hitmap
 
 import (
+	"context"
 	"log"
 	"math/big"
 	"sort"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 )
 
@@ -19,8 +21,8 @@ type PolygonHM struct {
 }
 
 // MustNewFromPolygons is like NewFromPolygons except on error it will panic.
-func MustNewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) *PolygonHM {
-	p, err := NewFromPolygons(clipbox, plys...)
+func MustNewFromPolygons(ctx context.Context, clipbox *geom.Extent, plys ...[][][2]float64) *PolygonHM {
+	p, err := NewFromPolygons(ctx, clipbox, plys...)
 	if err != nil {
 		panic(err)
 	}
@@ -28,7 +30,7 @@ func MustNewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) *PolygonH
 }
 
 // NewFromPolygons assumes that the outer ring of each polygon is inside, and each inner ring is inside.
-func NewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, error) {
+func NewFromPolygons(ctx context.Context, clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, error) {
 
 	hm := &PolygonHM{
 		clipBox: new(geom.Extent),
@@ -36,12 +38,18 @@ func NewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, 
 	if debug {
 		log.Printf("Setting up Hitmap")
 		log.Printf("Polygons provided % 5v", len(plys))
+
 		for i := range plys {
 			log.Printf("[% 3v] Polygons Rings:[% 3v]", i, len(plys[i]))
 			for j := range plys[i] {
-				log.Printf("\t[%v]Ring: %v", j, plys[i][j])
+				debugger.Record(ctx,
+					plys[i][j],
+					DebuggerCategoryRing.With("polygon", j),
+					"Polygon %v : Ring %v", j, i,
+				)
 			}
 		}
+
 	}
 	for i := range plys {
 		if len(plys[i]) == 0 {
@@ -69,16 +77,26 @@ func NewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, 
 			ring := NewRing(plys[i][j+1], planar.Outside)
 			if clipbox == nil {
 				// add to the bb of ring to the hm clipbox
+				// Expand out the size of the hm Clipbox.
 				hm.clipBox.Add(ring)
 			}
+
 			hm.rings = append(hm.rings, ring)
 		}
 	}
 	sort.Sort(bySmallestBBArea(hm.rings))
 	if debug {
-		log.Printf("The Rings are as follows: %v", len(hm.rings))
+		debugger.Record(ctx,
+			hm.clipBox,
+			DebuggerCategoryHitmap,
+			"clipbox",
+		)
 		for i, r := range hm.rings {
-			log.Printf("\t% 5v : { Area: %v Label %v }", i, r.r.Extent().Area(), r.Label)
+			debugger.Record(ctx,
+				r.Segments(),
+				DebuggerCategoryRing.With("label", r.Label),
+				"ring[%v]{ Area: %v Label: %v }", i, r.r.Extent().Area(), r.Label,
+			)
 		}
 	}
 	return hm, nil

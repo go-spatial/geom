@@ -124,68 +124,88 @@ func TestFindMinIdx(t *testing.T) {
 
 func TestPoint(t *testing.T) {
 
-	less := func(p1, p2 [2]float64) bool {
-		if p1[0] == p2[0] {
-			return p1[1] < p2[1]
-		}
-		return p1[0] < p2[0]
-	}
-
 	type tc struct {
 		p1 [2]float64
 		p2 [2]float64
 		e  bool
+		lt bool
 	}
 
-	fn := func(t *testing.T, tc tc) {
-		gp1, gp2 := geom.Point(tc.p1), geom.Point(tc.p2)
-		e := (tc.p1[0] == tc.p2[0]) && (tc.p1[1] == tc.p2[1])
-		if e != PointEqual(tc.p1, tc.p2) {
-			t.Errorf("p1 == p2, expected %v got %v", e, !e)
-		}
-		if e != PointerEqual(gp1, gp2) {
-			t.Errorf("p1 == p2, expected %v got %v", e, !e)
-		}
-		if e != GeometryEqual(gp1, gp2) {
-			t.Errorf("p1 == p2, expected %v got %v", e, !e)
-		}
+	fn := func(tc tc) (string, func(*testing.T)) {
+		return fmt.Sprintf("%.2f_%.2f", tc.p1, tc.p2),
+			func(t *testing.T) {
 
-		l := less(tc.p1, tc.p2)
-		if l != PointLess(tc.p1, tc.p2) {
-			t.Errorf("p1 < p2, expected %v got %v", l, !l)
-		}
-		l = less(tc.p2, tc.p1)
-		if l != PointLess(tc.p2, tc.p1) {
-			t.Errorf("p2 < p1, expected %v got %v", l, !l)
-		}
+				t.Run("eq", func(t *testing.T) {
+					gp1, gp2 := geom.Point(tc.p1), geom.Point(tc.p2)
+					if tc.e != PointEqual(tc.p1, tc.p2) {
+						t.Errorf("p1 == p2, expected %v got %v", tc.e, !tc.e)
+					}
+					if tc.e != PointerEqual(gp1, gp2) {
+						t.Errorf("p1 == p2, expected %v got %v", tc.e, !tc.e)
+					}
+					if tc.e != GeometryEqual(gp1, gp2) {
+						t.Errorf("p1 == p2, expected %v got %v", tc.e, !tc.e)
+					}
+				})
+				t.Run("lt", func(t *testing.T) {
 
+					if tc.lt != PointLess(tc.p1, tc.p2) {
+						t.Errorf("p1 < p2, expected %v got %v", tc.lt, !tc.lt)
+					}
+				})
+
+			}
 	}
 
-	tests := map[string]tc{
-		"0": {
+	tests := [...]tc{
+		{
 			p1: [2]float64{1, 2},
 			p2: [2]float64{1, 2},
 			e:  true,
+			lt: false,
 		},
-		"1": {
+		{
 			p1: [2]float64{1, 1},
 			p2: [2]float64{1, 2},
 			e:  false,
+			lt: true,
 		},
-		"3": {
+		{
 			p1: [2]float64{1, 2},
 			p2: [2]float64{2, 2},
 			e:  false,
+			lt: true,
 		},
-		"4": {
+		{
 			p1: [2]float64{1, 1},
 			p2: [2]float64{2, 2},
 			e:  false,
+			lt: true,
 		},
+		{
+			p1: [2]float64{1286969.19, 6138821.40},
+			p2: [2]float64{1286969.19, 6138807.59},
+			e:  false,
+			lt: false,
+		},
+		{
+			p1: [2]float64{1286969.19, 6138807.59},
+			p2: [2]float64{1286969.19, 6138821.40},
+			e:  false,
+			lt: true,
+		},
+		/*
+			[
+			{1.286969190251759e+06 ,6.138807588546206e+06}
+			{1.2869691902517593e+06,6.138820308571075e+06}
+			{1.286969190251759e+06 ,6.138821397104245e+06}
+			{1.28696919030943e+06  ,6.13880758852643e+06 }
+			{1.28696919030943e+06  ,6.138821397139203e+06}
+			]
+		*/
 	}
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	for _, tc := range tests {
+		t.Run(fn(tc))
 	}
 
 }
@@ -800,7 +820,7 @@ func TestFloat64(t *testing.T) {
 	fn := func(t *testing.T, tc tcase) {
 		g := Float64(tc.f1, tc.f2, tc.t)
 		if g != tc.e {
-			t.Errorf(" Float64, expected %v, got %v", tc.e, g)
+			t.Errorf(" Float64 %v : %v, expected %v, got %v", tc.f1, tc.f2, tc.e, g)
 		}
 	}
 	tests := map[string]tcase{

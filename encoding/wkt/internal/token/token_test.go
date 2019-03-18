@@ -73,8 +73,8 @@ func TestParsePointValue(t *testing.T) {
 func TestParsePointe(t *testing.T) {
 	type tcase struct {
 		input string
-		exp *geom.Point
-		err error
+		exp   *geom.Point
+		err   error
 	}
 	fn := func(tc tcase) (string, func(t *testing.T)) {
 		return tc.input, func(t *testing.T) {
@@ -197,6 +197,8 @@ func TestParseFloat64(t *testing.T) {
 	}
 	tests := []tcase{
 		{input: "-12", exp: -12.0},
+		{input: "-.12", exp: -0.12},
+		{input: "-0.12", exp: -0.12},
 		{input: "0", exp: 0.0},
 		{input: "+1000.00", exp: 1000.0},
 		{input: "-12000.00", exp: -12000.0},

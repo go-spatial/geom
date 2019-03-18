@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math"
 	"sort"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/intersect"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
@@ -18,7 +20,7 @@ import (
 type Makevalid struct {
 	Hitmap planar.HitMapper
 	// Currently not used, but once we have the IsValid function, we can use this instead
-	// Of running the MakeValid routine on a Geometry that is alreayd valid.
+	// Of running the MakeValid routine on a Geometry that is already valid.
 	// Used to clip geometries that are not Polygon and MultiPolygons
 	Clipper planar.Clipper
 }
@@ -72,7 +74,117 @@ type ByXYLine []geom.Line
 func (a ByXYLine) Len() int      { return len(a) }
 func (a ByXYLine) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByXYLine) Less(i, j int) bool {
-	return cmp.PointLess(a[i][0], a[j][0]) || (cmp.PointEqual(a[i][0], a[j][0]) && cmp.PointLess(a[i][1], a[j][1]))
+	if !cmp.PointEqual(a[i][0], a[j][0]) {
+		return cmp.PointLess(a[i][0], a[j][0])
+	}
+	return cmp.PointLess(a[i][1], a[j][1])
+}
+
+// filterLinesbyClipbox will iterate through all the given lines returning only lines that
+// intersect with the clipbox. A nil clipbox is assumed to indicate a clipbox containing the
+// whole universe, and so all lines are returned unfiltered.
+func filterLinesByClipbox(clipbox *geom.Extent, lines []geom.Line) (nlines []geom.Line) {
+
+	if clipbox == nil {
+		nlines = make([]geom.Line, len(lines))
+		copy(nlines, lines)
+		return nlines
+	}
+
+	for _, ln := range lines {
+		gext, err := geom.NewExtentFromGeometry(ln)
+		if err != nil {
+			log.Printf("Got an error trying to find the extent of %v: %v", wkt.MustEncode(ln), err)
+			continue
+		}
+		if _, ok := clipbox.Intersect(gext); ok {
+			// Keep lines that intersect our clipbox in some way.
+			nlines = append(nlines, ln)
+		}
+	}
+	return nlines
+}
+
+func round(x, unit float64) float64 {
+	return math.Round(x/unit) * unit
+}
+
+func roundPoint(pt [2]float64, unit float64) (npt [2]float64) {
+	npt[0], npt[1] = round(pt[0], unit), round(pt[1], unit)
+	return npt
+}
+
+// splitIntersectingLines will split the given set of lines so that in any lines that intersect
+// each other are split into new lines. If a clipbox is provided (not nil) then any line not
+// wholly contained by the clip box will be discarded.
+func splitIntersectingLines(ctx context.Context, clipbox *geom.Extent, lines []geom.Line) (nlines []geom.Line) {
+
+	const tolerance = 0.001
+
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+	}
+
+	// This will hold all the points that will make up the parts of the lines
+	// to split, not including the end points.
+	newPartialSegments := make([][][2]float64, len(lines))
+
+	eq := intersect.NewEventQueue(lines)
+	eq.FindIntersects(ctx, true, func(src, dst int, pt [2]float64) error {
+		newPartialSegments[src] = append(newPartialSegments[src], roundPoint(pt, tolerance))
+		newPartialSegments[dst] = append(newPartialSegments[dst], roundPoint(pt, tolerance))
+		if debug {
+			debugger.Record(ctx,
+				pt,
+				"IntersectPoint",
+				"An Intersection point %v %v", src, dst,
+			)
+		}
+		return nil
+	})
+	for idx, pseg := range newPartialSegments {
+
+		// Add the end points to the pseg
+		pseg = append(pseg, roundPoint(lines[idx][0], tolerance), roundPoint(lines[idx][1], tolerance))
+
+		// Sort points
+		sort.Sort(ByXYPoint(pseg))
+
+		// Generate new segments
+		i := 0
+		for j := 1; j < len(pseg); j++ {
+			dst := planar.FloatPointDistance2(pseg[i], pseg[j])
+			// found a line
+			ln := [2][2]float64{pseg[i], pseg[j]}
+
+			// using the squared distance
+			if dst <= tolerance {
+				continue
+			}
+			i = j
+			if clipbox != nil && !clipbox.ContainsLine(ln) {
+				// Does not intersect the clipbox skip
+				if debug {
+					debugger.Record(ctx,
+						ln,
+						"line:filtered",
+						"line (%v)", dst,
+					)
+				}
+				continue
+			}
+			if debug {
+				debugger.Record(ctx,
+					ln,
+					"line",
+					"line (%v)", dst,
+				)
+			}
+			nlines = append(nlines, geom.Line(ln))
+		}
+	}
+	return nlines
 }
 
 // Destructure will take a multipolygon, break up the polygon into a set of segments that have the following characteristics:
@@ -82,13 +194,26 @@ func (a ByXYLine) Less(i, j int) bool {
 // 4. line segments outside of the clipbox will be clipped
 func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) ([]geom.Line, error) {
 
+	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+	}
+
 	segments, err := asSegments(*multipolygon)
 	if err != nil {
-		if debug {
-			log.Printf("asSegments returned error: %v", err)
-		}
 		return nil, err
 	}
+
+	if debug {
+		for i, seg := range segments {
+			debugger.Record(ctx,
+				seg,
+				"asSegment",
+				"Original Segment #%v", i,
+			)
+		}
+	}
+
 	gext, err := geom.NewExtentFromGeometry(multipolygon)
 	if err != nil {
 		return nil, err
@@ -97,71 +222,42 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	// Let's see if our clip box is bigger then our polygon.
 	// if it is we don't need the clip box.
 	hasClipbox := clipbox != nil && !clipbox.Contains(gext)
-	if debug {
-		log.Printf("\thasClipbox: %v && !%v", clipbox != nil, clipbox.Contains(gext))
-	}
-	var clpbx *geom.Extent
+
+	// var clpbx *geom.Extent
 	// Let's get the edges of our clipbox; as segments and add it to the begining.
 	if hasClipbox {
-		var ok bool
-		// Let get the intersection of the clipbox and the extent of the geometry.
-		if clpbx, ok = clipbox.Intersect(gext); !ok {
-			if debug {
-				log.Printf("\tGeometry Extent does not intersect the clipbox?\nGeometry Extent:%#v\n%v\n clipbox Extent:%#v\n%v\n ", gext, wkt.MustEncode(gext), clipbox, wkt.MustEncode(clipbox))
-			}
-			return []geom.Line{}, nil
-		}
 
-		edges := clpbx.Edges(nil)
+		filteredSegments := filterLinesByClipbox(clipbox, segments)
+
+		edges := clipbox.Edges(nil)
 		segments = append([]geom.Line{
 			geom.Line(edges[0]), geom.Line(edges[1]),
 			geom.Line(edges[2]), geom.Line(edges[3]),
-		}, segments...)
-	}
-	ipts := make(map[int][][2]float64)
+		}, filteredSegments...)
 
-	// Lets find all the places we need to split the lines on.
-	eq := intersect.NewEventQueue(segments)
-	eq.FindIntersects(ctx, true, func(src, dest int, pt [2]float64) error {
-		ipts[src] = append(ipts[src], pt)
-		ipts[dest] = append(ipts[dest], pt)
-		return nil
-	})
-
-	// Time to start splitting lines. if we have a clip box we can ignore the first 4 (0,1,2,3) lines.
-	offset := 0
-	/*
-		if hasClipbox {
-			offset = 4
-		}
-	*/
-
-	nsegs := make([]geom.Line, 0, len(segments))
-
-	for i := offset; i < len(segments); i++ {
-		pts := append([][2]float64{segments[i][0], segments[i][1]}, ipts[i]...)
-
-		// Normalize the direction of the points.
-		sort.Sort(ByXYPoint(pts))
-
-		for j := 1; j < len(pts); j++ {
-			if cmp.PointEqual(pts[j-1], pts[j]) {
-				continue
+		if debug {
+			for i, seg := range segments {
+				debugger.Record(ctx,
+					seg,
+					"filterLinesByClipbox",
+					"Filtered Segment #%v", i,
+				)
 			}
-			nl := geom.Line{pts[j-1], pts[j]}
-			if hasClipbox && !clpbx.ContainsLine(nl) {
-				// Not in clipbox discard segment.
-				continue
-			}
-			nsegs = append(nsegs, nl)
-		}
-		if ctx.Err() != nil {
-			return nil, err
 		}
 	}
 
-	//unique(nsegs)
-	nsegs = keepShortestOfSameSlopeSPoint(nsegs)
+	nsegs := splitIntersectingLines(ctx, clipbox, segments)
+
+	if debug {
+		for i, seg := range nsegs {
+			debugger.Record(ctx,
+				seg,
+				"splitIntersectingLines",
+				"Split Segment #%v", i,
+			)
+		}
+	}
+
 	return nsegs, nil
 }
 
@@ -245,39 +341,36 @@ func unique(segs []geom.Line) {
 }
 
 func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (*geom.MultiPolygon, error) {
+
 	if debug {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.Close(ctx)
+
 		log.Printf("*Step  1 : Destructure the geometry into segments w/ the clipbox applied.")
 	}
+
 	segs, err := Destructure(ctx, clipbox, multipolygon)
+
 	if err != nil {
-		if debug {
-			log.Printf("Destructure returned err %v", err)
-		}
 		return nil, err
 	}
+
 	if len(segs) == 0 {
 		if debug {
 			log.Printf("Step   1a: Segments are zero.")
-			log.Printf("\t multiPolygon: %+v", multipolygon)
-			log.Printf("\n clipbox:      %+v", clipbox)
 		}
 		return nil, nil
 	}
+
 	if debug {
-		log.Printf("Step   2 : Convert segments to linestrings to use in triangleuation.")
+		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
 	}
 
-	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
+	hm, err := hitmap.NewFromPolygons(ctx, nil, (*multipolygon)...)
 	if err != nil {
 		return nil, err
 	}
 
-	if debug {
-		log.Printf("triangulating segs(%v)\n", len(segs))
-		for i, seg := range segs {
-			log.Printf("seg(% 4d):%v", i, wkt.MustEncode(geom.Line(seg)))
-		}
-	}
 	triangles, err := InsideTrianglesForGeometry(ctx, segs, hm)
 	if err != nil {
 		return nil, err
