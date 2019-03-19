@@ -84,8 +84,8 @@ func (u Vertex) MarshalJSON() ([]byte, error) {
 }
 
 func (u Vertex) Equals(other Vertex) bool {
+	return cmp.Float(u[0],other[0]) && cmp.Float(u[1],other[1])
 
-	return u[0] == other[0] && u[1] == other[1]
 }
 
 func (u Vertex) EqualsTolerance(other Vertex, tolerance float64) bool {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 )
 
@@ -61,6 +62,9 @@ Author Martin Davis
 Ported to Go by Jason R. Surratt
 */
 type QuadEdgeSubdivision struct {
+
+	// For debugging purposes
+	Recorder debugger.Recorder
 
 	// used for edge extraction to ensure edge uniqueness
 	visitedKey               int
@@ -109,6 +113,23 @@ func NewQuadEdgeSubdivision(env geom.Extent, tolerance float64) *QuadEdgeSubdivi
 	qes.startingEdge = qes.initSubdiv()
 	qes.locator = NewLastFoundQuadEdgeLocator(&qes)
 	return &qes
+}
+
+func (qes *QuadEdgeSubdivision) debugRecord(geom interface{}, category string, descriptionFormat string, data ...interface{}) {
+	if debug {
+		debugger.RecordFFLOn(
+			qes.Recorder,
+			debugger.FFL(0),
+			geom,
+			category,
+			descriptionFormat, data...,
+		)
+	}
+}
+
+func (qes *QuadEdgeSubdivision) debugAugementRecorder() debugger.Recorder {
+	qes.Recorder, _ = debugger.AugmentRecorder(qes.Recorder, debugger.FFL(1).Func)
+	return qes.Recorder
 }
 
 /*
@@ -954,7 +975,7 @@ returns a MultiLineString
 If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) GetEdgesAsMultiLineString() geom.MultiLineString {
-	quadEdges := qes.GetPrimaryEdges(false)
+	quadEdges := qes.GetPrimaryEdges(true)
 	var ms geom.MultiLineString
 	for _, qe := range quadEdges {
 		var ls [][2]float64

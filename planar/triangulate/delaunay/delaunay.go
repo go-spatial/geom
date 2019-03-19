@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 )
@@ -24,6 +25,26 @@ type Builder struct {
 	siteCoords []quadedge.Vertex
 	// subdiv is the quadEdge Subdivisions
 	subdiv *quadedge.QuadEdgeSubdivision
+
+	// This is for debugging purposes
+	recorder debugger.Recorder
+}
+
+func (b *Builder) debugRecord(geom interface{}, category string, descriptionFormat string, data ...interface{}) {
+	if debug {
+		debugger.RecordFFLOn(
+			b.recorder,
+			debugger.FFL(0),
+			geom,
+			category,
+			descriptionFormat, data...,
+		)
+	}
+}
+
+func (b *Builder) debugAugementRecorder() debugger.Recorder {
+	b.recorder, _ = debugger.AugmentRecorder(b.recorder, debugger.FFL(1).Func)
+	return b.recorder
 }
 
 func New(tolerance float64, points ...geom.Point) (b Builder) {
@@ -45,7 +66,15 @@ func New(tolerance float64, points ...geom.Point) (b Builder) {
 	return b
 }
 
+func (b *Builder) setRecorder(r debugger.Recorder) {
+	b.recorder = r
+}
+
 func (b *Builder) initSubdiv() error {
+	if debug {
+		defer b.debugAugementRecorder().Close()
+	}
+
 	if b.subdiv != nil {
 		log.Println("subdiv not nil")
 		return nil
@@ -55,12 +84,37 @@ func (b *Builder) initSubdiv() error {
 	}
 	siteEnv := geom.NewExtent([2]float64(b.siteCoords[0]))
 	for i := 1; i < len(b.siteCoords); i++ {
+		if debug {
+			b.debugRecord(
+				[2]float64(b.siteCoords[i]),
+				DebuggerCategoryBuilder.With("point", i),
+				"initial point %v", i,
+			)
+		}
 		siteEnv.AddPoints([2]float64(b.siteCoords[i]))
+	}
+	if debug {
+		b.debugRecord(
+			siteEnv,
+			DebuggerCategoryBuilder.With("extent"),
+			"initial extent of all points.",
+		)
 	}
 
 	b.subdiv = quadedge.NewQuadEdgeSubdivision(*siteEnv, b.Tolerance)
-	for _, v := range b.siteCoords {
-		if _, err := b.subdiv.InsertSite(v); err != nil {
+	if b.recorder.IsValid() {
+		b.subdiv.Recorder = b.recorder
+	}
+	for i := range b.siteCoords {
+		if _, err := b.subdiv.InsertSite(b.siteCoords[i]); err != nil {
+			if debug {
+				b.debugRecord(
+					[2]float64(b.siteCoords[i]),
+					DebuggerCategoryBuilder.With("failed", "insert", i),
+					"failed to insert point %v : %v", i, err,
+				)
+				log.Println("Returning error:", err)
+			}
 			return err
 		}
 	}
