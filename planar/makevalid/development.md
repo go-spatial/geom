@@ -244,8 +244,10 @@ cd into your `geom` folder and startup a container: `docker run --rm -ti -v $(pw
 
 ```
 apk add git build-base
+apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing libspatialite-dev
 cd /go/src/geom/vendor/github.com
 git clone --branch master --depth 1 https://github.com/mattn/go-sqlite3.git mattn/go-sqlite3
+// git clone --branch master --depth 1 https://github.com/shaxbee/go-spatialite.git shaxbee/go-spatialite
 cd /go/src/geom/vendor/github.com/go-spatial/geom/planar/makevalid
 go test -v -run "TestMakeValid"
 ```
