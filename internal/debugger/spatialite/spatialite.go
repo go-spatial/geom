@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/go-spatial/geom/internal/debugger/recorder"
 	_ "github.com/go-spatial/geom/internal/debugger/spatialite/go-spatialite"
@@ -13,6 +14,7 @@ import (
 
 type DB struct {
 	*sql.DB
+	lck sync.Mutex
 }
 
 func New(outputDir, filename string) (*DB, string, error) {
@@ -84,6 +86,7 @@ func (db *DB) Record(geom interface{}, ffl recorder.FuncFileLineType, tblTest re
 
 	type_, wktStr := recorder.TypeAndWKT(geom)
 	insertQuery := fmt.Sprintf(insertQueryFormat, type_)
+	db.lck.Lock()
 	_, err := db.Exec(insertQuery,
 
 		ffl.Func,
@@ -96,5 +99,6 @@ func (db *DB) Record(geom interface{}, ffl recorder.FuncFileLineType, tblTest re
 
 		wktStr,
 	)
+	db.lck.Unlock()
 	return err
 }
