@@ -14,8 +14,19 @@ var ErrCoincidentEdges = errors.New("coincident edges")
 func (qes *QuadEdgeSubdivision) InsertSite(v Vertex) (*QuadEdge, error) {
 
 	if debug {
-		log.Printf("Inserting: %v", v)
-		log.Printf("Initial: %v", qes.DebugDumpEdges())
+		defer qes.debugAugementRecorder().Close()
+		/*
+		for i, ls := range qes.GetEdgesAsMultiLineString() {
+			qes.debugRecord(ls,
+				DebuggerCategoryQES.With(i, "edge"),
+				"Initial:%v", i,
+			)
+		}
+		qes.debugRecord([2]float64(v),
+			DebuggerCategoryQES.With("vertex"),
+			"inserting: %v", v,
+		)
+		*/
 	}
 	/*
 		This code is based on Guibas and Stolfi (1985), with minor modifications
@@ -66,9 +77,16 @@ func (qes *QuadEdgeSubdivision) InsertSite(v Vertex) (*QuadEdge, error) {
 			e = e.OPrev()
 
 		case e.ONext() == startEdge:
+			/*
 			if debug {
-				log.Printf("New State: %v", qes.DebugDumpEdges())
+				for i, ls := range qes.GetEdgesAsMultiLineString() {
+					qes.debugRecord(ls,
+						DebuggerCategoryQES.With("new_state", i, "edge"),
+						"New State:%v", i,
+					)
+				}
 			}
+			*/
 			return base, nil // no more suspect edges.
 
 		}

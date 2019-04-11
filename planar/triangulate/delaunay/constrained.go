@@ -17,9 +17,6 @@ import (
 type ConstrainedBuilder struct {
 	Builder
 	constraints edgeMap
-
-	// This is for debugging purposes
-	recorder debugger.Recorder
 }
 
 const TOLERANCE = 0.0001
@@ -40,7 +37,7 @@ func NewConstrainedWithCtx(ctx context.Context, tolerance float64, points []geom
 		for i, pt := range points {
 			debugger.Record(ctx, pt, DebuggerCategoryConstrained.With("points", "initial", i), "Original points %v", i)
 		}
-		cb.recorder = debugger.GetRecorderFromContext(ctx)
+		cb.Builder.setRecorder(debugger.GetRecorderFromContext(ctx))
 	}
 
 	sort.Sort(sort.Reverse(byLength(constraints)))
@@ -78,17 +75,6 @@ func NewConstrainedWithCtx(ctx context.Context, tolerance float64, points []geom
 	return cb
 }
 
-func (cb *ConstrainedBuilder) debugRecord(geom interface{}, category string, descriptionFormat string, data ...interface{}) {
-	if debug {
-		debugger.RecordFFLOn(
-			cb.recorder,
-			debugger.FFL(1),
-			geom,
-			category,
-			descriptionFormat, data...,
-		)
-	}
-}
 
 func (cb *ConstrainedBuilder) addConstraint(l geom.Line) error {
 	if cb == nil {
@@ -277,14 +263,22 @@ func (cb *ConstrainedBuilder) insertConstraint(constraint geom.Line, i int) erro
 	// check to see if the constraint edge already exists in the triangulation.
 	found, err := quadedge.LocateSegment(startingQE, endVertex)
 	if err != nil {
+		if debug {
+			log.Printf("Got error trying to locate segment.")
+		}
 		return err
 	}
 	if found != nil {
 		// nothing to change; the edge already exists.
 		if debug && i == debugEdge {
 			log.Println("Edge already exists.", found)
-			log.Printf("Triangulation:\n%v\n", cb.subdiv.DebugDumpEdges())
-
+			for i, ln := range cb.subdiv.GetEdgesAsMultiLineString() {
+				cb.debugRecord(
+					ln,
+					DebuggerCategoryConstrained.With("insert", i, "triangulation"),
+					"insert %v triangulation", i,
+				)
+			}
 		}
 		return nil
 	}
@@ -306,9 +300,11 @@ func (cb *ConstrainedBuilder) insertConstraint(constraint geom.Line, i int) erro
 
 	for _, e := range removalList {
 
+		/*
 		if cb.subdiv.IsFrameEdge(e) {
 			continue
 		}
+		*/
 
 		for i, sharedVertex := range [2]quadedge.Vertex{e.Orig(), e.Dest()} {
 			classification := sharedVertex.Classify(startVertex, endVertex)
@@ -404,11 +400,15 @@ func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, e
 	}
 
 	// Let's print out the triangulated polygon.
-	cb.debugRecord(
-		cb.subdiv.GetEdgesAsMultiLineString(),
-		DebuggerCategoryConstrained.With("triangulation"),
-		"initial triangulation",
-	)
+	if debug {
+		for i, ln := range cb.subdiv.GetEdgesAsMultiLineString() {
+			cb.debugRecord(
+				ln,
+				DebuggerCategoryConstrained.With("triangulation", i),
+				"initial triangulation",
+			)
+		}
+	}
 
 	for i, constraint := range cb.constraints.Edges() {
 		if err := cb.insertConstraint(constraint, i); err != nil {
@@ -420,14 +420,14 @@ func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, e
 		var triangle geom.Triangle
 		if len(triEdges) != 3 {
 			edges := cb.constraints.Edges()
-			log.Printf("Something weird!")
+			log.Printf("there's something' strange in your neighborhood")
 			var pts []geom.Point
 			for i := range triEdges {
 				v := triEdges[i].Orig()
 				pts = append(pts, geom.Point(v))
 			}
 			if debug {
-				cat := DebuggerCategoryConstrained.With("something_weird")
+				cat := DebuggerCategoryConstrained.With("something_strange")
 				cb.debugRecord(
 					cb.subdiv.GetEdgesAsMultiLineString(),
 					cat,
@@ -438,11 +438,13 @@ func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, e
 					cat,
 					"Points",
 				)
-				cb.debugRecord(
-					edges,
-					cat,
-					"Constraints",
-				)
+				for i, edge := range edges {
+					cb.debugRecord(
+						edge,
+						cat,
+						"Constraint %v", i,
+					)
+				}
 			}
 			return
 
@@ -452,6 +454,11 @@ func (cb *ConstrainedBuilder) Triangles(withFrame bool) (tris []geom.Triangle, e
 			v := triEdges[i].Orig()
 			triangle[i] = [2]float64(v)
 		}
+		cb.debugRecord(
+			triangle,
+			DebuggerCategoryConstrained.With("triangle"),
+			"Found Triangle %v", len(tris),
+		)
 		tris = append(tris, triangle)
 	}, withFrame)
 	return tris, nil

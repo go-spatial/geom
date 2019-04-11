@@ -9,7 +9,8 @@ import (
 const debug = false
 
 const (
-	DebuggerCategoryConstrained = debugger.CategoryJoiner("constrained:")
+	DebuggerCategoryConstrained = debugger.CategoryJoiner("delaunay:constrained:")
+	DebuggerCategoryBuilder = debugger.CategoryJoiner("delaunay:")
 )
 
 func init() {

@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-spatial/geom/internal/debugger/spatialite"
+	"github.com/pborman/uuid"
 )
 
 const (
@@ -43,13 +45,20 @@ func AsString(vs ...interface{}) string {
 // IsValid() function on the recorder.
 func GetRecorderFromContext(ctx context.Context) Recorder {
 
-	name, _ := ctx.Value(ContextRecorderTestnameKey).(string)
 	r, _ := ctx.Value(ContextRecorderKey).(Recorder)
 
-	r.Desc.Name = name
+	if name, ok := ctx.Value(ContextRecorderTestnameKey).(string); ok {
+		r.Desc.Name = name
+	}
 
 	return r
 }
+
+var lck sync.Mutex
+var recrds = make(map[string]struct {
+	fn   string
+	rcrd *recorder
+})
 
 // AugmentRecorder is will create and configure a new recorder (if needed) to
 // be used to track the debugging entries
@@ -71,12 +80,36 @@ func AugmentRecorder(rec Recorder, testFilename string) (Recorder, bool) {
 		panic(fmt.Sprintf("Failed to created dir %v:%v", DefaultOutputDir, err))
 	}
 
-	rcd, filename, err := spatialite.New(DefaultOutputDir, testFilename)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to created spatialite db: %v", err))
+	lck.Lock()
+	defer lck.Unlock()
+	rcrd, ok := recrds[testFilename]
+	if !ok {
+		rcd, filename, err := spatialite.New(DefaultOutputDir, testFilename)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to created spatialite db (%v): %v", testFilename, err))
+			os.Exit(1)
+		}
+		rcrd = struct {
+			fn   string
+			rcrd *recorder
+		}{
+			fn:   filename,
+			rcrd: &recorder{Interface: rcd},
+		}
+		recrds[testFilename] = rcrd
+
+	} else {
+		rcrd.rcrd.IncrementCount()
 	}
-	log.Println("Writing debugger output to", filename)
-	return Recorder{recorder: &recorder{Interface: rcd}}, true
+	log.Println("Writing debugger output to", rcrd.fn)
+
+	return Recorder{
+		recorder: rcrd.rcrd,
+		Desc: TestDescription{
+			Name: uuid.NewRandom().String(),
+		},
+	}, true
+
 }
 
 // AugmentContext is will add and configure the recorder used to track the
@@ -124,15 +157,17 @@ func RecordFFLOn(rec Recorder, ffl FuncFileLineType, geom interface{}, category 
 	}
 	description := fmt.Sprintf(descriptionFormat, data...)
 
-	err := rec.Record(
-		geom,
-		ffl,
-		TestDescription{
-			Category:    category,
-			Description: description,
-		},
-	)
-	if err != nil {
-		panic(fmt.Sprintf("failed to record entry: %v", err))
-	}
+	go func() {
+		err := rec.Record(
+			geom,
+			ffl,
+			TestDescription{
+				Category:    category,
+				Description: description,
+			},
+		)
+		if err != nil {
+			panic(fmt.Sprintf("failed to record entry: %v", err))
+		}
+	}()
 }

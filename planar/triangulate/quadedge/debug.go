@@ -4,9 +4,12 @@ import (
 	"fmt"
 
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
 )
 
 const debug = false
+
+const DebuggerCategoryQES = debugger.CategoryJoiner("quadedge subdivision:")
 
 /*
 DebugDumpEdges returns a string with the WKT representation of the
