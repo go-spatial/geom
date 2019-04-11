@@ -14,4 +14,5 @@ MakeValid tests:
 6   | circle one right                 | `PASS` | ![6](_images/circle_one_right.png)
 7   | irregular polygon middle         | `FAIL:imgage good/Triangulation bad`                     | ![7](_images/irregular_polygon_middle.png) ![7](_images/irregular_polygon_middle_bad_triangulation.png)
 8   | irregular polygon right          | `PASS`       | ![8](_images/irregular_polygon_right.png)
+9   | irregular polygon detail 1 middle| `FAIL: vertex missing` | ![9](_images/irregular_polygon_detail1.png)
 
