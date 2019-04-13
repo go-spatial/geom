@@ -30,8 +30,10 @@ func init() {
 	debugger.DefaultOutputDir = "_test_output"
 }
 
-func TestMakeValid(t *testing.T)      { checkMakeValid(t) }
-func BenchmakrMakeValid(b *testing.B) { checkMakeValid(b) }
+func TestMakeValid(t *testing.T) {
+	// t.Skip() // FIXME: Remove this line before merge
+	checkMakeValid(t)
+}
 
 func checkMakeValid(tb testing.TB) {
 	type tcase struct {
@@ -302,5 +304,18 @@ func TestSplitIntersectingLines(t *testing.T) {
 			name = strconv.Itoa(i)
 		}
 		t.Run(name, fn(ctx, tc))
+	}
+}
+
+// BenchmarkMakeValid runs a single testcase from makevalidTestCases multiple times to support performance analysis
+// Make sure to PASS all the tests in the package. Otherwise benchmarks will NOT be run.
+func BenchmarkMakeValid(b *testing.B) {
+	ctx := context.Background()
+	benchmarkItem := makevalidTestCases[8]
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		hm, _ := hitmap.NewFromPolygons(ctx, benchmarkItem.ClipBox, benchmarkItem.MultiPolygon.Polygons()...)
+		mv := &Makevalid{Hitmap: hm}
+		_, _, _ = mv.Makevalid(ctx, benchmarkItem.MultiPolygon, benchmarkItem.ClipBox)
 	}
 }

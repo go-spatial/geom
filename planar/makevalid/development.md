@@ -252,3 +252,12 @@ git clone --branch master --depth 1 https://github.com/google/uuid.git google/uu
 cd /go/src/geom/vendor/github.com/go-spatial/geom/planar/makevalid
 go test -v -run "TestMakeValid"
 ```
+
+## running benchmarks
+
+run `go test -bench . -benchtime=2s`
+
+## References
+
+- Marco Franssen: [Test and benchmark your code in go](https://marcofranssen.nl/test-and-benchmark-your-code-in-go/) 
+
