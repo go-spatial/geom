@@ -16,3 +16,8 @@ MakeValid tests:
 8   | irregular polygon right          | `PASS`       | ![8](_images/irregular_polygon_right.png)
 9   | irregular polygon detail 1 middle| `FAIL: vertex missing` | ![9](_images/irregular_polygon_detail1.png)
 
+## Benchmark results
+
+- Using just one CPU (flag `-cpu 1`) results in ~15% faster (`~290µs/op`) calculations that using all (no `-cpu` flag set) CPUs evenly (`~340µs/op`) This could be explained by reduced context switches/copy operation between CPUs.
+
+

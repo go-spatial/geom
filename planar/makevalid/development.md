@@ -255,9 +255,10 @@ go test -v -run "TestMakeValid"
 
 ## running benchmarks
 
-run `go test -bench . -benchtime=2s`
+run `go test -bench . -benchtime=2s -benchmem`
 
 ## References
 
+- The Go Programming Language: [Package testing](https://golang.org/pkg/testing/)
 - Marco Franssen: [Test and benchmark your code in go](https://marcofranssen.nl/test-and-benchmark-your-code-in-go/) 
-
+- Dave Cheney: [How to write benchmarks in Go](https://dave.cheney.net/2013/06/30/how-to-write-benchmarks-in-go)

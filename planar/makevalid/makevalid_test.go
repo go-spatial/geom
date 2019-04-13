@@ -31,7 +31,7 @@ func init() {
 }
 
 func TestMakeValid(t *testing.T) {
-	// t.Skip() // FIXME: Remove this line before merge
+	// t.Skip() // HINT: Uncomment this line to run benchmarks while some tests still fail.
 	checkMakeValid(t)
 }
 
@@ -312,8 +312,14 @@ func TestSplitIntersectingLines(t *testing.T) {
 func BenchmarkMakeValid(b *testing.B) {
 	ctx := context.Background()
 	benchmarkItem := makevalidTestCases[8]
+
+	// In case the benchmark setup takes a lot of time, the timer can be reset with the following function
 	b.ResetTimer()
+
+	// This loop contains just the algorithms to be benchmarked. No checking, error handling whatsoever as this was
+	// already done during the test-stage which is run BEFORE any benchmarks
 	for i := 0; i < b.N; i++ {
+		// check regularly, that function calls are not removed by compiler optimization
 		hm, _ := hitmap.NewFromPolygons(ctx, benchmarkItem.ClipBox, benchmarkItem.MultiPolygon.Polygons()...)
 		mv := &Makevalid{Hitmap: hm}
 		_, _, _ = mv.Makevalid(ctx, benchmarkItem.MultiPolygon, benchmarkItem.ClipBox)
