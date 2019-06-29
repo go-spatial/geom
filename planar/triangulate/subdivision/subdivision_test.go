@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/go-spatial/geom/planar/triangulate/debugger"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar/triangulate/geometry"
 	"github.com/go-spatial/geom"
 )

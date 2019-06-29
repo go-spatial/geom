@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/go-spatial/geom/planar/triangulate/debugger"
+	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar/triangulate/geometry"
 	"github.com/go-spatial/geom/planar/triangulate/quadedge"
 	"github.com/go-spatial/geom"

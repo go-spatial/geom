@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"log"
 	"sync"
 
 	recdr "github.com/go-spatial/geom/internal/debugger/recorder"
@@ -10,6 +11,8 @@ type TestDescription = recdr.TestDescription
 
 type recorder struct {
 	recdr.Interface
+
+	wg sync.WaitGroup
 
 	clck sync.Mutex
 	// Number of times the DB connection has been "initilized", and expect
@@ -37,13 +40,39 @@ func (rec *recorder) Close() error {
 		return nil
 	}
 	rec.clck.Lock()
-	defer rec.clck.Unlock()
 	rec.count--
 	c := rec.count
-	if !rec.closed && c < 0 {
+	if !rec.closed && c <= 0 {
 		rec.closed = true
+		rec.clck.Unlock()
+		log.Println("Waiting for things to finish")
+		rec.wg.Wait()
+		log.Println("Done waiting for things to finish")
 		return rec.Interface.Close()
 	}
+	rec.clck.Unlock()
+	return nil
+}
+
+// Close will allows the recorder to free up any held resources
+func (rec *recorder) CloseWait() error {
+	if rec == nil {
+		return nil
+	}
+	rec.clck.Lock()
+	rec.count--
+	c := rec.count
+	if !rec.closed && c <= 0 {
+		rec.closed = true
+		rec.clck.Unlock()
+		log.Println("Waiting for things to finish")
+		rec.wg.Wait()
+		log.Println("Done waiting for things to finish")
+		return rec.Interface.Close()
+	}
+	rec.clck.Unlock()
+	log.Println("Waiting for things to finish")
+	rec.wg.Wait()
 	return nil
 }
 
@@ -86,4 +115,31 @@ func (rec Recorder) Record(geom interface{}, ffl FuncFileLineType, desc TestDesc
 		tstDesc.Description = desc.Description
 	}
 	return rec.recorder.Record(geom, ffl, tstDesc)
+}
+
+
+// AsyncRecord will record an entry into the debugging Database asynchronously. Zero values in the desc will be
+// replaced by their corrosponding values in the Recorder.Desc
+func (rec Recorder) AsyncRecord(geom interface{}, ffl FuncFileLineType, desc TestDescription) {
+	if !rec.IsValid() {
+		return
+	}
+	tstDesc := rec.Desc
+	if desc.Name != "" {
+		tstDesc.Name = desc.Name
+	}
+	if desc.Category != "" {
+		tstDesc.Category = desc.Category
+	}
+	if desc.Description != "" {
+		tstDesc.Description = desc.Description
+	}
+	rec.recorder.wg.Add(1)
+	go func() {
+		err := rec.recorder.Record(geom, ffl, tstDesc)
+		rec.recorder.wg.Done()
+		if err != nil {
+			log.Println("Got an error running recorder (async):", err)
+		}
+	}()
 }

@@ -12,14 +12,14 @@ import (
 	"strings"
 	"testing"
 
-	qetriangulate "github.com/go-spatial/geom/planar/triangulate"
-	"github.com/go-spatial/geom/planar/triangulate/debugger"
-	"github.com/go-spatial/geom/planar/triangulate/geometry"
-	"github.com/go-spatial/geom/planar/triangulate/quadedge"
-	"github.com/go-spatial/geom/planar/triangulate/subdivision"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/debugger"
+	qetriangulate "github.com/go-spatial/geom/planar/triangulate"
+	"github.com/go-spatial/geom/planar/triangulate/geometry"
+	"github.com/go-spatial/geom/planar/triangulate/quadedge"
+	"github.com/go-spatial/geom/planar/triangulate/subdivision"
 )
 
 func logEdges(sd *subdivision.Subdivision) {
@@ -300,7 +300,7 @@ func TestConstraint(t *testing.T) {
 				err = sd.InsertConstraint(ctx, vxidx, geometry.NewPoint(ct[0][0], ct[0][1]), geometry.NewPoint(ct[1][0], ct[1][1]))
 				if err != nil {
 					debugger.Record(ctx, ct, "insert constraint:failed", "failed constraint %v", i)
-					//subdivision.DumpSubdivision(sd) 
+					//subdivision.DumpSubdivision(sd)
 					t.Logf("failed to add constraint %v of %v", i, len(tc.Constraints))
 					t.Errorf("got err: %v", err)
 					return

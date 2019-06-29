@@ -5,3 +5,4 @@ cover.out
 _test_output
 vendor/github.com/dvyukov/go-fuzz/gen/main.go
 vendor/github.com/dvyukov/go-fuzz/LICENSE
+output
