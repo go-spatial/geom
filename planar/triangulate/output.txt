@@ -1,0 +1,43 @@
+=== RUN   TestConstraint
+=== RUN   TestConstraint/natural_earth_cities_2_0_1
+2019/03/29 11:42:19 debugger.go:132: Writing debugger output to output/geom/testconstraint/natural_earth_cities_2_0_1.sqlite3
+2019/03/29 11:42:29 subdivision.go:814: Count 0
+2019/03/29 11:43:00 subdivision.go:744: First Triangle:  [[4160 949.667] [25280 -42304] [4159 2642]]
+2019/03/29 11:43:00 topo.go:64: Deleting edge 0xc000745758
+2019/03/29 11:43:00 pseudo_polygon.go:56: Step 0: starting points(3): MULTIPOINT (4160 949.667,25280 -42304,4160 3091)
+2019/03/29 11:43:00 subdivision.go:469: Looking for to and from.
+2019/03/29 11:43:00 subdivision.go:472: found for to and from?
+2019/03/29 11:43:00 subdivision.go:469: Looking for to and from.
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc0000fe0d8 -- 0xc0000fe0d8
+2019/03/29 11:43:00 subdivision.go:472: found for to and from?
+2019/03/29 11:43:00 subdivision.go:469: Looking for to and from.
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000745a78 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000746b88 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc00073cb48 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc00073f958 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc00073a638 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc00072f5a8 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000737128 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000740438 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000742948 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000743ea8 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc0007447e8 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc0007458c8 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc000745958 -- 0xc000746c18
+2019/03/29 11:43:00 subdivision.go:472: found for to and from?
+2019/03/29 11:43:00 subdivision.go:510: Added edge 0xc0007478c8
+2019/03/29 11:43:00 subdivision.go:469: Looking for to and from.
+2019/03/29 11:43:00 subdivision.go:443: Found a canidate: 0xc0000fe0d8 -- 0xc0000fe0d8
+2019/03/29 11:43:00 subdivision.go:472: found for to and from?
+2019/03/29 11:43:00 subdivision.go:423: Failed to insert edge.
+starting point geom.Point{4160, 949.667}
+end point geom.Point{4160, 3091}
+2019/03/29 11:43:00 recorder.go:68: Waiting for things to finish
+2019/03/29 11:43:00 recorder.go:70: Done waiting for things to finish
+--- FAIL: TestConstraint (48.29s)
+    --- FAIL: TestConstraint/natural_earth_cities_2_0_1 (48.29s)
+        main_test.go:304: failed to add constraint 25 of 8522
+        main_test.go:305: got err: did not find to and from edge
+FAIL
+exit status 1
+FAIL	github.com/gdey/quad-edge	48.299s

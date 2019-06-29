@@ -247,6 +247,7 @@ func (u Vertex) IsCCW(b Vertex, c Vertex) bool {
 
 }
 
+/*
 func (u Vertex) RightOf(e QuadEdge) bool {
 	return u.IsCCW(e.Dest(), e.Orig())
 }
@@ -254,6 +255,7 @@ func (u Vertex) RightOf(e QuadEdge) bool {
 func (u Vertex) LeftOf(e QuadEdge) bool {
 	return u.IsCCW(e.Orig(), e.Dest())
 }
+*/
 
 /*
 private HCoordinate bisector(Vertex a, Vertex b) {
