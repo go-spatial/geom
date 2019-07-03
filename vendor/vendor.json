@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "DVox9EQOk++BpE/MGrGdpeCdN3o=",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "5dd71670cca4bc0ee90371eabd0f1bdba1ac6f35",
+			"revisionTime": "2019-06-20T01:01:18Z"
+		},
+		{
 			"checksumSHA1": "PigyCtFZeHFv8E6PAa4j5NMBlvY=",
 			"path": "github.com/mattn/goveralls",
 			"revision": "1c14a4061c1cb86f0310cc0d4c0b5bc743879bc5",
