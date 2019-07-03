@@ -4,8 +4,13 @@ import (
 	"errors"
 )
 
+// ErrNilPolygon is thrown when a polygon is nil but shouldn't be
 var ErrNilPolygon = errors.New("geom: nil Polygon")
+
+// ErrInvalidLinearRing is thrown when a LinearRing is malformed
 var ErrInvalidLinearRing = errors.New("geom: invalid LinearRing")
+
+// ErrInvalidPolygon is thrown when a Polygon is malformed
 var ErrInvalidPolygon = errors.New("geom: invalid Polygon")
 
 // Polygon is a geometry consisting of multiple closed LineStrings.

@@ -5,12 +5,15 @@ import (
 	"math"
 )
 
+
 func round(x, unit float64) float64 {
 	return math.Round(x/unit) * unit
 }
 
+// ErrPointsAreCoLinear is thrown when points are colinear but that is unexpected
 var ErrPointsAreCoLinear = errors.New("given points are colinear")
 
+// Circle is a point (float tuple) and a radius
 type Circle struct {
 	Center [2]float64
 	Radius float64
@@ -22,6 +25,8 @@ func IsColinear(a, b, c [2]float64) bool {
 }
 
 // ref: http://mathforum.org/library/drmath/view/55233.html
+// CircleFromPoint returns the circle from by the given points, or an error if the points are colinear.
+// REF:  Formula used gotten from http://mathforum.org/library/drmath/view/55233.html
 func CircleFromPoints(a, b, c [2]float64) (Circle, error) {
 	xA, yA, xB, yB, xC, yC := a[0], a[1], b[0], b[1], c[0], c[1]
 	if ((yB - yA) * (xC - xB)) == ((yC - yB) * (xB - xA)) {

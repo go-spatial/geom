@@ -2,6 +2,7 @@ package geom
 
 import "errors"
 
+// ErrNilMultiLineString is thrown when MultiLineString is nil but shouldn't be
 var ErrNilMultiLineString = errors.New("geom: nil MultiLineString")
 
 // MultiLineString is a geometry with multiple LineStrings.

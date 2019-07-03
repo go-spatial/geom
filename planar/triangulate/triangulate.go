@@ -123,5 +123,3 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		)
 	}
 	return tris, nil
-
-}

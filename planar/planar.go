@@ -6,8 +6,11 @@ import (
 	"github.com/go-spatial/geom/cmp"
 )
 
+// Rad is the factor to go from pi to radians
 const Rad = math.Pi / 180
 
+// PointLineDistanceFunc is the abstract method to get the distance from point
+// to a line depending on projection
 type PointLineDistanceFunc func(line [2][2]float64, point [2]float64) float64
 
 // PerpendicularDistance  provides the distance between a line and a point in Euclidean space.
@@ -41,6 +44,7 @@ func Slope(line [2][2]float64) (m, b float64, defined bool) {
 	return m, b, true
 }
 
+// IsPointOnLine checks if pt is on the lines l1, l2 by checking slope and intersect form
 func IsPointOnLine(pt [2]float64, l1, l2 [2]float64) bool {
 	m, b, defined := Slope([2][2]float64{l1, l2})
 	switch {

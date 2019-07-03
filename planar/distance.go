@@ -6,14 +6,14 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// Distance returns the euclidean distance between two points.
+// PointDistance returns the euclidean distance between two points.
 func PointDistance(p1 geom.Pointer, p2 geom.Pointer) float64 {
 	return math.Sqrt(PointDistance2(p1, p2))
 }
 
 
 /*
-Distance returns the euclidean distance between two points squared.
+PointDistance2 returns the euclidean distance between two points squared.
 
 This can be a useful optimization in some routines where d^2 is good
 enough.
@@ -37,6 +37,7 @@ func PointDistance2(p1 geom.Pointer, p2 geom.Pointer) float64 {
 
 /*
 distanceToLineSegment calculates the distance from point p to line segment
+DistanceToLineSegment calculates the distance from point p to line segment
 v, w.
 
 Taken from: https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
