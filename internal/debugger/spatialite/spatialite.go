@@ -9,13 +9,14 @@ import (
 	"sync"
 
 	"github.com/go-spatial/geom/internal/debugger/recorder"
-	_ "github.com/go-spatial/geom/internal/debugger/spatialite/go-spatialite"
 )
 
 type DB struct {
 	*sql.DB
 	lck sync.Mutex
 }
+
+var ignoreOpenErr = false
 
 func New(outputDir, filename string) (*DB, string, error) {
 
@@ -25,6 +26,9 @@ func New(outputDir, filename string) (*DB, string, error) {
 
 	db, err := sql.Open("spatialite", dbFilename)
 	if err != nil {
+		if ignoreOpenErr {
+			return nil, dbFilename, nil
+		}
 		return nil, dbFilename, fmt.Errorf("dbfile: %v err: %v", dbFilename, err)
 	}
 
@@ -43,8 +47,8 @@ func New(outputDir, filename string) (*DB, string, error) {
 		sqls = append(sqls,
 			fmt.Sprintf("DROP TABLE IF EXISTS %v", tblName),
 			fmt.Sprintf(
-				`CREATE TABLE %v 
-		        ( id INTEGER PRIMARY KEY AUTOINCREMENT 
+				`CREATE TABLE %v
+		        ( id INTEGER PRIMARY KEY AUTOINCREMENT
 		        , name CHAR(255)
 		        , function_name CHAR(255)
 			, filename CHAR(255)
@@ -101,4 +105,11 @@ func (db *DB) Record(geom interface{}, ffl recorder.FuncFileLineType, tblTest re
 	)
 	db.lck.Unlock()
 	return err
+}
+
+func (db *DB) Close() error {
+	if db == nil {
+		return nil
+	}
+	return db.DB.Close()
 }
