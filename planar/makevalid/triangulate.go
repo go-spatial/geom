@@ -7,7 +7,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/planar/triangulate/delaunay"
+	triangulate "github.com/go-spatial/geom/planar/triangulate"
 )
 
 func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
@@ -19,9 +19,15 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 		log.Printf("Step   3 : generate triangles")
 	}
 
-	builder := delaunay.NewConstrainedWithCtx(ctx, delaunay.TOLERANCE, []geom.Point{}, segs)
+	builder := triangulate.GeomConstrained{
+		Points: []geom.Point{},
+		Constraints: segs,
+	}
+	allTriangles, err := builder.Triangles(ctx, false)
 
-	allTriangles, err := builder.Triangles(false)
+	// builder := delaunay.NewConstrainedWithCtx(ctx, delaunay.TOLERANCE, []geom.Point{}, segs)
+
+	// allTriangles, err := builder.Triangles(false)
 	if err != nil {
 		if debug {
 			log.Println("Step     3a: got error", err)
