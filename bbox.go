@@ -198,11 +198,18 @@ func NewExtent(points ...[2]float64) *Extent {
 
 // NewExtentFromGeometry tries to create an extent based on the geometry
 func NewExtentFromGeometry(g Geometry) (*Extent, error) {
-	e := Extent{}
-	err := getExtent(g, &e)
-	if err != nil {
+	var pts []Point
+	if err := getCoordinates(g, &pts); err != nil {
 		return nil, err
 	}
+	if len(pts) == 0 {
+		return nil, nil
+	}
+	e := Extent{pts[0][0], pts[0][1], pts[0][0], pts[0][1]}
+	for _, pt := range pts {
+		e.AddPoints([2]float64(pt))
+	}
+
 	return &e, nil
 }
 
