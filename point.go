@@ -1,9 +1,17 @@
 package geom
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 // ErrNilPoint is thrown when a point is null but shouldn't be
 var ErrNilPoint = errors.New("geom: nil Point")
+
+var nan = math.NaN()
+
+// EmptyPoint describes an empty 2D point object.
+var EmptyPoint = Point{nan, nan}
 
 // Point describes a simple 2D point
 type Point [2]float64
