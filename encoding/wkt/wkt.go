@@ -285,6 +285,7 @@ func MustEncode(geo geom.Geometry) (str string) {
 	if str, err = Encode(geo); err != nil {
 		panic(fmt.Sprintf("unable to encode %T as wkt", geo))
 	}
+	return str
 }
 
 func Decode(text string) (geo geom.Geometry, err error) {

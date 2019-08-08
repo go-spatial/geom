@@ -77,7 +77,6 @@ func (t *T) parseFloat64EVal() []byte {
 			return d
 		}
 	}
-	return d
 }
 
 func (t *T) ParseFloat64() (float64, error) {
