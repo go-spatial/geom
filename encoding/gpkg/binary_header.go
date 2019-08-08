@@ -348,6 +348,20 @@ func NewBinary(srs int32, geo geom.Geometry) (*StandardBinary, error) {
 
 }
 
+func (sb *StandardBinary) Extent() *geom.Extent {
+	if sb == nil {
+		return nil
+	}
+	if geom.IsEmpty(sb.Geometry) {
+		return nil
+	}
+	extent, err := geom.NewExtentFromGeometry(sb.Geometry)
+	if err != nil {
+		return nil
+	}
+	return extent
+}
+
 func (sb *StandardBinary) Value() (driver.Value, error) {
 	if sb == nil {
 		return nil, ErrNilStandardBinary

@@ -1,44 +1,19 @@
 package recorder
 
 import (
-	"fmt"
 	"runtime"
 	"strings"
-
-	"github.com/go-spatial/geom/encoding/wkt"
 )
 
 type TestDescription struct {
-	Name string
-	Category string
+	Name        string
+	Category    string
 	Description string
 }
 
 type Interface interface {
 	Close() error
 	Record(geom interface{}, FFL FuncFileLineType, Description TestDescription) error
-}
-
-func TypeAndWKT(geom interface{}) (string, string) {
-	wktGeom := wkt.MustEncode(geom)
-	switch {
-	case strings.HasPrefix(wktGeom, "POINT"):
-		return "point", wktGeom
-	case strings.HasPrefix(wktGeom, "MULTIPOINT"):
-		return "multipoint", wktGeom
-	case strings.HasPrefix(wktGeom, "LINESTRING"):
-		return "linestring", wktGeom
-	case strings.HasPrefix(wktGeom, "MULTILINESTRING"):
-		return "multilinestring", wktGeom
-	case strings.HasPrefix(wktGeom, "POLYGON"):
-		return "polygon", wktGeom
-	case strings.HasPrefix(wktGeom, "MULTIPOLYGON"):
-		return "multipolygon", wktGeom
-	default:
-		panic(fmt.Sprintf("Unknown wkt type: %v", wktGeom))
-
-	}
-	return "", ""
 }
 
 type FuncFileLineType struct {

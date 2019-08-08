@@ -243,6 +243,27 @@ func (gt GeometryType) String() string {
 	}
 }
 
+func TypeForGeometry(g geom.Geometry) GeometryType {
+	switch g.(type) {
+	case geom.Collectioner:
+		return GeometryCollection
+	case geom.MultiPolygoner:
+		return MultiPolygon
+	case geom.MultiLineStringer:
+		return MultiLinestring
+	case geom.MultiPointer:
+		return MultiPoint
+	case geom.Polygoner:
+		return Polygon
+	case geom.LineStringer:
+		return Linestring
+	case geom.Pointer:
+		return Point
+	default:
+		return Geometry
+	}
+}
+
 func (gt GeometryType) Empty() (geom.Geometry, error) {
 	switch gt {
 	case Point:

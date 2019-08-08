@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-spatial/geom/internal/debugger/spatialite"
+	"github.com/go-spatial/geom/internal/debugger/recorder/gpkg"
 )
 
 const (
@@ -72,9 +72,9 @@ func AugmentContext(ctx context.Context, testFilename string) context.Context {
 		panic(fmt.Sprintf("Failed to created dir %v:%v", DefaultOutputDir, err))
 	}
 
-	rcd, filename, err := spatialite.New(DefaultOutputDir, testFilename)
+	rcd, filename, err := gpkg.New(DefaultOutputDir, testFilename, 0)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to created spatialite db: %v", err))
+		panic(fmt.Sprintf("Failed to created gpkg db: %v", err))
 	}
 	log.Println("Write debugger output to", filename)
 	return context.WithValue(
