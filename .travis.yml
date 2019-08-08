@@ -3,19 +3,19 @@ language: go
 go_import_path: github.com/go-spatial/geom
 
 git:
-  depth: 3
+  depth: 1
 
 matrix:
   include:
-    - go: "1.10.x"
+    - go: "1.12.x"
       env: CGO_ENABLED=0
-    - go: "1.9.x"
-      env: CGO_ENABLED=0
-    - go: "1.8.x"
+    - go: "1.11.x"
       env: CGO_ENABLED=0
     - go: "1.10.x"
-    - go: "1.9.x"
-    - go: "1.8.x"
+      env: CGO_ENABLED=0
+    - go: "1.12.x"
+    - go: "1.11.x"
+    - go: "1.10.x"
 
 script:
   - bash ci/go_test_multi_package_coverprofile.sh --coveralls
