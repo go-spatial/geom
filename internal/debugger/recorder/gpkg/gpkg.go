@@ -14,7 +14,7 @@ import (
 
 const (
 	createTableSQLFmt = `
-	DROP TABLE IF EXISTS %[1]s
+	DROP TABLE IF EXISTS %[1]s;
 	CREATE TABLE "%[1]s" ( 
 		  id INTEGER PRIMARY KEY AUTOINCREMENT
 	    , function_name TEXT
