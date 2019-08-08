@@ -795,7 +795,7 @@ func TestGeometry(t *testing.T) {
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 			if GeometryEqual(tc.cl1, tc.cl2) != tc.e {
-				t.Error("failed test for: %T", tc)
+				t.Errorf("failed test for: %t", tc)
 			}
 		}
 	}
