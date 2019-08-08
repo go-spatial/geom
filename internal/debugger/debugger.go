@@ -72,9 +72,24 @@ func AugmentContext(ctx context.Context, testFilename string) context.Context {
 		panic(fmt.Sprintf("Failed to created dir %v:%v", DefaultOutputDir, err))
 	}
 
-	rcd, filename, err := gpkg.New(DefaultOutputDir, testFilename, 0)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to created gpkg db: %v", err))
+	lck.Lock()
+	defer lck.Unlock()
+	rcrd, ok := recrds[testFilename]
+	if !ok {
+		rcd, filename, err := gpkg.New(dir, filename, 0)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to created gpkg db: %v", err))
+			os.Exit(1)
+		}
+		rcrd = struct {
+			fn   string
+			rcrd *recorder
+		}{
+			fn:   filename,
+			rcrd: &recorder{Interface: rcd},
+		}
+		recrds[testFilename] = rcrd
+
 	}
 	log.Println("Write debugger output to", filename)
 	return context.WithValue(
