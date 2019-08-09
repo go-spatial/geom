@@ -1,5 +1,5 @@
 /*
- Package debugger provides a way for us to capture partial
+Package debugger provides a way for us to capture partial
 geometries during geometry processing. The geometries are
 stored in a `spatailite` database.
 

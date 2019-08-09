@@ -10,7 +10,6 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/go-spatial/geom/internal/debugger/recorder/gpkg"
 	"github.com/pborman/uuid"
 )
 
@@ -113,10 +112,9 @@ func AugmentRecorder(rec Recorder, testFilename string) (Recorder, bool) {
 	defer lck.Unlock()
 	rcrd, ok := recrds[testFilename]
 	if !ok {
-		rcd, filename, err := gpkg.New(dir, filename, 0)
+		rcd, filename, err := NewRecorder(dir, filename)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to created gpkg db: %v", err))
-			os.Exit(1)
+			panic(err)
 		}
 		rcrd = struct {
 			fn   string
@@ -126,7 +124,6 @@ func AugmentRecorder(rec Recorder, testFilename string) (Recorder, bool) {
 			rcrd: &recorder{Interface: rcd},
 		}
 		recrds[testFilename] = rcrd
-
 	}
 	rcrd.rcrd.IncrementCount()
 	log.Println("Writing debugger output to", rcrd.fn)
