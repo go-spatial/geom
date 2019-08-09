@@ -8,11 +8,11 @@ import (
 	"github.com/go-spatial/tegola"
 )
 
-// ScaleGeo converts the geometry's coordinates to tile coordinates
-func ScaleGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
+// PrepareGeo converts the geometry's coordinates to tile coordinates
+func PrepareGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 	switch g := geo.(type) {
 	case geom.Point:
-		return scalept(g, tile)
+		return preparept(g, tile)
 
 	case geom.MultiPoint:
 		pts := g.Points()
@@ -20,36 +20,20 @@ func ScaleGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 			return nil
 		}
 
-		// TODO the ptmap is used for removing duplicate points.
-		// This does not seem to be part of the spec, but it seems
-		// helpful for reducing the point count, especially with
-		// very zoomed out geometries. Further discussion should be had...
-		// https://github.com/mapbox/vector-tile-spec/tree/master/2.1#4342-point-geometry-type
-		var ptmap = make(map[geom.Point]struct{})
-		var mp = make(geom.MultiPoint, 1, len(pts))
-		mp[0] = scalept(pts[0], tile)
-
-		ptmap[mp[0]] = struct{}{}
-		for i := 1; i < len(pts); i++ {
-
-			npt := scalept(pts[i], tile)
-			if _, ok := ptmap[npt]; ok {
-				// Skip duplicate points.
-				continue
-			}
-
-			ptmap[npt] = struct{}{}
-			mp = append(mp, npt)
+		mp := make(geom.MultiPoint, len(pts))
+		for i, pt := range g {
+			mp[i] = preparept(pt, tile)
 		}
+
 		return mp
 
 	case geom.LineString:
-		return scalelinestr(g, tile)
+		return preparelinestr(g, tile)
 
 	case geom.MultiLineString:
 		var ml geom.MultiLineString
 		for _, l := range g.LineStrings() {
-			nl := scalelinestr(l, tile)
+			nl := preparelinestr(l, tile)
 			if len(nl) > 0 {
 				ml = append(ml, nl)
 			}
@@ -57,12 +41,12 @@ func ScaleGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 		return ml
 
 	case geom.Polygon:
-		return scalePolygon(g, tile)
+		return preparePolygon(g, tile)
 
 	case geom.MultiPolygon:
 		var mp geom.MultiPolygon
 		for _, p := range g.Polygons() {
-			np := scalePolygon(p, tile)
+			np := preparePolygon(p, tile)
 			if len(np) > 0 {
 				mp = append(mp, np)
 			}
@@ -73,7 +57,7 @@ func ScaleGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 	return nil
 }
 
-func scalept(g geom.Point, tile *tegola.Tile) geom.Point {
+func preparept(g geom.Point, tile *tegola.Tile) geom.Point {
 	pt, err := tile.ToPixel(tegola.WebMercator, g)
 	if err != nil {
 		panic(err)
@@ -81,7 +65,7 @@ func scalept(g geom.Point, tile *tegola.Tile) geom.Point {
 	return geom.Point(pt)
 }
 
-func scalelinestr(g geom.LineString, tile *tegola.Tile) (ls geom.LineString) {
+func preparelinestr(g geom.LineString, tile *tegola.Tile) (ls geom.LineString) {
 	pts := g
 	// If the linestring
 	if len(pts) < 2 {
@@ -89,10 +73,10 @@ func scalelinestr(g geom.LineString, tile *tegola.Tile) (ls geom.LineString) {
 		return nil
 	}
 	ls = make(geom.LineString, 0, len(pts))
-	ls = append(ls, scalept(pts[0], tile))
+	ls = append(ls, preparept(pts[0], tile))
 	lidx := len(ls) - 1
 	for i := 1; i < len(pts); i++ {
-		npt := scalept(pts[i], tile)
+		npt := preparept(pts[i], tile)
 		if cmp.PointEqual(ls[lidx], npt) {
 			// drop any duplicate points.
 			continue
@@ -108,7 +92,7 @@ func scalelinestr(g geom.LineString, tile *tegola.Tile) (ls geom.LineString) {
 	return ls
 }
 
-func scalePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
+func preparePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
 	lines := geom.MultiLineString(g.LinearRings())
 	p = make(geom.Polygon, 0, len(lines))
 
@@ -117,7 +101,7 @@ func scalePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
 	}
 
 	for _, line := range lines.LineStrings() {
-		ln := scalelinestr(line, tile)
+		ln := preparelinestr(line, tile)
 		if len(ln) < 2 {
 			if debug {
 				// skip lines that have been reduced to less then 2 points.

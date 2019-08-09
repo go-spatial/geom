@@ -9,7 +9,7 @@ import (
 	"github.com/go-spatial/tegola"
 )
 
-func TestScaleLinestring(t *testing.T) {
+func TestPrepareLinestring(t *testing.T) {
 	tile := tegola.NewTile(20, 0, 0)
 
 	newLine := func(ptpairs ...float64) (ln geom.LineString) {
@@ -32,7 +32,7 @@ func TestScaleLinestring(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			got := scalelinestr(tc.g, tile)
+			got := preparelinestr(tc.g, tile)
 
 			if !reflect.DeepEqual(tc.e, got) {
 				t.Errorf("expected %v got %v", tc.e, got)
