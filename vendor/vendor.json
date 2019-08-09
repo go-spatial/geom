@@ -3,18 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "UcbSZWGkz2MDZx4K+WkX38wh2RA=",
-			"path": "github.com/gdey/errors",
-			"revision": "8ebd5bc891fb33c01a915a6f1bc068aa094266fd",
-			"revisionTime": "2019-04-26T17:21:49Z"
-		},
-		{
-			"checksumSHA1": "Qk7VIdrRPxkPBRG31IV/AtUsD64=",
-			"path": "github.com/mattn/go-sqlite3",
-			"revision": "31f5bb843b7852e28d5a66d1d539c042c3bb623a",
-			"revisionTime": "2019-03-15T08:37:29Z"
-		},
-		{
 			"checksumSHA1": "PigyCtFZeHFv8E6PAa4j5NMBlvY=",
 			"path": "github.com/mattn/goveralls",
 			"revision": "1c14a4061c1cb86f0310cc0d4c0b5bc743879bc5",
