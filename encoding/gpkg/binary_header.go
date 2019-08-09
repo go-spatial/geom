@@ -332,20 +332,32 @@ func (sb StandardBinary) Encode() ([]byte, error) {
 }
 
 func NewBinary(srs int32, geo geom.Geometry) (*StandardBinary, error) {
-	extent, err := geom.NewExtentFromGeometry(geo)
+
+	var (
+		emptyGeo = geom.IsEmpty(geo)
+		err      error
+		extent   = []float64{nan, nan, nan, nan}
+		h        *BinaryHeader
+	)
+
+	if !emptyGeo {
+		ext, err := geom.NewExtentFromGeometry(geo)
+		if err != nil {
+			return nil, err
+		}
+		extent = ext[:]
+	}
+
+	h, err = NewBinaryHeader(binary.LittleEndian, srs, extent, EnvelopeTypeXY, false, emptyGeo)
 	if err != nil {
 		return nil, err
 	}
-	h, err := NewBinaryHeader(binary.LittleEndian, srs, extent[:], EnvelopeTypeXY, false, false)
-	if err != nil {
-		return nil, err
-	}
+
 	return &StandardBinary{
 		Header:   h,
 		SRSID:    srs,
 		Geometry: geo,
 	}, nil
-
 }
 
 func (sb *StandardBinary) Extent() *geom.Extent {
