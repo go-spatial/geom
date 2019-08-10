@@ -126,13 +126,16 @@ func AugmentRecorder(rec Recorder, testFilename string) (Recorder, bool) {
 		recrds[testFilename] = rcrd
 	}
 	rcrd.rcrd.IncrementCount()
-	log.Println("Writing debugger output to", rcrd.fn)
+	if debug {
+		log.Println("Writing debugger output to", rcrd.fn)
+	}
 
 	return Recorder{
 		recorder: rcrd.rcrd,
 		Desc: TestDescription{
 			Name: uuid.NewRandom().String(),
 		},
+		Filename: rcrd.fn,
 	}, true
 
 }

@@ -65,13 +65,19 @@ func (rec *recorder) CloseWait() error {
 	if !rec.closed && c <= 0 {
 		rec.closed = true
 		rec.clck.Unlock()
-		log.Println("Waiting for things to finish")
+		if debug {
+			log.Println("waiting for things to finish")
+		}
 		rec.wg.Wait()
-		log.Println("Done waiting for things to finish")
+		if debug {
+			log.Println("done waiting for things to finish")
+		}
 		return rec.Interface.Close()
 	}
 	rec.clck.Unlock()
-	log.Println("Waiting for things to finish")
+	if debug {
+		log.Println("waiting for things to finish")
+	}
 	rec.wg.Wait()
 	return nil
 }
@@ -93,6 +99,9 @@ type Recorder struct {
 	// Desc is the template for the description to use when recording a
 	// test.
 	Desc TestDescription
+
+	// The filename the recording are being written to, or empty
+	Filename string
 }
 
 // IsValid is the given Recorder valid
@@ -116,7 +125,6 @@ func (rec Recorder) Record(geom interface{}, ffl FuncFileLineType, desc TestDesc
 	}
 	return rec.recorder.Record(geom, ffl, tstDesc)
 }
-
 
 // AsyncRecord will record an entry into the debugging Database asynchronously. Zero values in the desc will be
 // replaced by their corrosponding values in the Recorder.Desc
