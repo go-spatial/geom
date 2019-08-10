@@ -3,6 +3,7 @@ package planar
 import (
 	"math"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 )
 
@@ -58,4 +59,36 @@ func IsPointOnLine(pt [2]float64, l1, l2 [2]float64) bool {
 		y := (m * pt[0]) + b
 		return cmp.Float(pt[1], y)
 	}
+}
+
+// IsPointOnLineSegment checks if pt is on the line segment (seg)
+func IsPointOnLineSegment(pt geom.Point, seg geom.Line) bool {
+	// first order the x and y of the line.
+	minx, miny, maxx, maxy := seg[0][0], seg[0][1], seg[1][0], seg[1][1]
+	if minx > maxx {
+		minx, maxx = maxx, minx
+	}
+	if miny > maxy {
+		miny, maxy = maxy, miny
+	}
+	if minx > pt[0] || maxx < pt[0] || miny > pt[1] || maxy < pt[1] {
+		// Outside the extent of the line
+		return false
+	}
+	// vertical line
+	if cmp.Float(minx, maxx) {
+		return minx == pt[0]
+	}
+	// horizontal line
+	if cmp.Float(miny, maxy) {
+		return miny == pt[1]
+	}
+
+	// Match the gradients
+	return cmp.Float((minx-pt[0])*(miny-pt[1]), (pt[0]-maxx)*(pt[1]-miny))
+
+}
+
+func IsCCW(a, b, c geom.Point) bool {
+	return geom.Triangle{[2]float64(a), [2]float64(b), [2]float64(c)}.Area() > 0
 }
