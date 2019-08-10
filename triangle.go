@@ -61,3 +61,52 @@ func NewTriangleFromPolygon(py [][][2]float64) Triangle {
 	t := Triangle{py[0][0], py[0][1], py[0][2]}
 	return t
 }
+
+// Area reaturns twice the area of the oriented triangle (a,b,c), i.e.
+// the area is positive if the triangle is oriented counterclockwise.
+func (t Triangle) Area() float64 {
+	a, b, c := t[0], t[1], t[2]
+	return (b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0])
+}
+
+// NewTriangleContaining returns a triangle that is large enough to contain the
+// given points
+func NewTriangleContaining(pts ...Point) Triangle {
+	const buff = 10
+	ext := NewExtentFromPoints(pts...)
+	xlen := ext[2] - ext[0]
+	ylen := ext[3] - ext[1]
+	x2len := xlen / 2
+
+	nx := ext[0] - (x2len * buff)
+	cx := ext[0] + x2len
+	xx := ext[2] + (x2len * buff)
+
+	ny := ext[1] - (ylen * buff)
+	xy := ext[3] + (2 * ylen * buff)
+	return Triangle{
+		{nx, ny},
+		{cx, xy},
+		{xx, ny},
+	}
+}
+
+func NewTriangleContainingPoints(pts ...[2]float64) Triangle {
+	const buff = 10
+	ext := NewExtent(pts...)
+	xlen := ext[2] - ext[0]
+	ylen := ext[3] - ext[1]
+	x2len := xlen / 2
+
+	nx := ext[0] - (x2len * buff)
+	cx := ext[0] + x2len
+	xx := ext[2] + (x2len * buff)
+
+	ny := ext[1] - (ylen * buff)
+	xy := ext[3] + (2 * ylen * buff)
+	return Triangle{
+		{nx, ny},
+		{cx, xy},
+		{xx, ny},
+	}
+}

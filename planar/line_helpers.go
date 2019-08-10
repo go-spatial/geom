@@ -37,3 +37,19 @@ func NormalizeUniqueLines(lines []geom.Line) []geom.Line {
 	}
 	return lns
 }
+
+type LinesByLength []geom.Line
+
+func (l LinesByLength) Len() int      { return len(l) }
+func (l LinesByLength) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
+func (l LinesByLength) Less(i, j int) bool {
+	lilen := l[i].LenghtSquared()
+	ljlen := l[j].LenghtSquared()
+	if lilen == ljlen {
+		if cmp.PointEqual(l[i][0], l[j][0]) {
+			return cmp.PointLess(l[i][1], l[j][1])
+		}
+		return cmp.PointLess(l[i][0], l[j][0])
+	}
+	return lilen < ljlen
+}
