@@ -35,6 +35,11 @@ func (t Triangle) Center() (pt [2]float64) {
 	return pt
 }
 
+// LinearRings returns the coordinates of the linear rings
+func (t Triangle) LinearRings() [][][2]float64 {
+	return [][][2]float64{t[:]}
+}
+
 // ThirdPoint takes 2 points and checks which point is the 3rd in the Triangle
 func (t Triangle) ThirdPoint(p1, p2 [2]float64) [2]float64 {
 	switch {
