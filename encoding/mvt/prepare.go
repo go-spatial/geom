@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/tegola"
 )
 
@@ -74,15 +73,9 @@ func preparelinestr(g geom.LineString, tile *tegola.Tile) (ls geom.LineString) {
 	}
 	ls = make(geom.LineString, 0, len(pts))
 	ls = append(ls, preparept(pts[0], tile))
-	lidx := len(ls) - 1
 	for i := 1; i < len(pts); i++ {
 		npt := preparept(pts[i], tile)
-		if cmp.PointEqual(ls[lidx], npt) {
-			// drop any duplicate points.
-			continue
-		}
 		ls = append(ls, npt)
-		lidx = len(ls) - 1
 	}
 
 	if len(ls) < 2 {
@@ -109,6 +102,8 @@ func preparePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
 			}
 			continue
 		}
+		// TODO: check the last and first point to make sure
+		// they are not the same, per the mvt spec
 		p = append(p, ln)
 	}
 	return p
