@@ -42,7 +42,8 @@ func TestPrepareLinestring(t *testing.T) {
 
 	tests := map[string]tcase{
 		"duplicate pt simple line": {
-			g: geom.LineString{{9.0, 9.0}, {9.0, 9.0}},
+			g: newLine(9.0, 9.0, 9.0, 9.0),
+			e: geom.LineString{{9.0, 9.0}, {9.0, 9.0}},
 		},
 		"simple line": {
 			g: newLine(10.0, 10.0, 11.0, 11.0),
