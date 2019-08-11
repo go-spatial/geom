@@ -262,8 +262,11 @@ func TestTriangulation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			var rec debugger.Recorder
-			rec, _ = debugger.AugmentRecorder(rec, fmt.Sprintf("drawn_%v", name))
-			t.Logf("writing entries to %v", rec.Filename)
+			if cgo {
+				// Only enable writing to log files if we have cgo enabled
+				rec, _ = debugger.AugmentRecorder(rec, fmt.Sprintf("drawn_%v", name))
+				t.Logf("writing entries to %v", rec.Filename)
+			}
 			Draw(t, rec, name, pts...)
 			rec.CloseWait()
 		})
