@@ -155,8 +155,10 @@ func TestFindImmediateRightOfEdge(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ctx = debugger.AugmentContext(ctx, "")
-	defer debugger.CloseWait(ctx)
+	if cgo {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.CloseWait(ctx)
+	}
 
 	for name, tc := range tests {
 		t.Run(name, fn(ctx, tc))
@@ -264,8 +266,10 @@ func TestResolveEdge(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ctx = debugger.AugmentContext(ctx, "")
-	defer debugger.CloseWait(ctx)
+	if cgo {
+		ctx = debugger.AugmentContext(ctx, "")
+		defer debugger.CloseWait(ctx)
+	}
 
 	for name, tc := range tests {
 		t.Run(name, fn(ctx, tc))

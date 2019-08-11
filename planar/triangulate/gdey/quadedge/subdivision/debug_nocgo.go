@@ -1,5 +1,7 @@
+// +build !cgo
+
 package subdivision
 
 const (
-	debug = false
+	cgo = false
 )
