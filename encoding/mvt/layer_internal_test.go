@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/arolek/p"
 	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
 )
 
@@ -54,18 +53,24 @@ func TestLayer(t *testing.T) {
 		}
 	}
 
+	var (
+		noFeatures = "nofeatures"
+		oneFeature = "onefeature"
+		twoFeatures = "twofeatures"
+	)
+
 	tests := map[string]tcase{
 		"no features": {
 			layer: &Layer{
 				Name: "nofeatures",
 			},
 			vtlayer: &vectorTile.Tile_Layer{
-				Version:  p.Uint32(Version),
-				Name:     p.String("nofeatures"),
+				Version:  &Version,
+				Name:     &noFeatures,
 				Features: nil,
 				Keys:     nil,
 				Values:   nil,
-				Extent:   p.Uint32(DefaultExtent),
+				Extent:   &DefaultExtent,
 			},
 		},
 		"one feature": {
@@ -84,12 +89,12 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: &vectorTile.Tile_Layer{
-				Version:  p.Uint32(Version),
-				Name:     p.String("onefeature"),
+				Version:  &Version,
+				Name:     &oneFeature,
 				Features: []*vectorTile.Tile_Feature{nil},
 				Keys:     []string{"tag1", "tag2"},
 				Values:   []*vectorTile.Tile_Value{vectorTileValue("tag")},
-				Extent:   p.Uint32(DefaultExtent),
+				Extent:   &DefaultExtent,
 			},
 		},
 		"two features": {
@@ -121,12 +126,12 @@ func TestLayer(t *testing.T) {
 			// features should not be nil, when we start comparing features this will fail.
 			// But for now it's okay.
 			vtlayer: &vectorTile.Tile_Layer{
-				Version:  p.Uint32(Version),
-				Name:     p.String("twofeatures"),
+				Version:  &Version,
+				Name:     &twoFeatures,
 				Features: []*vectorTile.Tile_Feature{nil, nil},
 				Keys:     []string{"tag1", "tag2"},
 				Values:   []*vectorTile.Tile_Value{vectorTileValue("tag1")},
-				Extent:   p.Uint32(DefaultExtent),
+				Extent:   &DefaultExtent,
 			},
 		},
 	}
