@@ -1,7 +1,10 @@
 package mvt
 
 const (
-	Version       = 2
-	DefaultExtent = 4096
 	MimeType      = "application/vnd.mapbox-vector-tile"
+)
+
+var (
+	Version       uint32 = 2
+	DefaultExtent uint32 = 4096
 )
