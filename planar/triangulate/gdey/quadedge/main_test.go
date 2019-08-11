@@ -168,7 +168,7 @@ func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...[2]float64) {
 func cleanup(data []byte) (parts []string) {
 	toreplace := []byte(`[]{}(),;`)
 	for _, v := range toreplace {
-		data = bytes.ReplaceAll(data, []byte{v}, []byte(" "))
+		data = bytes.Replace(data, []byte{v}, []byte(" "), -1)
 	}
 	dparts := bytes.Split(data, []byte(` `))
 	for _, dpt := range dparts {
