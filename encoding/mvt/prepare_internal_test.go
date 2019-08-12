@@ -1,57 +1,61 @@
 package mvt
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestPrepareLinestring(t *testing.T) {
-	tile := tegola.NewTile(20, 0, 0)
-
-	newLine := func(ptpairs ...float64) (ln geom.LineString) {
-		for i, j := 0, 1; j < len(ptpairs); i, j = i+2, j+2 {
-			pt, err := tile.FromPixel(tegola.WebMercator, [2]float64{ptpairs[i], ptpairs[j]})
-			if err != nil {
-				panic(fmt.Sprintf("error trying to convert %v,%v to WebMercator. %v", ptpairs[i], ptpairs[j], err))
-			}
-
-			ln = append(ln, geom.Point(pt))
-		}
-
-		return ln
-	}
 
 	type tcase struct {
-		g geom.LineString
-		e geom.LineString
+		in geom.LineString
+		out geom.LineString
+		tile geom.Extent
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			got := preparelinestr(tc.g, tile)
+			got := preparelinestr(tc.in, &tc.tile, DefaultPixelExtent)
 
-			if !reflect.DeepEqual(tc.e, got) {
-				t.Errorf("expected %v got %v", tc.e, got)
+			if len(got) != len(tc.out) {
+				t.Errorf("expected %v got %v", tc.out, got)
+			}
+
+			for i := range got {
+				if !cmp.PointEqual(tc.out[i], got[i]) {
+					t.Errorf("expected (%d) %v got %v", i, tc.out, got)
+				}
 			}
 		}
 	}
 
 	tests := map[string]tcase{
 		"duplicate pt simple line": {
-			g: newLine(9.0, 9.0, 9.0, 9.0),
-			e: geom.LineString{{9.0, 9.0}, {9.0, 9.0}},
+			in: geom.LineString{{9.0, 9.0}, {9.0, 9.0}},
+			out: geom.LineString{{9.0, 9.0}, {9.0, 9.0}},
+			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
 		},
 		"simple line": {
-			g: newLine(10.0, 10.0, 11.0, 11.0),
-			e: geom.LineString{{9.0, 9.0}, {11.0, 11.0}},
+			in: geom.LineString{{9.0, 9.0}, {11.0, 11.0}},
+			out: geom.LineString{{9.0, 9.0}, {11.0, 11.0}},
+			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
+		},
+		"edge line": {
+			in: geom.LineString{{0.0, 0.0}, {4096.0, 20.0}},
+			out: geom.LineString{{0.0, 0.0}, {4096.0, 20.0}},
+			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
 		},
 		"simple line 3pt": {
-			g: newLine(10.0, 10.0, 11.0, 10.0, 11.0, 15.0),
-			e: geom.LineString{{9.0, 9.0}, {11.0, 9.0}, {11.0, 14.0}},
+			in: geom.LineString{{9.0, 9.0}, {11.0, 9.0}, {11.0, 14.0}},
+			out: geom.LineString{{9.0, 9.0}, {11.0, 9.0}, {11.0, 14.0}},
+			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
+		},
+		"scale" : {
+			in: geom.LineString{{100.0, 100.0}, {300.0, 300.0}},
+			out: geom.LineString{{1024.0, 1024.0}, {3072.0, 3072.0}},
+			tile: geom.Extent{0.0, 0.0, 400.0, 400.0},
 		},
 	}
 

@@ -4,14 +4,18 @@ import (
 	"log"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/tegola"
 )
 
-// PrepareGeo converts the geometry's coordinates to tile coordinates
-func PrepareGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
+// A default valu for pixelExtent for use with PrepareGeo
+const DefaultPixelExtent = 4096.0
+
+// PrepareGeo converts the geometry's coordinates to tile coordinates. tile should be the
+// extent of the tile, in the same projection as geo. pixelExtent is the dimension of the
+// (square) tile in pixels usually 4096, see DefaultPixelExtent)
+func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.Geometry {
 	switch g := geo.(type) {
 	case geom.Point:
-		return preparept(g, tile)
+		return preparept(g, tile, pixelExtent)
 
 	case geom.MultiPoint:
 		pts := g.Points()
@@ -21,18 +25,18 @@ func PrepareGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 
 		mp := make(geom.MultiPoint, len(pts))
 		for i, pt := range g {
-			mp[i] = preparept(pt, tile)
+			mp[i] = preparept(pt, tile, pixelExtent)
 		}
 
 		return mp
 
 	case geom.LineString:
-		return preparelinestr(g, tile)
+		return preparelinestr(g, tile, pixelExtent)
 
 	case geom.MultiLineString:
 		var ml geom.MultiLineString
 		for _, l := range g.LineStrings() {
-			nl := preparelinestr(l, tile)
+			nl := preparelinestr(l, tile, pixelExtent)
 			if len(nl) > 0 {
 				ml = append(ml, nl)
 			}
@@ -40,12 +44,12 @@ func PrepareGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 		return ml
 
 	case geom.Polygon:
-		return preparePolygon(g, tile)
+		return preparePolygon(g, tile, pixelExtent)
 
 	case geom.MultiPolygon:
 		var mp geom.MultiPolygon
 		for _, p := range g.Polygons() {
-			np := preparePolygon(p, tile)
+			np := preparePolygon(p, tile, pixelExtent)
 			if len(np) > 0 {
 				mp = append(mp, np)
 			}
@@ -56,36 +60,30 @@ func PrepareGeo(geo tegola.Geometry, tile *tegola.Tile) geom.Geometry {
 	return nil
 }
 
-func preparept(g geom.Point, tile *tegola.Tile) geom.Point {
-	pt, err := tile.ToPixel(tegola.WebMercator, g)
-	if err != nil {
-		panic(err)
-	}
-	return geom.Point(pt)
+func preparept(g geom.Point, tile *geom.Extent, pixelExtent float64) geom.Point {
+	px := (g.X() - tile.MinX()) / tile.XSpan() * pixelExtent
+	py := (g.Y() - tile.MinY()) / tile.YSpan() * pixelExtent
+
+	return geom.Point{px, py}
 }
 
-func preparelinestr(g geom.LineString, tile *tegola.Tile) (ls geom.LineString) {
+func preparelinestr(g geom.LineString, tile *geom.Extent, pixelExtent float64) (ls geom.LineString) {
 	pts := g
 	// If the linestring
 	if len(pts) < 2 {
 		// Not enought points to make a line.
 		return nil
 	}
-	ls = make(geom.LineString, 0, len(pts))
-	ls = append(ls, preparept(pts[0], tile))
-	for i := 1; i < len(pts); i++ {
-		npt := preparept(pts[i], tile)
-		ls = append(ls, npt)
+
+	ls = make(geom.LineString, len(pts))
+	for i := 0; i < len(pts); i++ {
+		ls[i] = preparept(pts[i], tile, pixelExtent)
 	}
 
-	if len(ls) < 2 {
-		// Not enough points. the zoom must be too far out for this ring.
-		return nil
-	}
 	return ls
 }
 
-func preparePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
+func preparePolygon(g geom.Polygon, tile *geom.Extent, pixelExtent float64) (p geom.Polygon) {
 	lines := geom.MultiLineString(g.LinearRings())
 	p = make(geom.Polygon, 0, len(lines))
 
@@ -94,7 +92,7 @@ func preparePolygon(g geom.Polygon, tile *tegola.Tile) (p geom.Polygon) {
 	}
 
 	for _, line := range lines.LineStrings() {
-		ln := preparelinestr(line, tile)
+		ln := preparelinestr(line, tile, pixelExtent)
 		if len(ln) < 2 {
 			if debug {
 				// skip lines that have been reduced to less then 2 points.
