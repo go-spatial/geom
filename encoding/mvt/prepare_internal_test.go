@@ -17,7 +17,7 @@ func TestPrepareLinestring(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			got := preparelinestr(tc.in, &tc.tile, DefaultPixelExtent)
+			got := preparelinestr(tc.in, &tc.tile, float64(DefaultExtent))
 
 			if len(got) != len(tc.out) {
 				t.Errorf("expected %v got %v", tc.out, got)

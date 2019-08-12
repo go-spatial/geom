@@ -6,12 +6,11 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// A default valu for pixelExtent for use with PrepareGeo
-const DefaultPixelExtent = 4096.0
-
 // PrepareGeo converts the geometry's coordinates to tile coordinates. tile should be the
 // extent of the tile, in the same projection as geo. pixelExtent is the dimension of the
-// (square) tile in pixels usually 4096, see DefaultPixelExtent)
+// (square) tile in pixels usually 4096, see DefaultExtent.
+// The geometry must not go outside the tile extent. If this is unknown,
+// use the clip package before encoding.
 func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.Geometry {
 	switch g := geo.(type) {
 	case geom.Point:
