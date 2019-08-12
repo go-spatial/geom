@@ -1,4 +1,6 @@
 /*
+Package mvt is used to encode MVT tiles
+
 In short, a `Tile`s has `Layer`s, which have `Feauture`s. The `Feature` type
 is what holds a single `geom.Geometry` and associated metadata.
 
