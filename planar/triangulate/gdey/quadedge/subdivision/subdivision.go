@@ -253,11 +253,13 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 	}
 }
 
+// appendNonrepeate will append points to an array if that point
+// is not the same as the point immediately prior
 func appendNonrepeat(pts []geom.Point, v geom.Point) []geom.Point {
 	if len(pts) == 0 || cmp.GeomPointEqual(v, pts[len(pts)-1]) {
-		return append(pts, v)
+		return pts
 	}
-	return pts
+	return append(pts, v)
 }
 
 func selectCorrectEdges(from, to *quadedge.Edge) (cfrom, cto *quadedge.Edge) {
