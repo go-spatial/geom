@@ -175,14 +175,19 @@ func SetTestName(ctx context.Context, name string) context.Context {
 	)
 }
 
+// Filename returns the filename of the recorder in the ctx if one exists or an empty string
+func Filename(ctx context.Context) string {
+	return GetRecorderFromContext(ctx).Filename
+}
+
 // Record records the geom and descriptive attributes into the debugging system
 func Record(ctx context.Context, geom interface{}, category string, descriptionFormat string, data ...interface{}) {
-	RecordFFLOn(GetRecorderFromContext(ctx), FFL(1), geom, category, descriptionFormat, data...)
+	RecordFFLOn(GetRecorderFromContext(ctx), FFL(0), geom, category, descriptionFormat, data...)
 }
 
 // RecordOn records the geom and descriptive attributes into the debugging system
 func RecordOn(rec Recorder, geom interface{}, category string, descriptionFormat string, data ...interface{}) {
-	RecordFFLOn(rec, FFL(1), geom, category, descriptionFormat, data...)
+	RecordFFLOn(rec, FFL(0), geom, category, descriptionFormat, data...)
 }
 
 // RecordFFLOn records the geom and descriptive attributes into the debugging system with the give Func File Line values

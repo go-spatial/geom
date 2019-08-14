@@ -5,6 +5,7 @@ package gpkg
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,17 +114,29 @@ func (db *DB) Record(geo interface{}, ffl recorder.FuncFileLineType, tblTest rec
 
 	gtype := gpkg.TypeForGeometry(geo)
 	if gtype == gpkg.Geometry {
-		return fmt.Errorf("error unknown geometry type %t", geo)
+		err := fmt.Errorf("error unknown geometry type %T", geo)
+		if debug {
+			log.Println(ffl, err)
+		}
+		return err
 	}
 
 	stm, ok := db.statements[gtype]
 	if !ok {
-		return fmt.Errorf("error unsupported geom %s", gtype)
+		err := fmt.Errorf("error unsupported geom %s", gtype)
+		if debug {
+			log.Println(ffl, err)
+		}
+		return err
 	}
 
 	sb, err := gpkg.NewBinary(db.srsid, geo)
 	if err != nil {
-		return fmt.Errorf("error unsupported geometry %s :  %v", gtype, err)
+		err = fmt.Errorf("error unsupported geometry %s :  %v", gtype, err)
+		if debug {
+			log.Println(ffl, err)
+		}
+		return err
 	}
 
 	_, err = stm.Exec(
@@ -139,6 +152,7 @@ func (db *DB) Record(geo interface{}, ffl recorder.FuncFileLineType, tblTest rec
 		sb,
 	)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	// update extent

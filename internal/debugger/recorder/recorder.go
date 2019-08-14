@@ -1,6 +1,8 @@
 package recorder
 
 import (
+	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -20,6 +22,11 @@ type FuncFileLineType struct {
 	Func       string
 	File       string
 	LineNumber int
+}
+
+func (ffl FuncFileLineType) String() string {
+	file := filepath.Base(ffl.File)
+	return fmt.Sprintf("%v@%v:%v", file, ffl.LineNumber, ffl.Func)
 }
 
 // FuncFileLine returns the func file and line number of the the number of callers
