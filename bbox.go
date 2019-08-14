@@ -23,7 +23,7 @@ type Extent [4]float64
 
 /* ========================= ATTRIBUTES ========================= */
 
-// Vertices return the verticies of the Bounding Box. The verticies are ordered in the following maner.
+// Vertices return the vertices of the Bounding Box. The vertices are ordered in the following maner.
 // (minx,miny), (maxx,miny), (maxx,maxy), (minx,maxy)
 func (e *Extent) Vertices() [][2]float64 {
 	return [][2]float64{
@@ -33,6 +33,9 @@ func (e *Extent) Vertices() [][2]float64 {
 		{e.MinX(), e.MaxY()},
 	}
 }
+
+// Verticies is the misspelled version of Vertices to match the interface
+func (e *Extent) Verticies() [][2]float64 { return e.Vertices() }
 
 // ClockwiseFunc returns weather the set of points should be considered clockwise or counterclockwise. The last point is not the same as the first point, and the function should connect these points as needed.
 type ClockwiseFunc func(...[2]float64) bool
