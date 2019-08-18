@@ -150,7 +150,7 @@ var KnownSRS = map[int32]SpatialReferenceSystem{
 		Name:                   "WGS 84",
 		ID:                     4326,
 		Organization:           OREPSG,
-		OrganizationCoordsysID: 4327,
+		OrganizationCoordsysID: 4326,
 		Definition: `
 		GEOGCS["WGS 84",
 		DATUM["WGS_1984",
