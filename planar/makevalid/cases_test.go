@@ -20,7 +20,7 @@ type makevalidCase struct {
 }
 
 // Segments returns the flattened segments of the MultiPolygon, on an error it will panic.
-func (mvc makevalidCase) Segments() (segments geom.MultiLineString) {
+func (mvc makevalidCase) Segments() (segments []geom.Line) {
 	if debug {
 		log.Printf("MakeValidTestCase Polygon: %+v", mvc.MultiPolygon)
 	}

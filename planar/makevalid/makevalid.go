@@ -79,7 +79,7 @@ func (a ByXYLine) Less(i, j int) bool {
 // 2. normalize direction of line segments to left to right
 // 3. line segments are generally unique.
 // 4. line segments outside of the clipbox will be clipped
-func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (geom.MultiLineString, error) {
+func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) ([]geom.Line, error) {
 
 	segments, err := asSegments(*multipolygon)
 	if err != nil {
@@ -141,12 +141,16 @@ func Destructure(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.M
 	}
 
 	unique(nsegs)
-	var mls = make(geom.MultiLineString, len(nsegs))
-	for i := range nsegs {
-		mls[i] = nsegs[i][:]
-	}
+	return nsegs, nil
+	/*
+		// TODO(gdey): delete
+		var mls = make(geom.MultiLineString, len(nsegs))
+		for i := range nsegs {
+			mls[i] = nsegs[i][:]
+		}
 
-	return mls, nil
+		return mls, nil
+	*/
 }
 
 // unique sorts segments by XY and filters out duplicate segments.
@@ -191,7 +195,7 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if err != nil {
 		return nil, err
 	}
-	triangles, err := InsideTrianglesForGeometry(ctx, multipolygon, hm)
+	triangles, err := InsideTrianglesForSegments(ctx, segs, hm)
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}

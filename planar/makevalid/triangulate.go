@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
@@ -50,11 +52,14 @@ func TriangulateGeometry(ctx context.Context, g geom.Geometry) ([]geom.Triangle,
 	return triangles, nil
 }
 
-func InsideTrianglesForGeometry(ctx context.Context, g geom.Geometry, hm planar.HitMapper) ([]geom.Triangle, error) {
+func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
 	if debug {
 		log.Printf("Step   3 : generate triangles")
 	}
-	allTriangles, err := TriangulateGeometry(ctx, g)
+	triangulator := qetriangulate.GeomConstrained{
+		Constraints: segs,
+	}
+	allTriangles, err := triangulator.Triangles(ctx, false)
 	if err != nil {
 		if debug {
 			log.Println("Step     3a: got error", err)
