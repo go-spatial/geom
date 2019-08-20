@@ -6,8 +6,8 @@ import (
 	"log"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/wkt"
 	vectorTile "github.com/go-spatial/geom/encoding/mvt/vector_tile"
+	"github.com/go-spatial/geom/encoding/wkt"
 )
 
 var (
@@ -35,7 +35,6 @@ func (f Feature) String() string {
 	if err != nil {
 		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}
-
 
 	if f.ID != nil {
 		return fmt.Sprintf("{Feature: %v, GEO: %v, Tags: %+v}", *f.ID, g, f.Tags)
@@ -243,6 +242,23 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 		return g, vectorTile.Tile_POLYGON, nil
 
 	case geom.MultiPolygon:
+		polygons := t.Polygons()
+		for _, p := range polygons {
+			lines := geom.Polygon(p).LinearRings()
+			for _, l := range lines {
+				points := geom.LineString(l).Verticies()
+				g = append(g, c.MoveTo(points[0])...)
+				g = append(g, c.LineTo(points[1:]...)...)
+				g = append(g, c.ClosePath())
+			}
+		}
+		return g, vectorTile.Tile_POLYGON, nil
+
+	case *geom.MultiPolygon:
+		if t == nil {
+			return g, vectorTile.Tile_POLYGON, nil
+		}
+
 		polygons := t.Polygons()
 		for _, p := range polygons {
 			lines := geom.Polygon(p).LinearRings()
