@@ -353,15 +353,15 @@ func (e *Extent) Clone() *Extent {
 
 // Intersect will return a new extent that is the intersect of the two extents.
 //
-// +-------------------------+
-// |                         |
-// |       A      +----------+------+
-// |              |//////////|      |
-// |              |/// C ////|      |
-// |              |//////////|      |
-// +--------------+----------+      |
-//                |             B   |
-//                +-----------------+
+//	+-------------------------+
+//	|                         |
+//	|       A      +----------+------+
+//	|              |//////////|      |
+//	|              |/// C ////|      |
+//	|              |//////////|      |
+//	+--------------+----------+      |
+//	               |             B   |
+//	               +-----------------+
 // For example the for the above Box A intersects Box B at the area surround by C.
 //
 // If the Boxes don't intersect does will be false, otherwise ibb will be the intersect.
