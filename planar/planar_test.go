@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/go-spatial/geom/cmp"
+
 	"github.com/go-spatial/geom"
 )
 
@@ -51,6 +53,71 @@ func TestSlope(t *testing.T) {
 		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
 	}
 }
+func TestIsPointOnLine(t *testing.T) {
+	type tcase struct {
+		desc     string
+		point    geom.Point
+		segment  geom.Line
+		expected bool
+	}
+	fn := func(tc tcase) (string, func(*testing.T)) {
+		return fmt.Sprintf("%v on %v", tc.point, tc.segment),
+			func(t *testing.T) {
+				if tc.expected != IsPointOnLine(tc.point, tc.segment[0], tc.segment[1]) {
+					t.Errorf("expected %v, got %v", tc.expected, !tc.expected)
+				}
+			}
+	}
+	tests := [...]tcase{
+		{
+			// Diagonal line
+			point:   geom.Point{1, 1},
+			segment: geom.Line{{0, 0}, {1, 10}},
+		},
+		{
+			// Vertical line
+			point:   geom.Point{1, 1},
+			segment: geom.Line{{0, 0}, {0, 10}},
+		},
+		{
+			// Vertical line
+			point:   geom.Point{1, 1},
+			segment: geom.Line{{0, 10}, {10, 10}},
+		},
+		{
+			// horizontal line
+			point:    geom.Point{1, 1},
+			segment:  geom.Line{{1, 0}, {1, 10}},
+			expected: true,
+		},
+		{
+			// horizontal line
+			point:    geom.Point{1, 100},
+			segment:  geom.Line{{1, 0}, {1, 10}},
+			expected: true,
+		},
+		{
+			// horizontal line
+			point:    geom.Point{1, -100},
+			segment:  geom.Line{{1, 0}, {1, 10}},
+			expected: true,
+		},
+		{
+			// horizontal line on close to the end point
+			point:   geom.Point{-0.5, 0},
+			segment: geom.Line{{1, 0}, {1, 10}},
+		},
+		{
+			// horizontal line on the end point
+			point:    geom.Point{1, 0},
+			segment:  geom.Line{{1, 0}, {1, 10}},
+			expected: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(fn(tc))
+	}
+}
 
 func TestIsPointOnLineSegment(t *testing.T) {
 	type tcase struct {
@@ -63,7 +130,7 @@ func TestIsPointOnLineSegment(t *testing.T) {
 		return fmt.Sprintf("%v on %v", tc.point, tc.segment),
 			func(t *testing.T) {
 				if tc.expected != IsPointOnLineSegment(tc.point, tc.segment) {
-					t.Errorf("got %v, expected %v", !tc.expected, tc.expected)
+					t.Errorf("expected %v, got %v", tc.expected, !tc.expected)
 				}
 			}
 	}
@@ -103,5 +170,125 @@ func TestIsPointOnLineSegment(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(fn(tc))
+	}
+}
+
+func TestIsCCW(t *testing.T) {
+	type tcase struct {
+		desc       string
+		p1, p2, p3 geom.Point
+		is         bool
+	}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			got := IsCCW(tc.p1, tc.p2, tc.p3)
+			if got != tc.is {
+				t.Errorf(
+					"%v:%v:%v, expected %v got %v",
+					tc.p1, tc.p2, tc.p3,
+					tc.is, got,
+				)
+				return
+			}
+		}
+	}
+
+	tests := []tcase{
+		{
+			p1: geom.Point{0, 0},
+			p2: geom.Point{1, 0},
+			p3: geom.Point{1, 1},
+			is: true,
+		},
+		{
+			p1: geom.Point{204, 694},
+			p2: geom.Point{-2511, -3640},
+			p3: geom.Point{3462, -3640},
+			is: true,
+		},
+		{
+			p2: geom.Point{204, 694},
+			p3: geom.Point{-2511, -3640},
+			p1: geom.Point{3462, -3640},
+			is: true,
+		},
+		{
+			p3: geom.Point{204, 694},
+			p1: geom.Point{-2511, -3640},
+			p2: geom.Point{3462, -3640},
+			is: true,
+		},
+		{
+			p1: geom.Point{-2511, -3640},
+			p2: geom.Point{204, 694},
+			p3: geom.Point{3462, -3640},
+			is: false,
+		},
+		{
+			p1: geom.Point{-2511, 3640},
+			p2: geom.Point{204, 694},
+			p3: geom.Point{3462, -3640},
+			is: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, fn(tc))
+	}
+}
+func TestPointOnLineAt(t *testing.T) {
+
+	type tcase struct {
+		desc     string
+		line     geom.Line
+		distance float64
+		point    geom.Point
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			got := PointOnLineAt(tc.line, tc.distance)
+			if !cmp.GeomPointEqual(tc.point, got) {
+				t.Errorf("point, expected %v, got %v", tc.point, got)
+			}
+		}
+	}
+
+	tests := []tcase{
+		{
+			desc:     "simple test case",
+			line:     geom.Line{{0, 0}, {10, 0}},
+			distance: 5.0,
+			point:    geom.Point{5, 0},
+		},
+		{
+			line:     geom.Line{{204, 694}, {-2511, -3640}},
+			distance: 100,
+			point:    geom.Point{150.9122535714552, 609.2551406919657},
+		},
+		{
+			line:     geom.Line{{204, 694}, {475.500, 8853}},
+			distance: 100,
+			point:    geom.Point{207.3257728713106, 793.9446808730132},
+		},
+		{
+			line:     geom.Line{{204, 694}, {369, 793}},
+			distance: 100,
+			point:    geom.Point{289.7492925712544, 745.4495755427527},
+		},
+		{
+			line:     geom.Line{{204, 694}, {426, 539}},
+			distance: 100,
+			point:    geom.Point{285.9925374282251, 636.7529581019149},
+		},
+		{
+			line:     geom.Line{{204, 694}, {273, 525}},
+			distance: 100,
+			point:    geom.Point{241.79928289224065, 601.4191476987149},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, fn(tc))
 	}
 }
