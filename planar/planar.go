@@ -51,10 +51,10 @@ func IsPointOnLine(pt [2]float64, l1, l2 [2]float64) bool {
 	switch {
 	case !defined:
 		// line is vertical, so if we the y values are the same it's on the line.
-		return cmp.Float(pt[1], l1[1])
-	case m == 0:
-		// line is horizontal, so if the x values are the same it's on the line.
 		return cmp.Float(pt[0], l1[0])
+	case m == 0:
+		// line is horizontal, so if the y values are the same it's on the line.
+		return cmp.Float(pt[1], l1[1])
 	default:
 		y := (m * pt[0]) + b
 		return cmp.Float(pt[1], y)
@@ -89,6 +89,20 @@ func IsPointOnLineSegment(pt geom.Point, seg geom.Line) bool {
 
 }
 
+// PointOnLineAt will return a point on the given line at the distance from the
+// origin of the line
+func PointOnLineAt(ln geom.Line, distance float64) geom.Point {
+
+	lineDist := math.Sqrt(ln.LenghtSquared())
+	ratio := distance / lineDist
+	var x, y float64
+
+	x = ln[0][0] + (ratio * (ln[1][0] - ln[0][0]))
+	y = ln[0][1] + (ratio * (ln[1][1] - ln[0][1]))
+	return geom.Point{x, y}
+}
+
+// IsCCW will check if the given points are in counter-clockwise order.
 func IsCCW(a, b, c geom.Point) bool {
 	return geom.Triangle{[2]float64(a), [2]float64(b), [2]float64(c)}.Area() > 0
 }
