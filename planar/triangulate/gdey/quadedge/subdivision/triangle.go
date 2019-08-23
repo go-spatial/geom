@@ -22,13 +22,13 @@ func (t Triangle) IntersectsPoint(pt geom.Point) bool {
 	}
 
 	for i := 0; i < 3; i++ {
-		switch Classify(pt, *e.Orig(), *e.Dest()) {
+		switch quadedge.Classify(pt, *e.Orig(), *e.Dest()) {
 
 		// return true if v is on the edge
-		case ORIGIN, DESTINATION, BETWEEN:
+		case quadedge.ORIGIN, quadedge.DESTINATION, quadedge.BETWEEN:
 			return true
 			// return false if v is well outside the triangle
-		case LEFT, BEHIND, BEYOND:
+		case quadedge.LEFT, quadedge.BEHIND, quadedge.BEYOND:
 			return false
 		}
 		e = e.RNext()
