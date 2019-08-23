@@ -66,12 +66,15 @@ func (w WindingOrder) Not() WindingOrder {
 // be -1, otherwise it will be 1; vice versa for counter-clockwise.
 func Orient(pts ...[2]float64) int8 {
 	sum := 0.0
-	li := len(pts) - 1
+
 	if len(pts) < 3 {
 		return 0
 	}
-	for i := range pts[:li] {
-		sum += (pts[i][0] * pts[i+1][1]) - (pts[i+1][0] * pts[i][1])
+	li := len(pts) - 1
+
+	for i := range pts {
+		sum += (pts[li][0] * pts[i][1]) - (pts[i][0] * pts[li][1])
+		li = i
 	}
 	if debug {
 		log.Printf("sum: %v", sum)

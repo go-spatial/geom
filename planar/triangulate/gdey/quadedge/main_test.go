@@ -2,6 +2,7 @@ package qetriangulate_test
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-spatial/geom/encoding/gpkg"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
@@ -36,7 +39,7 @@ func logEdges(sd *subdivision.Subdivision) {
 	})
 }
 
-func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...[2]float64) {
+func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...geom.Point) {
 
 	var (
 		ffl        = debugger.FFL(0)
@@ -45,22 +48,21 @@ func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...[2]float64) {
 	)
 
 	start := time.Now()
-	sort.Sort(cmp.ByXY(pts))
+	sort.Sort(cmp.PointByXY(pts))
 
-	tri := geom.NewTriangleContainingPoints(pts...)
-	ext := geom.NewExtent(pts...)
+	tri := geom.NewTriangleContaining(pts...)
+	ext := geom.NewExtentFromPoints(pts...)
 	sd := subdivision.New(geom.Point(tri[0]), geom.Point(tri[1]), geom.Point(tri[2]))
 
 	for i, pt := range pts {
 		if i != 0 && pts[i-1][0] == pt[0] && pts[i-1][1] == pt[1] {
 			continue
 		}
-		bfpt := geom.Point(pt)
-		if !sd.InsertSite(bfpt) {
-			badPoints = append(badPoints, bfpt)
+		if !sd.InsertSite(pt) {
+			badPoints = append(badPoints, pt)
 			continue
 		}
-		goodPoints = append(goodPoints, bfpt)
+		goodPoints = append(goodPoints, pt)
 	}
 	t.Logf("triangulation setup took: %v", time.Since(start))
 
@@ -181,7 +183,7 @@ func cleanup(data []byte) (parts []string) {
 	return parts
 }
 
-func gettests(inputdir, mid string, ts map[string][][2]float64) {
+func gettests(inputdir string, ts map[string][]geom.Point) {
 	files, err := ioutil.ReadDir(inputdir)
 	if err != nil {
 		panic(
@@ -190,15 +192,13 @@ func gettests(inputdir, mid string, ts map[string][][2]float64) {
 	}
 	var filename string
 	for _, file := range files {
-		if mid != "" {
-			filename = filepath.Join(mid, file.Name())
-		} else {
-			filename = file.Name()
-		}
+
 		if file.IsDir() {
-			gettests(inputdir, filename, ts)
+			gettests(filepath.Join(inputdir, file.Name()), ts)
 			continue
 		}
+		filename = file.Name()
+
 		idx := strings.LastIndex(filename, ".points")
 		if idx == -1 || filename[idx:] != ".points" {
 			continue
@@ -209,7 +209,7 @@ func gettests(inputdir, mid string, ts map[string][][2]float64) {
 				fmt.Sprintf("Could not read file %v: %v", filename, err),
 			)
 		}
-		var pts [][2]float64
+		var pts []geom.Point
 
 		// clean up file of { [ ( , ;
 		parts := cleanup(data)
@@ -231,7 +231,7 @@ func gettests(inputdir, mid string, ts map[string][][2]float64) {
 					fmt.Sprintf("%v::%v: Badly formatted value {{%v}}:%v\n%s", filename, i+1, parts[i], err, data),
 				)
 			}
-			pts = append(pts, [2]float64{x, y})
+			pts = append(pts, geom.Point{x, y})
 		}
 		ts[filename[:idx]] = pts
 	}
@@ -241,12 +241,200 @@ func init() {
 	debugger.DefaultOutputDir = "output"
 }
 
-const inputdir = "testdata"
+const (
+	inputdir                       = "testdata"
+	triangulationTestCrateTableSQL = `
+
+	CREATE TABLE IF NOT EXISTS test_triangulation_info (
+		id INTEGER PRIMARY KEY AUTOINCREMENT
+		, name TEXT
+	);
+	
+	CREATE TABLE IF NOT EXISTS test_triangulation_input_point (
+		test_id INTEGER
+		, "order" INTEGER
+		, geometry POINT
+		, FOREIGN KEY(test_id) REFERENCES test_triangulation_info(id)
+	);
+	
+	CREATE TABLE IF NOT EXISTS test_constrained_triangulation_linestring (
+		test_id INTEGER
+		, "order" INTEGER
+		, geometry LINESTRING
+		, FOREIGN KEY(test_id) REFERENCES test_triangulation_info(id)
+		
+	)
+	
+	CREATE TABLE IF NOt EXISTS "test_triangulation_expected_point" (
+		test_id INTEGER
+		, is_bad BOOLEAN DEFAULT false -- for good or bad points
+		, "order" INTEGER
+		, geometry POINT
+		, FOREIGN KEY(test_id) REFERENCES test_triangulation_info(id)
+	);
+	
+	CREATE TABLE IF NOT EXISTS "test_triangulation_expected_linestring" (
+		test_id INTEGER
+		, "order" INTEGER
+		, geometry LINESTRING
+		, FOREIGN KEY(test_id) REFERENCES test_triangulation_info(id)
+	);
+	
+	CREATE TABLE IF NOT EXISTS "test_triangulation_expected_polygon" (
+		test_id INTEGER
+		, is_frame BOOLEAN DEFAULT false -- is part of the frame
+		, type TEXT -- should be triangle, triangle:main, extent
+		, "order" INTEGER
+		, geometry LINESTRING
+		, FOREIGN KEY(test_id) REFERENCES test_triangulation_info(id)
+	);
+	`
+)
+
+type gpkgTriangulationTestDB struct {
+	Filename string
+	init     bool
+	h        *gpkg.Handle
+	prepared map[string]*sql.Stmt
+}
+
+type gpkgTriangulationTestTableDescription struct {
+	name    string
+	geoType gpkg.GeometryType
+}
+
+func (tab gpkgTriangulationTestTableDescription) TableDescription() gpkg.TableDescription {
+	return gpkg.TableDescription{
+		Name:          tab.name,
+		ShortName:     strings.Replace(tab.name, "_", " ", -1),
+		Description:   fmt.Sprintf("triangualtion test table %v for %v", tab.name, tab.geoType),
+		GeometryField: "geometry",
+		GeometryType:  tab.geoType,
+		Z:             gpkg.Prohibited,
+		M:             gpkg.Prohibited,
+	}
+}
+
+func (db *gpkgTriangulationTestDB) Load() error {
+	tables := []gpkgTriangulationTestTableDescription{
+		{
+			name:    "test_triangulation_input_point",
+			geoType: gpkg.Point,
+		},
+		{
+			name:    "test_constrained_triangulation_linestring",
+			geoType: gpkg.Linestring,
+		},
+		{
+			name:    "test_triangulation_expected_point",
+			geoType: gpkg.Point,
+		},
+		{
+			name:    "test_triangulation_expected_linestring",
+			geoType: gpkg.Linestring,
+		},
+		{
+			name:    "test_triangulation_expected_polygon",
+			geoType: gpkg.Polygon,
+		},
+	}
+	if db.Filename == "" {
+		return fmt.Errorf("need a filename")
+	}
+	h, err := gpkg.Open(db.Filename)
+	if err != nil {
+		return err
+	}
+	db.h = h
+	if _, err = h.Exec(triangulationTestCrateTableSQL); err != nil {
+		return err
+	}
+	for _, tbl := range tables {
+		if err = h.AddGeometryTable(tbl.TableDescription()); err != nil {
+			return err
+		}
+	}
+	db.init = true
+	return nil
+}
+
+func (db *gpkgTriangulationTestDB) Tests() []gpkgTriangulationTestDBRow {
+	const (
+		selectSQL = `
+		SELECT 
+			id,
+			name
+		FROM
+			test_triangulation_info
+		;
+		`
+	)
+	rows, err := db.h.Query(selectSQL)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	var tests []gpkgTriangulationTestDBRow
+	for rows.Next() {
+		var test gpkgTriangulationTestDBRow
+		if err = rows.Scan(&test.ID, &test.Name); err != nil {
+			panic(err)
+		}
+		tests = append(tests, test)
+	}
+	return tests
+}
+
+type gpkgTriangulationTestDBRow struct {
+	db   *gpkgTriangulationTestDB
+	Name string
+	ID   int
+}
+
+func (tcase gpkgTriangulationTestDBRow) Points() (pts []geom.Point) {
+	const (
+		selectSQL = `
+	SELECT 
+		geometry
+	FROM
+		test_triangulation_input_point
+	WHERE
+		test_id = ?
+	ORDER BY
+		"order"
+	;
+	`
+	)
+
+	stmt := tcase.db.prepared["input_points"]
+	if stmt == nil {
+		stmt, err := tcase.db.h.Prepare(selectSQL)
+		if err != nil {
+			panic(err)
+		}
+		tcase.db.prepared["input_points"] = stmt
+	}
+	rows, err := stmt.Query(tcase.ID)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sb gpkg.StandardBinary
+		rows.Scan(&sb)
+		pt, ok := sb.Geometry.(geom.Point)
+		if !ok {
+			panic(fmt.Sprintf("failed to decode point: %v %T", sb, sb.Geometry))
+		}
+		pts = append(pts, pt)
+	}
+	return pts
+}
 
 func TestTriangulation(t *testing.T) {
 
 	/*
-		tests := map[string][]geometry.Point{
+		tests := map[string][]geom.Point{
 			"First Test": {
 				{516, 661}, {369, 793}, {426, 539}, {273, 525}, {204, 694}, {747, 750}, {454, 390},
 			},
@@ -254,9 +442,56 @@ func TestTriangulation(t *testing.T) {
 				{382, 302}, {382, 328}, {382, 205}, {623, 175}, {382, 188}, {382, 284}, {623, 87}, {623, 341}, {141, 227},
 			},
 		}
+
+		type struct tcase {
+			Name string
+			Points []geom.Point `gpkgtest:"input"`
+			Good []geom.Point `gpkgtest:"got"`
+			Bad []geom.Point `gpkgtest:"got"`
+			Edges []geom.Line `gpkgtest:"got"`
+			Triangles []geom.Triangle `gpgktest:"got"`
+		}
+
+		test_triangulation_info {
+			id integer
+			name string -- Name
+		}
+		test_triangulation_points_point {
+			test_id integer
+			order integer
+			geometry POINT
+		}
+
+		test_triangulation_good_point {
+			test_id integer
+			order integer
+			geometry POINT
+		}
+		test_triangulation_good_point {
+			test_id integer
+			order integer
+			geometry POINT
+		}
+
+		test_triangulation_expected_linestring {
+			test_id
+			order
+			geometry LINESTRING
+		}
+
+		-- this will hold the triangles
+		test_triangulation_expected_polygon {
+			test_id
+			is_frame
+			type -- triangle, extent
+			order
+			geometry POLYGON
+		}
+
+
 	*/
-	tests := make(map[string][][2]float64)
-	gettests(inputdir, "", tests)
+	tests := make(map[string][]geom.Point)
+	gettests(inputdir, tests)
 
 	for name, pts := range tests {
 		t.Run(name, func(t *testing.T) {

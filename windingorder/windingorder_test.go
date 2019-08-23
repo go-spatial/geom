@@ -199,7 +199,7 @@ func TestOfPoints(t *testing.T) {
 				{853.491, 1424.329},
 				{852.395, 1424.635},
 			},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			Desc: "edge_test initial good",
@@ -217,6 +217,69 @@ func TestOfPoints(t *testing.T) {
 				{365.513, 116.162},
 				{366.318, 117.961},
 				{384.939, 111.896},
+			},
+			order: CounterClockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{10,0},
+				{0,20},
+				{10,20},
+			},
+			order:CounterClockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{10,20},
+				{10,0},
+				{0,20},
+			},
+			order:CounterClockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{0,20},
+				{10,20},
+				{10,0},
+			},
+			order:CounterClockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{10,20},
+				{0,20},
+				{10,0},
+			},
+			order:Clockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{10,0},
+				{10,20},
+				{0,20},
+			},
+			order:Clockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{0,20},
+				{10,0},
+				{10,20},
+			},
+			order:Clockwise,
+		},
+		{
+			Desc: "pseudo_polygon_test should not be colinear",
+			pts: [][2]float64{
+				{0,0},
+				{0,-3},
+				{-2,0},
 			},
 			order: CounterClockwise,
 		},

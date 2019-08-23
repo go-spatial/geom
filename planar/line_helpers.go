@@ -43,8 +43,8 @@ type LinesByLength []geom.Line
 func (l LinesByLength) Len() int      { return len(l) }
 func (l LinesByLength) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
 func (l LinesByLength) Less(i, j int) bool {
-	lilen := l[i].LenghtSquared()
-	ljlen := l[j].LenghtSquared()
+	lilen := l[i].LengthSquared()
+	ljlen := l[j].LengthSquared()
 	if lilen == ljlen {
 		if cmp.PointEqual(l[i][0], l[j][0]) {
 			return cmp.PointLess(l[i][1], l[j][1])

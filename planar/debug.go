@@ -1,3 +1,3 @@
 package planar
 
-const debug = false
+const debug = true

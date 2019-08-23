@@ -2,6 +2,7 @@ package geom
 
 import (
 	"log"
+	"math"
 	"math/big"
 )
 
@@ -74,8 +75,27 @@ func (l Line) ContainsPointBigFloat(pt [2]*big.Float) bool {
 	return goodX && goodY
 }
 
-// LengthSqured returns the length of the segment squared
 func (l Line) LenghtSquared() float64 {
-	deltax, deltay := l[1][0]-l[0][0], l[1][1]-l[0][1]
+	log.Printf("depercated: please use LengthSquared")
+	if debug {
+		panic("depercated: please use LengthSquared")
+	}
+	return l.LengthSquared()
+}
+
+func RoundToPrec(v float64, prec uint) float64 {
+	if v == -0.0 {
+		return 0.0
+	}
+	if prec == 0 {
+		return math.Round(v)
+	}
+	RoundingFactor := float64(10 * prec)
+	return math.Round(v*RoundingFactor) / RoundingFactor
+}
+
+// LengthSquared returns the length of the segment squared
+func (l Line) LengthSquared() float64 {
+	deltax, deltay := RoundToPrec(l[1][0], 3)-RoundToPrec(l[0][0], 3), RoundToPrec(l[1][1], 3)-RoundToPrec(l[0][1], 3)
 	return (deltax * deltax) + (deltay * deltay)
 }
