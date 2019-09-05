@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"io"
 	"strings"
 
 	"github.com/go-spatial/geom"
@@ -183,7 +184,7 @@ func _encode(geo geom.Geometry) string {
 
 //WKT returns a WKT representation of the Geometry if possible.
 // the Error will be non-nil if geometry is unknown.
-func Encode(geo geom.Geometry) (string, error) {
+func EncodeString(geo geom.Geometry) (string, error) {
 	switch g := geo.(type) {
 	default:
 
@@ -243,7 +244,7 @@ func Encode(geo geom.Geometry) (string, error) {
 		}
 		var geometries []string
 		for _, sg := range g.Geometries() {
-			s, err := Encode(sg)
+			s, err := EncodeString(sg)
 			if err != nil {
 				return "", err
 			}
@@ -253,15 +254,15 @@ func Encode(geo geom.Geometry) (string, error) {
 
 	case geom.Line:
 
-		return Encode(geom.LineString(g[:]))
+		return EncodeString(geom.LineString(g[:]))
 
 	case [2][2]float64:
 
-		return Encode(geom.LineString(g[:]))
+		return EncodeString(geom.LineString(g[:]))
 
 	case [][2]float64:
 
-		return Encode(geom.LineString(g))
+		return EncodeString(geom.LineString(g))
 
 	case []geom.Line:
 
@@ -269,43 +270,59 @@ func Encode(geo geom.Geometry) (string, error) {
 		for i := range g {
 			ml[i] = g[i][:]
 		}
-		return Encode(ml)
+		return EncodeString(ml)
 
 	case []geom.Point:
 		mp := make(geom.MultiPoint, len(g))
 		for i := range g {
 			mp[i] = [2]float64(g[i])
 		}
-		return Encode(mp)
+		return EncodeString(mp)
 
 	case geom.Triangle:
 		// treat a triangle as polygon
-		return Encode(geom.Polygon{g[:]})
+		return EncodeString(geom.Polygon{g[:]})
 
 	case []geom.Triangle:
 		mp := make(geom.MultiPolygon, len(g))
 		for i := range g {
 			mp[i] = geom.Polygon{g[i][:]}
 		}
-		return Encode(mp)
+		return EncodeString(mp)
 	case geom.Extent:
 		// treat an extent as a ploygon
-		return Encode(g.AsPolygon())
+		return EncodeString(g.AsPolygon())
 	case *geom.Extent:
 		// treat an extent as a ploygon
 		if g != nil {
-			return Encode(g.AsPolygon())
+			return EncodeString(g.AsPolygon())
 		}
-		return Encode(geom.Polygon{})
+		return EncodeString(geom.Polygon{})
 	}
 }
-func MustEncode(geo geom.Geometry) (str string) {
+func MustEncodeString(geo geom.Geometry) (str string) {
 	var err error
-	if str, err = Encode(geo); err != nil {
+	if str, err = EncodeString(geo); err != nil {
 		panic(fmt.Sprintf("unable to encode %T as wkt", geo))
 	}
 	return str
 }
+
+func Encode(w io.Writer, geo geom.Geometry) error {
+	byt, err := EncodeBytes(geo)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(byt)
+	return err
+}
+
+func EncodeBytes(geo geom.Geometry) ([]byte, error) {
+	str, err := EncodeString(geo)
+	return []byte(str), err
+}
+
 
 func Decode(text string) (geo geom.Geometry, err error) {
 	return nil, nil

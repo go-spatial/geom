@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	gtesting "github.com/go-spatial/geom/testing"
 )
 
 func TestEncode(t *testing.T) {
@@ -16,7 +17,7 @@ func TestEncode(t *testing.T) {
 		return tc.Rep, func(t *testing.T) {
 			t.Parallel()
 
-			grep, gerr := Encode(tc.Geom)
+			grep, gerr := EncodeString(tc.Geom)
 			if tc.Err != nil {
 				if tc.Err.Error() != gerr.Error() {
 					t.Errorf("error, expected %v got %v", tc.Err.Error(), gerr.Error())
@@ -317,5 +318,23 @@ func TestEncode(t *testing.T) {
 				t.Run(fn(tc))
 			}
 		})
+	}
+}
+
+func BenchmarkEncodeSin100(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		EncodeBytes(gtesting.SinLineString(1.0, 0.0, 100.0, 100))
+	}
+}
+
+func BenchmarkEncodeSin1000(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		EncodeBytes(gtesting.SinLineString(1.0, 0.0, 100.0, 1000))
+	}
+}
+
+func BenchmarkEncodeTile(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		EncodeBytes(gtesting.Tiles[0])
 	}
 }
