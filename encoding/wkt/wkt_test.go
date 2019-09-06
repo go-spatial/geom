@@ -2,6 +2,7 @@ package wkt
 
 import (
 	"testing"
+	"errors"
 
 	"github.com/go-spatial/geom"
 	gtesting "github.com/go-spatial/geom/testing"
@@ -18,12 +19,15 @@ func TestEncode(t *testing.T) {
 			t.Parallel()
 
 			grep, gerr := EncodeString(tc.Geom)
+			t.Logf("partial: %v", grep)
 			if tc.Err != nil {
 				if tc.Err.Error() != gerr.Error() {
 					t.Errorf("error, expected %v got %v", tc.Err.Error(), gerr.Error())
 				}
 				return
 			}
+
+
 			if tc.Err == nil && gerr != nil {
 				t.Errorf("error, expected nil got %v", gerr)
 				return
@@ -85,7 +89,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.LineString{{0, 0}},
-				Rep:  "LINESTRING (0 0)",
+				Err:  errors.New("not enough points for LINESTRING [[0 0]]"),
 			},
 			{
 				Geom: geom.LineString{{10, 10}, {0, 0}},
@@ -111,7 +115,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
@@ -123,7 +127,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{}, {{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{}, {{10, 10}, {20, 20}}},
@@ -131,15 +135,15 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {}},
-				Rep:  "MULTILINESTRING ((10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10),(10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
-				Rep:  "MULTILINESTRING ((10 10),(10 10,20 20))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {}},
@@ -147,7 +151,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10,20 20),(10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
