@@ -27,7 +27,8 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 func (enc *Encoder) putc(b byte) error {
-	_, err := enc.w.Write([]byte{b})
+	buf := append(enc.fbuf[:0], b)
+	_, err := enc.w.Write(buf)
 	return err
 }
 
