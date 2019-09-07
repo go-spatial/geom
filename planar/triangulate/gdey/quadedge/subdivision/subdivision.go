@@ -385,7 +385,11 @@ func (sd *Subdivision) Triangles(includeFrame bool) (triangles [][3]geom.Point, 
 				// skip this edge
 				if debug {
 					for i, e := range edges {
-						log.Printf("got the following edge%v : %v", i, wkt.MustEncode(e.AsLine()))
+						str, err := wkt.EncodeString(e.AsLine())
+						if err != nil {
+							panic(err)
+						}
+						log.Printf("got the following edge%v : %v", i, str)
 					}
 				}
 				return nil

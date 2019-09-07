@@ -23,8 +23,8 @@ func TestEncode(t *testing.T) {
 			grep, gerr := EncodeString(tc.Geom)
 			t.Logf("partial: %v", grep)
 			if tc.Err != nil {
-				if tc.Err.Error() != gerr.Error() {
-					t.Errorf("error, expected %v got %v", tc.Err.Error(), gerr.Error())
+				if gerr == nil || tc.Err.Error() != gerr.Error() {
+					t.Errorf("error, expected %v got %v", tc.Err, gerr)
 				}
 				return
 			}
@@ -198,6 +198,18 @@ func TestEncode(t *testing.T) {
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {11, 11}, {12, 12}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {12, 12}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {12, 12}, {10, 10}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
 				Err: errors.New("cannot have empty points in POLYGON"),
 			},
@@ -249,6 +261,18 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}}},
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {10, 10}, {11, 11}, {12, 12}}}},
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}, {12, 12}}}},
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}, {10, 10}, {10, 10}}}},
 				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
 			},
 			{

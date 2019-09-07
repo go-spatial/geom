@@ -185,18 +185,24 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 
 	// the last encode point
 	_v := mp[last]
-	lastEnc := &_v
+	lastToEnc := &_v
 	if gType == polyType || gType == mPolyType {
-		last++
-		lastEnc = nil
+		lastToEnc = nil
 	}
+
+	var lastEnc *[2]float64
 
 	err = enc.putc('(')
 	if err != nil {
 		return count, err
 	}
 
-	for _, v := range mp[:last] {
+	for i, v := range mp[:last+1] {
+		if lastEnc != nil && *lastEnc == v && gType != mpType {
+			continue
+		}
+		lastEnc = &mp[i]
+
 		if IsEmptyPoint(v) {
 			switch gType {
 			case mpType:
@@ -217,48 +223,33 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 			}
 		}
 
-		if lastEnc == nil {
+		if lastToEnc == nil {
 			_v = v
-			lastEnc = &_v
+			lastToEnc = &_v
 		}
 
+		if count != 0 {
+			err = enc.putc(',')
+			if err != nil {
+				return count, err
+			}
+		}
 		count++
 		err = enc.encodePair(v)
 		if err != nil {
 			return count, err
 		}
+	}
 
+	if (gType == polyType || gType == mPolyType) && *lastToEnc != *lastEnc {
 		err = enc.putc(',')
 		if err != nil {
 			return count, err
 		}
-	}
-
-	if IsEmptyPoint(*lastEnc) {
-		fmt.Printf("empty point, type is  %v\n", gType)
-		switch gType {
-		case mpType:
-			// multipoints can have empty points
-			if removePointless {
-				panic("the last element must always be poinfull, set by caller")
-			}
-		case lsType:
-			return count, errors.New("cannot have empty points in LINESTRING")
-		case mlType:
-			return count, errors.New("cannot have empty points in MULTILINESTRING")
-		case polyType:
-			return count, errors.New("cannot have empty points in POLYGON")
-		case mPolyType:
-			return count, errors.New("cannot have empty points in MULTIPOLYGON")
-		default:
-			panic("unrechable")
+		err = enc.encodePair(*lastToEnc)
+		if err != nil {
+			return count, err
 		}
-	}
-
-	count++
-	err = enc.encodePair(*lastEnc)
-	if err != nil {
-		return count, err
 	}
 
 	return count, enc.putc(')')
