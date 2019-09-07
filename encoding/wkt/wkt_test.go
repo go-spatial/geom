@@ -3,6 +3,7 @@ package wkt
 import (
 	"bytes"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/go-spatial/geom"
@@ -67,6 +68,10 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTIPOINT EMPTY",
 			},
 			{
+				Geom: geom.MultiPoint{{math.NaN(), math.NaN()}},
+				Rep:  "MULTIPOINT EMPTY",
+			},
+			{
 				Geom: geom.MultiPoint{{0, 0}},
 				Rep:  "MULTIPOINT (0 0)",
 			},
@@ -93,6 +98,10 @@ func TestEncode(t *testing.T) {
 				Err:  errors.New("not enough points for LINESTRING [[0 0]]"),
 			},
 			{
+				Geom: geom.LineString{{0, 0}, {math.NaN(), math.NaN()}},
+				Err:  errors.New("cannot have empty points in LINESTRING"),
+			},
+			{
 				Geom: geom.LineString{{10, 10}, {0, 0}},
 				Rep:  "LINESTRING (10 10,0 0)",
 			},
@@ -113,6 +122,14 @@ func TestEncode(t *testing.T) {
 			{
 				Geom: geom.MultiLineString{{}},
 				Rep:  "MULTILINESTRING EMPTY",
+			},
+			{
+				Geom: geom.MultiLineString{{}},
+				Rep:  "MULTILINESTRING EMPTY",
+			},
+			{
+				Geom: geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {}},
+				Err: errors.New("cannot have empty points in MULTILINESTRING"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}},
@@ -181,8 +198,16 @@ func TestEncode(t *testing.T) {
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
+				Err: errors.New("cannot have empty points in POLYGON"),
+			},
+			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10),(20 20,21 21,22 22,20 20))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {math.NaN(), math.NaN()}, {22, 22}}},
+				Err: errors.New("cannot have empty points in POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
@@ -225,6 +250,10 @@ func TestEncode(t *testing.T) {
 			{
 				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}}},
 				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {math.NaN(), math.NaN()}, {12, 12}}}},
+				Err: errors.New("cannot have empty points in MULTIPOLYGON"),
 			},
 		},
 		"Collectioner": {
