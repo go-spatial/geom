@@ -79,7 +79,6 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 		seen[pt] = true
 
 		if !sd.InsertSite(pt) {
-			// TODO(gdey): should this function return an error?
 			log.Printf("Failed to insert point(%v) %v", i, wkt.MustEncode(pt))
 			return nil, errors.String("Failed to insert point")
 		}
@@ -268,7 +267,7 @@ func (sd *Subdivision) Validate(ctx context.Context) error {
 	// Check for intersecting lines
 	eq := intersect.NewEventQueue(lines)
 	if err := eq.FindIntersects(ctx, true, func(i, j int, _ [2]float64) error {
-		err1 = append(err1, "found intersecting lines: \n%v\n%v", wkt.MustEncode(lines[i]), wkt.MustEncode(lines[j]))
+		err1 = append(err1, fmt.Sprintf("found intersecting lines: \n%v\n%v", wkt.MustEncode(lines[i]), wkt.MustEncode(lines[j])))
 		return err1
 	}); err != nil {
 		return err
@@ -388,38 +387,46 @@ func toOrtStr(s float64) string {
 //       ⟳ -- clockwise
 //        O -- colinear
 //
-// +----+----+----+----+
-// |  # | ab | da | db | return - comment
-// +----+----+----+----+
-// |  1 | ⟲ | ⟲  | ⟲ | next
-// |  2 | ⟲ | ⟲  | ⟳ | next
-// |  3 | ⟲ | ⟲  | O  | nex
-// |  4 | ⟲ | ⟳  | ⟲ | a
-// |  5 | ⟲ | ⟳  | ⟳ | next
-// |  6 | ⟲ | ⟳  | O | b -- ErrColinearPoints
-// |  7 | ⟲ | O   | ⟲ | a -- ErrColinearPoints
-// |  8 | ⟲ | O   | ⟳ | next
-// |  9 | ⟳ | ⟲  | ⟲ | a
-// | 10 | ⟳ | ⟲  | ⟳ | next
-// | 11 | ⟳ | ⟲  | O | b -- ErrColinearPoints
-// | 12 | ⟳ | ⟳  | ⟲ | a
-// | 13 | ⟳ | ⟳  | ⟳ | a
-// | 14 | ⟳ | ⟳  | O | a
-// | 15 | ⟳ | O   | ⟲ | a
-// | 16 | ⟳ | O   | ⟳ | a -- ErrColinearPoints
-// | 17 | O  | O   | O | a/b -- ErrColinearPoint a/b depending on which one contains dest
-// | 18 | O  | ⟲  | ⟳ | next
-// | 19 | O  | ⟳  | ⟲ | a
+//        +----+----+----+----+
+//        |  # | ab | da | db | return - comment
+//        +----+----+----+----+                                     ,,,,,,8,,,,,,
+//        |  1 | ⟲ | ⟲  | ⟲ | a                                   ,,,2,,:,,5,,,
+//        |  2 | ⟲ | ⟲  | ⟳ | a                                   .3....+----6->b
+//        |  3 | ⟲ | ⟲  | O  | a                                   ,, 1,,|  4
+//        |  4 | ⟲ | ⟳  | ⟲ | next                                ,,,,,,7
+//        |  5 | ⟲ | ⟳  | ⟳ | a                                         V
+//        |  6 | ⟲ | ⟳  | O | b -- ErrColinearPoints                     a
+//        |  7 | ⟲ | O   | ⟲ | a -- ErrColinearPoints
+//        |  8 | ⟲ | O   | ⟳ | a
+//        |  + | ⟲ | O   | O | point is at origin  : Err                 14
+//        |  9 | ⟳ | ⟲  | ⟲ | next                                   12 :  13
+//        | 10 | ⟳ | ⟲  | ⟳ | a                                  .15....+----16>a
+//        | 11 | ⟳ | ⟲  | O | b -- ErrColinearPoints                  9  |,,10,,
+//        | 12 | ⟳ | ⟳  | ⟲ | next                                      11,,,,,
+//        | 13 | ⟳ | ⟳  | ⟳ | next                                      V
+//        | 14 | ⟳ | ⟳  | O | next                                       b
+//        | 15 | ⟳ | O   | ⟲ | next
+//        | 16 | ⟳ | O   | ⟳ | a -- ErrColinearPoints
+//        |  + | ⟳ | O   | O | point is at origin : Err                   18
+//        | 17 | O  | ⟲  | ⟳ | a                                 b-19----+---19->a
+//        | 18 | O  | ⟳  | ⟲ | next                                ,,,,,,17,,,,,,
+//        | 19 | O  | O   | O | a/b -- ErrColinearPoint a/b depending on which one contains dest
+//        | 20 | O  | ⟲  | ⟲ | a -- ErrCoincidentalEdges                 21
+//        | 21 | O  | ⟳  | ⟳ | a -- ErrCoincidentalEdges           .......+------>a,b
+//        +----+----+-----+----+                                          20
 //
-// ab == 0 where a == b return nil and ErrCoincidentalEdges
-// if ab == O and da == O then db must be O
-// if ab != 0 then d can not be O to both a and b
+//        if ab == O and da == O then db must be O
 //
+// Only errors returned are
+//  * nil  // nothing is wrong
+//  * ErrInvalidateEndVertex
+//  * ErrConcidentalEdges
+//  * geom.ErrColinearPoints
 func resolveEdge(gse *quadedge.Edge, odest geom.Point) (*quadedge.Edge, error) {
 
 	var (
 		candidate *quadedge.Edge
-		err       error
+		err       error = ErrInvalidEndVertex
 	)
 
 	orig := *gse.Orig()
@@ -431,17 +438,24 @@ func resolveEdge(gse *quadedge.Edge, odest geom.Point) (*quadedge.Edge, error) {
 
 	gse.WalkAllONext(func(e *quadedge.Edge) bool {
 
-		a := *e.Dest()
-		b := *e.ONext().Dest()
+		apt := *e.Dest()
+		bpt := *e.ONext().Dest()
 
-		ao := [2]float64{a[0] - orig[0], a[1] - orig[1]}
-		bo := [2]float64{b[0] - orig[0], b[1] - orig[1]}
+		ao := [2]float64{apt[0] - orig[0], apt[1] - orig[1]}
+		bo := [2]float64{bpt[0] - orig[0], bpt[1] - orig[1]}
 
 		// calculate the cross product of the the dest line each of the edges
+		//
+		// ccw == 0,1 ->  1,0 == ( 0 * 0 ) - ( 1 * 1 ) == -1   +--
+		//                                                     |⟲
+		// cw  == 1,0 ->  0,1 == ( 1 * 1 ) - ( 0 * 0 ) ==  1   +--
+		//                                                     |⟳
+		// cl  == 1,0 -> -1,0 == ( 1 * 0 ) - (-1 * 0 ) ==  0 --+--
+		//                                                      O
 		ab, da, db := xprd(ao, bo), xprd(dest, ao), xprd(dest, bo)
-		ccwab, cwab, zab := ab > 0, ab < 0, ab == 0
-		ccwda, cwda, zda := da > 0, da < 0, da == 0
-		ccwdb, cwdb, zdb := db > 0, db < 0, db == 0
+		ccwab, cwab, zab := ab < 0, ab > 0, ab == 0
+		ccwda, cwda, zda := da < 0, da > 0, da == 0
+		ccwdb, cwdb, zdb := db < 0, db > 0, db == 0
 
 		if debug {
 			log.Printf("a: %v", wkt.MustEncode(e.AsLine()))
@@ -450,66 +464,92 @@ func resolveEdge(gse *quadedge.Edge, odest geom.Point) (*quadedge.Edge, error) {
 			log.Printf("ab: %v %v da: %v %v db: %v %v", ab, toOrtStr(ab), da, toOrtStr(da), db, toOrtStr(db))
 		}
 
-		switch {
-		case zab && cmp.GeomPointEqual(a, b):
-			candidate = a
-			err = ErrCoincidentalEdges
-			return false
-
-		case zab && zda && zdb: // case 17
-			candidate = e.ONext()
-			if e.AsLine().ContainsPoint([2]float64(dest)) {
+		var (
+			next = func() bool { return true }
+			a    = func() bool {
 				candidate = e
+				err = nil
+				return false
 			}
-			err = geom.ErrPointsAreCoLinear
-			return false
+			errA = func() bool {
+				candidate = e
+				err = geom.ErrPointsAreCoLinear
+				return false
+			}
+			errB = func() bool {
+				candidate = e.ONext()
+				err = geom.ErrPointsAreCoLinear
+				return false
+			}
+			errEdge = func() bool {
+				candidate = e
+				err = ErrCoincidentalEdges
+				if debug {
+					log.Printf("ConincidentalEdges: %v %v %v", wkt.MustEncode(e.AsLine()), wkt.MustEncode(e.ONext().AsLine()), wkt.MustEncode(dest))
+				}
+				return false
+			}
+		)
 
-		case ccwab && zda && ccwdb: // case 7
-			fallthrough
-		case cwab && zda && cwdb: // case 16
-			candidate = e
-			err = geom.ErrPointsAreCoLinear
-			return false
-
-		case ccwab && cwda && zdb: // case 6
-			fallthrough
-		case cwab && ccwda && zdb: // case 11
-			candidate = e.ONext()
-			err = geom.ErrPointsAreCoLinear
-			return false
-
-		case zab && cwda && ccwdb:
-			fallthrough
+		switch {
+		case ccwab && ccwda && ccwdb: // case 1
+			return a()
+		case ccwab && ccwda && cwdb: // case 2
+			return a()
+		case ccwab && ccwda && zdb: // case 3
+			return a()
 		case ccwab && cwda && ccwdb: // case 4
-			fallthrough
+			return next()
+		case ccwab && cwda && cwdb: // case 5
+			return a()
+		case ccwab && cwda && zdb: // case 6
+			return errB()
+		case ccwab && zda && ccwdb: // case 7
+			return errA()
+		case ccwab && zda && cwdb: // case 8
+			return a()
+
+		// +
+
 		case cwab && ccwda && ccwdb: // case 9
-			fallthrough
+			return next()
+		case cwab && ccwda && cwdb: // case 10
+			return a()
+		case cwab && ccwda && zdb: // case 11
+			return errB()
 		case cwab && cwda && ccwdb: // case 12
-			fallthrough
+			return next()
 		case cwab && cwda && cwdb: // case 13
-			fallthrough
+			return next()
 		case cwab && cwda && zdb: // case 14
-			fallthrough
+			return next()
 		case cwab && zda && ccwdb: // case 15
-			candidate = e
-			err = nil
-			return false
+			return next()
+		case cwab && zda && cwdb: // case 16
+			return errA()
+
+		// +
+
+		case zab && ccwda && cwdb: // case 17
+			return a()
+		case zab && cwda && ccwdb: // case 18
+			return next()
+
+		case zab && zda && zdb: // case 19
+		if e.AsLine().ContainsPoint([2]float64(odest)) {
+			return errA()
+		}
+		return errB()
+
+		case zab && ccwda && ccwdb: // case 21
+			return errEdge()
+		case zab && cwda && cwdb: // case 20
+			return errEdge()
 
 		default:
-			/*
-				these cases we move to the next entry
-					case zab && ccwda && cwdb: // case 18
-					case ccwab && ccwda && ccwdb: // case 1
-					case ccwab && ccwda && cwdb: // case 2
-					case ccwab && ccwda && zdb: // case 3
-					case ccwab && cwda && cwdb: // case 5
-					case ccwab && zda && cwdb: // case 8
-					case cwab && ccwda && ccwdb: // case 10
-			*/
 			return true
 
 		}
-
 	})
 	return candidate, err
 

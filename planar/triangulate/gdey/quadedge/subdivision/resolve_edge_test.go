@@ -2,8 +2,6 @@ package subdivision
 
 import (
 	"fmt"
-	"log"
-	"sort"
 	"testing"
 
 	"github.com/go-spatial/geom/cmp"
@@ -119,33 +117,25 @@ func TestResolveEdge(t *testing.T) {
 		"core2Vec %v",
 		geom.Point{0, 0},
 		map[geom.Point]error{
-			geom.Point{4, 0}: geom.ErrPointsAreCoLinear,
-			geom.Point{1, 3}: geom.ErrPointsAreCoLinear,
+			geom.Point{0, 1}: geom.ErrPointsAreCoLinear,
+			geom.Point{1, 0}: geom.ErrPointsAreCoLinear,
 		},
 		genTestStruct{
-			dest: geom.Point{2, 6},
+			dest: geom.Point{0, 6},
 			pts: []geom.Point{
-				{3, -1},
-				{2, -2},
-				{1, -3},
-				{0, -4},
-				{-1, -3},
-				{-2, -2},
-				{-3, -1},
-				{-4, 0},
-				{-3, 1},
-				{-2, 2},
-				{-1, 3},
-				{0, 4},
-				{1, 3},
+				{-1,  1},  // case 1
+				{-1, -1},  // case 2
+				{-1,  0},  // case 3
+				{ 1, -1},  // case 5
+				{ 0,  1},  // case 7
+				{ 0, -1},  // case 8
 			},
 		},
 		genTestStruct{
 			dest: geom.Point{6, 0},
 			pts: []geom.Point{
-				{2, 2},
-				{3, 1},
-				{4, 0},
+				{ 1,  1},  // case 4/10
+				{ 1,  0},  // case 6/16
 			},
 		},
 	)
@@ -241,24 +231,3 @@ func TestResolveEdge(t *testing.T) {
 	}
 }
 
-type ByCounterClockwise []geom.Point
-
-func (b ByCounterClockwise) Len() int {
-	return len(b)
-}
-
-func (b ByCounterClockwise) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-
-func (b ByCounterClockwise) Less(i, j int) bool {
-	return (b[i][0]*b[j][1])-(b[i][1]*b[j][0]) < 0
-}
-
-func AsCounterClockwise(pts []geom.Point) []geom.Point {
-	ccw := ByCounterClockwise(pts)
-	log.Printf("pts: %v", pts)
-	sort.Sort(ccw)
-	log.Printf("pts: %v", pts)
-	return pts
-}
