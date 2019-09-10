@@ -1,6 +1,14 @@
 package geom
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gdey/errors"
+)
+
+const (
+	// ErrPointsAreCoLinear is thrown when points are colinear but that is unexpected
+	ErrPointsAreCoLinear = errors.String("given points are colinear")
+)
 
 // ErrUnknownGeometry represents an objects that is not a known geom geometry.
 type ErrUnknownGeometry struct {

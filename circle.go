@@ -1,16 +1,12 @@
 package geom
 
 import (
-	"errors"
 	"math"
 )
 
 func round(x, unit float64) float64 {
 	return math.Round(x/unit) * unit
 }
-
-// ErrPointsAreCoLinear is thrown when points are colinear but that is unexpected
-var ErrPointsAreCoLinear = errors.New("given points are colinear")
 
 // Circle is a point (float tuple) and a radius
 type Circle struct {
