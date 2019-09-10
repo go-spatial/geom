@@ -85,14 +85,6 @@ func OnEdge(pt geom.Point, e *Edge) bool {
 	return planar.IsPointOnLineSegment(pt, l)
 }
 
-// RightOfOrOn indicate if the point is on the line created by the Edge or right of the edge
-func RightOfOrOn(x geom.Point, e *Edge) bool {
-	if planar.IsPointOnLine([2]float64(x), [2]float64(*e.Orig()), [2]float64(*e.Dest())) {
-		return true
-	}
-	return RightOf(x, e)
-}
-
 // RightOf indicates if the point is right of the Edge
 func RightOf(x geom.Point, e *Edge) bool {
 	org := e.Orig()
@@ -109,24 +101,3 @@ func RightOf(x geom.Point, e *Edge) bool {
 	//return planar.IsCCW(x, *dst, *org)
 }
 
-// LeftOfOrOn indicate if the point is on the line created by the Edge or right of the edge
-func LeftOfOrOn(x geom.Point, e *Edge) bool {
-	if planar.IsPointOnLine([2]float64(x), [2]float64(*e.Orig()), [2]float64(*e.Dest())) {
-		return true
-	}
-	return LeftOf(x, e)
-}
-
-// LeftOf indicates if the point is left of the Edge
-func LeftOf(x geom.Point, e *Edge) bool {
-	org := e.Orig()
-	if org == nil {
-		return false
-	}
-	dst := e.Dest()
-	if dst == nil {
-		return false
-	}
-	return windingorder.OfGeomPoints(x,*org,*dst) == windingorder.Clockwise
-	//return planar.IsCCW(x, *org, *dst)
-}

@@ -102,6 +102,7 @@ func TestValidate(t *testing.T) {
 		edge *Edge
 		err  ErrInvalid
 	}
+	const debug = true
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
@@ -113,17 +114,38 @@ func TestValidate(t *testing.T) {
 					t.Logf("error %v: %v", i, estr)
 				}
 			}
+			if debug {
+				t.Logf("expected errors:")
+				for i, estr := range tc.err {
+					t.Logf("error %v: %v", i, estr)
+				}
+				t.Logf("got      errors:")
+				for i, estr := range err {
+					t.Logf("error %v: %v", i, estr)
+				}
+			}
 			t.Logf("edges:\n%v", tc.edge.DumpAllEdges())
 		}
 	}
 
 	tests := []tcase{
 		{
+			desc: "nil edge",
+			err:  ErrInvalid{"expected edge to have origin"},
+		},
+		{
 			desc: "empty dest",
 			edge: NewWithEndPoints(&geom.Point{1, 0}, nil),
 			err: ErrInvalid{
 				"expected edge to have dest",
 			},
+		},
+		{
+			desc: "one edge",
+			edge: BuildEdgeGraphAroundPoint(
+				geom.Point{0, 0},
+				geom.Point{0, 1},
+			),
 		},
 		{
 			desc: "empty orig",
@@ -147,7 +169,7 @@ func TestValidate(t *testing.T) {
 				return ed1
 			}(),
 			err: ErrInvalid{
-				"orig not equal for edge",
+				"expected edge 3 to have same origin POINT (375 113) instead of POINT (378 113)",
 			},
 		},
 		{
@@ -166,20 +188,41 @@ func TestValidate(t *testing.T) {
 			),
 		},
 		{
+			desc: "colinear counterclockwise",
+			edge: BuildEdgeGraphAroundPoint(
+				geom.Point{0, 0},
+				geom.Point{-2, -1},
+				geom.Point{-2, 0},
+				geom.Point{-2, 1},
+			),
+		},
+		{
+			desc: "colinear clockwise",
+			edge: BuildEdgeGraphAroundPoint(
+				geom.Point{0, 0},
+				geom.Point{-2, 1},
+				geom.Point{-2, 0},
+				geom.Point{-2, -1},
+			),
+			err: ErrInvalid{
+				"expected all points to be counter-clockwise: MULTIPOINT (-2 1,-2 0,-2 -1)",
+			},
+		},
+		{
 			desc: "initial good",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
 				geom.Point{384, 112},
-				geom.Point{368, 117},
 				geom.Point{372, 114},
+				geom.Point{368, 117},
 			),
 		},
 		{
 			desc: "initial good, rotate 1",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
-				geom.Point{368, 117},
 				geom.Point{372, 114},
+				geom.Point{368, 117},
 				geom.Point{384, 112},
 			),
 		},
@@ -187,9 +230,9 @@ func TestValidate(t *testing.T) {
 			desc: "initial good, rotate 2",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
-				geom.Point{372, 114},
-				geom.Point{384, 112},
 				geom.Point{368, 117},
+				geom.Point{384, 112},
+				geom.Point{372, 114},
 			),
 		},
 		{
@@ -197,13 +240,11 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
 				geom.Point{368, 117},
-				geom.Point{384, 112},
 				geom.Point{372, 114},
+				geom.Point{384, 112},
 			),
 			err: ErrInvalid{
-				"expected to be counterclockwise: POINT (474.388 101.957) POINT (280.132 144.623) POINT (288.176 162.614)",
-				"expected to be counterclockwise: POINT (280.132 144.623) POINT (288.176 162.614) POINT (474.388 101.957)",
-				"expected to be counterclockwise: POINT (288.176 162.614) POINT (474.388 101.957) POINT (280.132 144.623)",
+				"expected all points to be counter-clockwise: MULTIPOINT (368 117,384 112,372 114)",
 			},
 		},
 		{
@@ -220,27 +261,24 @@ func TestValidate(t *testing.T) {
 		{
 			desc: "initial good four point",
 			edge: BuildEdgeGraphAroundPoint(
-				geom.Point{375, 113},
-				geom.Point{384, 112},
-				geom.Point{376, 119},
-				geom.Point{368, 117},
-				geom.Point{372, 114},
+				geom.Point{0, 0},
+				geom.Point{-1, 0},
+				geom.Point{0, 1},
+				geom.Point{1, 0},
+				geom.Point{0, -1},
 			),
 		},
 		{
 			desc: "initial bad four point clockwise ",
 			edge: BuildEdgeGraphAroundPoint(
-				geom.Point{375, 113},
-				geom.Point{384, 112},
-				geom.Point{372, 114},
-				geom.Point{368, 117},
-				geom.Point{376, 119},
+				geom.Point{0, 0},
+				geom.Point{-1, 0},
+				geom.Point{0, -1},
+				geom.Point{1, 0},
+				geom.Point{0, 1},
 			),
 			err: ErrInvalid{
-				"expected to be counterclockwise: POINT (366.318 117.961) POINT (376.644 122.864) POINT (384.939 111.896)",
-				"expected to be counterclockwise: POINT (376.644 122.864) POINT (384.939 111.896) POINT (365.513 116.162)",
-				"expected to be counterclockwise: POINT (384.939 111.896) POINT (365.513 116.162) POINT (366.318 117.961)",
-				"expected to be counterclockwise: POINT (365.513 116.162) POINT (366.318 117.961) POINT (376.644 122.864)",
+				"expected all points to be counter-clockwise: MULTIPOINT (-1 0,-1 0,0 -1,1 0,0 1)",
 			},
 		},
 		{
@@ -253,8 +291,8 @@ func TestValidate(t *testing.T) {
 				geom.Point{368, 117},
 			),
 			err: ErrInvalid{
-				"expected to be counterclockwise: POINT (288.176 162.614) POINT (474.388 101.957) POINT (280.132 144.623)",
-				"expected to be counterclockwise: POINT (474.388 101.957) POINT (280.132 144.623) POINT (391.440 211.639)",
+				"expected all points to be counter-clockwise: MULTIPOINT (384 112,384 112,372 114,376 119,368 117)",
+				"found self interstion for vertics POINT (376 119) and POINT (384 112)",
 			},
 		},
 		{
@@ -262,10 +300,10 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{204, 694},
 				geom.Point{-2511, -3640},
-				geom.Point{273, 525},
-				geom.Point{426, 539},
-				geom.Point{369, 793},
 				geom.Point{475.500, 8853},
+				geom.Point{369, 793},
+				geom.Point{426, 539},
+				geom.Point{273, 525},
 			),
 		},
 		{
@@ -273,17 +311,13 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{204, 694},
 				geom.Point{-2511, -3640},
-				geom.Point{475.500, 8853},
-				geom.Point{369, 793},
-				geom.Point{426, 539},
 				geom.Point{273, 525},
+				geom.Point{426, 539},
+				geom.Point{369, 793},
+				geom.Point{475.500, 8853},
 			),
 			err: ErrInvalid{
-				"expected to be counterclockwise: POINT (285.993 636.753) POINT (241.799 601.419) POINT (150.912 609.255)",
-				"expected to be counterclockwise: POINT (241.799 601.419) POINT (150.912 609.255) POINT (207.326 793.945)",
-				"expected to be counterclockwise: POINT (150.912 609.255) POINT (207.326 793.945) POINT (289.749 745.450)",
-				"expected to be counterclockwise: POINT (207.326 793.945) POINT (289.749 745.450) POINT (285.993 636.753)",
-				"expected to be counterclockwise: POINT (289.749 745.450) POINT (285.993 636.753) POINT (241.799 601.419)",
+				"expected all points to be counter-clockwise: MULTIPOINT (-2511 -3640,-2511 -3640,273 525,426 539,369 793,475.500 8853)",
 			},
 		},
 	}
