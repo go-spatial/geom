@@ -99,7 +99,7 @@ func NewSubdivisionFromGeomLines(lines []geom.Line) *Subdivision {
 		ptcount:      len(indexMap),
 		startingEdge: eq,
 	}
-	{
+	if debug {
 		var str strings.Builder
 		DumpSubdivisionW(&str, sd)
 		log.Print(str.String())

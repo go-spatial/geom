@@ -14,11 +14,6 @@ func dumpSD(t *testing.T, sd *Subdivision) {
 	var ml geom.MultiLineString
 	err := sd.WalkAllEdges(func(e *quadedge.Edge) error {
 		ln := e.AsLine()
-		/*
-			if !ext.ContainsPoint(ln[0]) && !ext.ContainsPoint(ln[1]) {
-				return nil
-			}
-		*/
 
 		ml = append(ml, ln[:])
 		return nil
