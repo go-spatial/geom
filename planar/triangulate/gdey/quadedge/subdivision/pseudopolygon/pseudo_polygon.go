@@ -36,7 +36,7 @@ func triangulateSubRings(oPoints []geom.Point) (points []geom.Point, edges []geo
 			// We have seen this point before.
 			// What we need to do, is split out the points and triangulate them
 			if debug {
-				log.Printf("say dup point at %v : points %v",
+				log.Printf("dup point at %v : points %v",
 					i,
 					wkt.MustEncode(npts),
 				)
@@ -84,8 +84,8 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if debug {
-		log.Printf("got Edges: %v",wkt.MustEncode(edges))
+	if debug && len(edges) > 0 {
+		log.Printf("got Edges from triangulateSubRings: %v",wkt.MustEncode(edges))
 	}
 
 	plen := len(points)
@@ -124,23 +124,20 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 	// find the next two closes points to the center of the line between the
 	// first and last points.
 	x1, y1, x2, y2 := points[0][0], points[0][1], points[plen-1][0], points[plen-1][1]
-	if x1 > x2 {
-		x1, x2 = x2, x1
-	}
-	if y1 > y2 {
-		y1, y2 = y2, y1
-	}
 
-	cpoint := geom.Point{(x2 - x1) / 2, (y2 - y1) / 2}
+	cpoint := geom.Point{(x1 + x2) / 2, (y1 + y2) / 2}
+	if debug {
+		log.Printf("center point: %v",wkt.MustEncode(cpoint))
+	}
 	dist := math.Inf(1)
 	var ps, p1, p2, pe int = 0, -1, -1, plen - 1
 
 	for i, candidate := range points[1:pe] {
-		d := planar.PointDistance2(cpoint, candidate)
+		d := planar.PointDistance(cpoint, candidate)
 		cln := windingorder.OfGeomPoints(points[ps], points[i+1], points[pe])
-		if debug && false{
+		if debug {
 			log.Printf("colin: %v -- %v %v %v", cln, points[ps], points[i+1], points[pe])
-			log.Printf("%v disance: %v < %v : %v / %v", i+1, d, dist, d < dist, cln)
+			log.Printf("%v distance: %v < %v : %v / %v", i+1, d, dist, d < dist, cln)
 		}
 		if d < dist && !cln.IsColinear() {
 			p1, p2, dist = i+1, p1, d
@@ -181,7 +178,7 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 	// Should never really error, as the only error is if the points are colinear, and we checked that already
 	circle, _ := geom.CircleFromPoints(points[p1], points[ps], points[pe])
 
-	if debug && false {
+	if debug {
 		log.Printf("Circle center point: \n%v\n", wkt.MustEncode(geom.Point(circle.Center)))
 		log.Printf("Redius x: \n%v\n", wkt.MustEncode(
 			geom.Line{
