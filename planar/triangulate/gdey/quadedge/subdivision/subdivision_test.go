@@ -2,6 +2,8 @@ package subdivision
 
 import (
 	"context"
+	"fmt"
+	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/encoding/wkt"
 	"testing"
 
@@ -31,8 +33,40 @@ func TestNewForPoints(t *testing.T) {
 					}
 				}
 			}
-			dumpSD(t, sd)
+			err = sd.Validate(context.Background())
+			if err  != nil  {
+				if err1, ok := err.(quadedge.ErrInvalid); ok  {
+					for  i, estr := range err1 {
+						t.Logf("%03v : %v",i,estr)
+					}
+				}
+				t.Errorf(err.Error())
+				return
+			}
+			idx :=-1
+			err = sd.WalkAllEdges(func(e *quadedge.Edge) error{
+				idx++
+				eln := e.AsLine()
+				if idx >= len(tc.Lines) {
+					return nil
+				}
 
+				t.Logf("line %v: \n\texp %v\n\tgot %v",idx,wkt.MustEncode(tc.Lines[idx]),wkt.MustEncode(eln))
+				if !cmp.LineStringEqual(eln[:],tc.Lines[idx][:]) {
+					t.Errorf("line %v, expected %v got %v",idx,wkt.MustEncode(tc.Lines[idx]),wkt.MustEncode(eln))
+					return fmt.Errorf("failed")
+				}
+				return nil
+			})
+			if idx+1 != len(tc.Lines) {
+
+				dumpSD(t, sd)
+				if err != nil {
+					t.Logf(err.Error())
+				}
+				t.Errorf("lines, expected %v got %v",len(tc.Lines), idx)
+				return
+			}
 		}
 	}
 
@@ -49,6 +83,7 @@ func TestNewForPoints(t *testing.T) {
 				{2023, 4160},
 				{2033, 4159},
 			},
+			Lines: must.ReadMultilines("testdata/colinear_folinear.lines"),
 		},
 		{
 			Desc:   "trunc something wrong with Florida",
