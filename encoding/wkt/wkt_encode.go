@@ -184,8 +184,8 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 	}
 
 	// the last encode point
-	_v := mp[last]
-	lastToEnc := &_v
+	// _v := mp[last]
+	lastToEnc := &mp[last]
 	if gType == polyType || gType == mPolyType {
 		lastToEnc = nil
 	}
@@ -198,10 +198,11 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 	}
 
 	for i, v := range mp[:last+1] {
+		// if the last point is the same as this point and
+		// we aren't encoding a multipoint, then dups should get dropped
 		if lastEnc != nil && *lastEnc == v && gType != mpType {
 			continue
 		}
-		lastEnc = &mp[i]
 
 		if IsEmptyPoint(v) {
 			switch gType {
@@ -223,10 +224,14 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 			}
 		}
 
+		// this also the first encoded point
+		// we save it in case we need to close the polygon later
 		if lastToEnc == nil {
-			_v = v
-			lastToEnc = &_v
+			lastToEnc = &mp[i]
 		}
+
+		// update what the last encoded value is
+		lastEnc = &mp[i]
 
 		if count != 0 {
 			err = enc.putc(',')
@@ -241,6 +246,9 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 		}
 	}
 
+	// if we need to close the polygon/multipolygon
+	// and the value we encoded last isn't (already) the last
+	// value to encode
 	if (gType == polyType || gType == mPolyType) && *lastToEnc != *lastEnc {
 		err = enc.putc(',')
 		if err != nil {
