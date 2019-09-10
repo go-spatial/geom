@@ -17,19 +17,22 @@ type DouglasPeucker struct {
 }
 
 func (dp DouglasPeucker) Simplify(ctx context.Context, linestring [][2]float64, isClosed bool) ([][2]float64, error) {
-	return dp.simplify(ctx, 0, linestring, isClosed)
+	ret := make([][2]float64, 0, len(linestring))
+	return dp.simplify(ctx, 0, linestring, isClosed, ret)
 }
 
-func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [][2]float64, isClosed bool) ([][2]float64, error) {
+func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [][2]float64, isClosed bool, ret [][2]float64) ([][2]float64, error) {
 
 	// helper function for debugging and tracing the code
 	var printf = func(msg string, depth uint8, params ...interface{}) {
-		if debug {
-			ps := make([]interface{}, 1, len(params)+1)
-			ps[0] = depth
-			ps = append(ps, params...)
-			logger.Printf(strings.Repeat(" ", int(depth*2))+"[%v]"+msg, ps...)
-		}
+		ps := make([]interface{}, 1, len(params)+1)
+		ps[0] = depth
+		ps = append(ps, params...)
+		logger.Printf(strings.Repeat(" ", int(depth*2))+"[%v]"+msg, ps...)
+	}
+
+	if debug {
+		printf("starting linestring: %v ; tolerance: %v", depth, linestring, dp.Tolerance)
 	}
 
 	if dp.Tolerance <= 0 || len(linestring) <= 2 {
@@ -39,15 +42,12 @@ func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [
 
 			}
 			if len(linestring) <= 2 {
-				printf("skipping due to len(linestring) (%v) ≤ two:", depth, len(linestring))
+				printf("skipping due to len(linestring) (%v) ≤ two: %v", depth, len(linestring), linestring)
 			}
 		}
-		return linestring, nil
+		return append(ret, linestring...), nil
 	}
 
-	if debug {
-		printf("starting linestring: %v ; tolerance: %v", depth, linestring, dp.Tolerance)
-	}
 
 	dmax, idx := 0.0, 0
 	dist := planar.PerpendicularDistance
@@ -79,25 +79,33 @@ func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [
 			if debug {
 				printf("returning linestring %v", depth, linestring)
 			}
-			return linestring, nil
+			return append(ret, linestring...), nil
 		}
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		rec1, _ := dp.simplify(ctx, depth+1, linestring[0:idx], isClosed)
+
+		// for debug
+		startLen := len(ret)
+
+		ret, _ = dp.simplify(ctx, depth+1, linestring[0:idx+1], isClosed, ret)
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		rec2, _ := dp.simplify(ctx, depth+1, linestring[idx:], isClosed)
+
+		// cut off the last point before recursing because this function will
+		// always write the endpoints to the slice
+		firstLen := len(ret)
+		ret, _ = dp.simplify(ctx, depth+1, linestring[idx:], isClosed, ret[:firstLen-1])
 		if debug {
-			printf("returning combined lines: %v %v", depth, rec1, rec2)
+			printf("returning combined lines: %v, %v", depth, ret[startLen:firstLen], ret[firstLen:])
 		}
-		return append(rec1, rec2...), nil
+		return ret, ctx.Err()
 	}
 
 	// Drop all points between the end points.
 	if debug {
 		printf("dropping all points between the end points: %v", depth, line)
 	}
-	return line[:], nil
+	return append(ret, line[:]...), nil
 }
