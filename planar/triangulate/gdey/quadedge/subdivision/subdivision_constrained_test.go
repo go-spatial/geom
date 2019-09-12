@@ -13,13 +13,7 @@ import (
 	"github.com/go-spatial/geom"
 
 	"github.com/go-spatial/geom/encoding/wkt"
-	"github.com/go-spatial/geom/internal/debugger"
 )
-
-func init() {
-	debugger.DefaultOutputDir = "output"
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
 
 func TestFindIntersectingEdges(t *testing.T) {
 	type tcase struct {
@@ -52,6 +46,8 @@ func TestFindIntersectingEdges(t *testing.T) {
 				pts [][2]float64
 			)
 
+			log.Printf("Starting test: %v",t.Name())
+
 			for _, ln := range tc.Lines {
 				pts = append(pts, ln[0], ln[1])
 			}
@@ -64,8 +60,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 			for i, ln := range tc.Lines {
 
 				start, end := geom.Point(tc.Lines[i][0]), geom.Point(tc.Lines[i][1])
-				_, _, exist, _ := resolveStartingEndingEdges(vertexIndex, start, end)
-				if exist {
+				if _, _, exists, _ := ResolveStartingEndingEdges(vertexIndex, start, end); exists {
 					continue
 				}
 				t.Logf("Adding edge %05v of %05v -- %v", i, len(tc.Lines), wkt.MustEncode(tc.Lines[i]))
@@ -138,8 +133,15 @@ func TestFindIntersectingEdges(t *testing.T) {
 			}
 
 			displaysd := false
+			TurnOnDebug()
 			// Test code goes here
-			t.Logf("Starting edge: %v\nEnding edge: %v", wkt.MustEncode(startingEdge.AsLine()), wkt.MustEncode(endingEdge.AsLine()))
+			t.Logf("Starting edge: %v\nEnding edge: %v\n%v",
+				wkt.MustEncode(startingEdge.AsLine()),
+				wkt.MustEncode(endingEdge.AsLine()),
+				wkt.MustEncode(
+					geom.Line{ [2]float64(startingEdge.AsLine()[0]), [2]float64(endingEdge.AsLine()[0])},
+				),
+			)
 			if debug {
 				displaysd = true
 			}
@@ -173,10 +175,12 @@ func TestFindIntersectingEdges(t *testing.T) {
 			Start: geom.Point{2674.923, 3448.779},
 			End:   geom.Point{2687.408, 3432.536},
 			ExpectedLines: []geom.Line{
-				{{2678.653, 3446.005}, {2676.168, 3439.720}},
-				{{2684.923, 3439.233}, {2676.168, 3439.720}},
-				{{2685.657, 3436.985}, {2676.168, 3439.720}},
-				{{2685.657, 3436.985}, {2680.390, 3431.154}},
+
+				{{2678.653,3446.005},{2676.168,3439.720}},
+				{{2684.923,3439.233},{2676.168,3439.720}},
+				{{2684.923,3439.233},{2676.023,3439.196}},
+				{{2685.657,3436.985},{2676.023,3439.196}},
+				{{2685.657,3436.985},{2680.390,3431.154}},
 			},
 		},
 		{
@@ -214,19 +218,19 @@ func TestFindIntersectingEdges(t *testing.T) {
 			Start: geom.Point{4080, 312},
 			End:   geom.Point{4082, 310},
 			ExpectedLines: []geom.Line{
-				{{4083,312},{4081,310}},
+				{{4083, 312}, {4081, 310}},
 			},
 		},
 		{
 			// starting edge: LINESTRING (4080 312,4081 310)
 			// ending edge: LINESTRING (4082 310,4082 309)
 			// intersecting edge: LINESTRING (4080 312,4082 310)
-			Lines: must.ReadMultilines("testdata/find_intersects_test_02.lines"),
-			Start: geom.Point{4080, 312},
-			End:   geom.Point{4082, 310},
-			EndingDest: &geom.Point{4082,309},
+			Lines:      must.ReadMultilines("testdata/find_intersects_test_02.lines"),
+			Start:      geom.Point{4080, 312},
+			End:        geom.Point{4082, 310},
+			EndingDest: &geom.Point{4082, 309},
 			ExpectedLines: []geom.Line{
-				{{4083,312},{4081,310}},
+				{{4083, 312}, {4081, 310}},
 			},
 		},
 	}

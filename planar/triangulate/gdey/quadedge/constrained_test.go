@@ -2,7 +2,7 @@ package qetriangulate_test
 
 import (
 	"context"
-	"log"
+	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 	"math"
 	"testing"
 
@@ -43,6 +43,9 @@ func TestConstraint(t *testing.T) {
 			total := len(tc.Constraints)
 
 			for i, ct := range tc.Constraints {
+				if i == 1804 {
+					subdivision.TurnOnDebug()
+				}
 				start, end := geom.Point(ct[0]), geom.Point(ct[1])
 				if _, _, exists, _ := subdivision.ResolveStartingEndingEdges(vxidx, start, end); exists {
 					// Nothing to do, edge already in the subdivision.
@@ -56,15 +59,21 @@ func TestConstraint(t *testing.T) {
 				err := sd.InsertConstraint(ctx, vxidx, start, end)
 				if err != nil {
 
-					log.Printf("errored: %v", err)
+					t.Logf("errored: %v", err)
 					t.Logf("Before:\nLine:%v\nEdges:\n%v", bLine, bEdges)
 					t.Logf("failed to add constraint %v of %v", i, total)
 					dumpSDWithin(t, sd, start, end)
 					t.Errorf("got err: %v", err)
 					return
 				}
-				if !sd.IsValid(ctx) {
+				if err := sd.Validate(ctx); err != nil {
+					t.Logf("Before:\nLine:%v\nEdges:\n%v", bLine, bEdges)
 					t.Logf("Subdivision not valid")
+					if er, ok := err.(quadedge.ErrInvalid); ok {
+						for i, estr := range er {
+							t.Logf("%03v: %v", i, estr)
+						}
+					}
 					dumpSDWithin(t, sd, start, end)
 					t.Errorf("Left subdivision in an invalid state")
 					return

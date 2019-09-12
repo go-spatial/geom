@@ -13,9 +13,18 @@ import (
 	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 )
 
-const (
+var (
 	debug = false
 )
+
+func TurnOnDebug() {
+	debug = true
+}
+
+func init() {
+	debugger.DefaultOutputDir = "output"
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 // ErrAssumptionFailed is an assert of when our assumptions fails, in debug mode it will return and error. In
 // non debug mode it will panic
@@ -40,9 +49,11 @@ func DumpSubdivisionW(w io.Writer, sd *Subdivision) {
 	var edges geom.MultiLineString
 
 	_ = sd.WalkAllEdges(func(e *quadedge.Edge) error {
+		/*
 		if IsFrameEdge(sd.frame,e) {
 			return nil
 		}
+		*/
 		ln := e.AsLine()
 		edges = append(edges, ln[:])
 		return nil

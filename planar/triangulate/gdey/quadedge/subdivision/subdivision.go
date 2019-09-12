@@ -54,9 +54,33 @@ func New(a, b, c geom.Point) *Subdivision {
 // NewForPoints creates a new subdivision for the given points, the points are
 // sorted and duplicate points are not added
 func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error) {
-	// sort.Sort(cmp.ByXY(points))
+
+	// const debug = true
+	for i := range points {
+		points[i] = [2]float64(roundGeomPoint(geom.Point(points[i])))
+	}
 	tri := geom.NewTriangleContainingPoints(points...)
 	sd := New(tri[0], tri[1], tri[2])
+
+	if debug {
+		//	log.Printf("Validating Subdivision (%v of %v", i, len(points))
+		if err := sd.Validate(ctx); err != nil {
+			if err1, ok := err.(quadedge.ErrInvalid); ok {
+				var strBuf strings.Builder
+				fmt.Fprintf(&strBuf, "Invalid subdivision:\n Tri: %v\n", tri)
+				for i, estr := range err1 {
+					fmt.Fprintf(&strBuf, "\t%v : %v\n", i, estr)
+				}
+				fmt.Fprintf(&strBuf, "Original Points: %v\n\n", wkt.MustEncode(geom.MultiPoint(points)))
+				fmt.Fprintf(&strBuf, "edges: %v", sd.startingEdge.DumpAllEdges())
+				log.Printf(strBuf.String())
+			}
+
+			return sd, err
+		} else {
+			log.Printf("After new good")
+		}
+	}
 
 	seen := make(map[geom.Point]bool)
 	seen[tri[0]] = true
@@ -78,6 +102,10 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 		}
 		seen[pt] = true
 
+		if debug {
+			log.Printf("\n\nInserting site %v: %v\n\n", i, wkt.MustEncode(pt))
+		}
+
 		if !sd.InsertSite(pt) {
 			log.Printf("Failed to insert point(%v) %v", i, wkt.MustEncode(pt))
 			return nil, errors.String("Failed to insert point")
@@ -92,7 +120,8 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 				for i, estr := range err1 {
 					fmt.Fprintf(&strBuf, "\t%v : %v\n", i, estr)
 				}
-				fmt.Fprintf(&strBuf, "%v\n\n", wkt.MustEncode(geom.MultiPoint(points)))
+				fmt.Fprintf(&strBuf, "Original Points: %v\n\n", wkt.MustEncode(geom.MultiPoint(points)))
+				fmt.Fprintf(&strBuf, "edges: %v", sd.startingEdge.DumpAllEdges())
 				log.Printf(strBuf.String())
 			}
 
@@ -110,11 +139,25 @@ func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
 	return locate(sd.startingEdge, x, sd.ptcount*2)
 }
 
+var internal_debug = false
+
 // InsertSite will insert a new point into a subdivision representing a Delaunay
 // triangulation, and fixes the affected edges so that the result
 // is  still a Delaunay triangulation. This is based on the pseudocode
 // from Guibas and Stolfi (1985) p.120, with slight modifications and a bug fix.
 func (sd *Subdivision) InsertSite(x geom.Point) bool {
+
+	if cmp.GeomPointEqual(x, geom.Point{45, 2620}) ||
+		cmp.GeomPointEqual(x, geom.Point{45, 2624}) ||
+		cmp.GeomPointEqual(x, geom.Point{45, 2622}) ||
+		cmp.GeomPointEqual(x, geom.Point{45, 2620}) {
+		internal_debug = true
+	}
+	debug := internal_debug
+
+	if debug {
+		log.Printf("\n\nInsertSite   %v  \n\n", wkt.MustEncode(x))
+	}
 
 	sd.ptcount++
 	e, got := sd.locate(x)
@@ -140,12 +183,15 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		return true
 	}
 
+	// x should only be somewhere in the middle.
 	if quadedge.OnEdge(x, e) {
 		if debug {
 			log.Printf("%v is on %v", wkt.MustEncode(x), wkt.MustEncode(e.AsLine()))
 		}
 		e = e.OPrev()
+
 		// Check to see if this point is still already in subdivision.
+		// not sure if this is needed
 		if ptEqual(x, e.Orig()) || ptEqual(x, e.Dest()) {
 			if debug {
 				log.Printf("%v already in sd", wkt.MustEncode(x))
@@ -163,20 +209,79 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 	// triangle (or quadrilateral, if the new point fell on an
 	// existing edge.)
 	base := quadedge.NewWithEndPoints(e.Orig(), &x)
+	if debug {
+		log.Printf("Created new base: %v", wkt.MustEncode(base.AsLine()))
+		//	log.Printf("deleting ONext: %v",wkt.MustEncode(e.ONext().AsLine()))
+	}
+
+	//quadedge.Delete(e.ONext())
+	if debug {
+		log.Printf("Splice base,e: %v", wkt.MustEncode(e.AsLine()))
+	}
 	quadedge.Splice(base, e)
 	sd.startingEdge = base
+	if debug {
+		log.Printf("base edges: %v", base.DumpAllEdges())
+		log.Printf("connecting e[ %v ] to base.Sym[ %v ]",
+			wkt.MustEncode(e.AsLine()),
+			wkt.MustEncode(base.Sym().AsLine()),
+		)
+	}
 
 	base = quadedge.Connect(e, base.Sym())
+	// reset e
 	e = base.OPrev()
+	if debug {
+		log.Printf("base: %v", wkt.MustEncode(base.AsLine()))
+		log.Printf("base.OPrev/e: %v", wkt.MustEncode(e.AsLine()))
+		log.Printf("e.LNext: %v", wkt.MustEncode(e.LNext().AsLine()))
+		log.Printf("e.LPrev: %v", wkt.MustEncode(e.LPrev().AsLine()))
+		log.Printf("e.RNext: %v", wkt.MustEncode(e.RNext().AsLine()))
+		log.Printf("e.RPrev: %v", wkt.MustEncode(e.RPrev().AsLine()))
+		log.Printf("se: %v", wkt.MustEncode(sd.startingEdge.AsLine()))
+	}
+	count := 0
 	for e.LNext() != sd.startingEdge {
+		if debug {
+			log.Printf("connecting e[ %v ] to base.Sym[ %v ]",
+				wkt.MustEncode(e.AsLine()),
+				wkt.MustEncode(base.Sym().AsLine()),
+			)
+		}
 		base = quadedge.Connect(e, base.Sym())
 		e = base.OPrev()
+		if debug {
+			count++
+			log.Printf("se: %v", wkt.MustEncode(sd.startingEdge.AsLine()))
+			log.Printf("base: %v", wkt.MustEncode(base.AsLine()))
+			log.Printf("e == base.OPrev: %v", wkt.MustEncode(e.AsLine()))
+			log.Printf("e.LNext: %v", wkt.MustEncode(e.LNext().AsLine()))
+			log.Printf("subdivision: connect %v", count)
+			if err := sd.Validate(context.Background()); err != nil {
+				if err1, ok := err.(quadedge.ErrInvalid); ok {
+					for i, estr := range err1 {
+						log.Printf("err: %03v : %v", i, estr)
+					}
+				}
+			} else {
+				log.Printf("subdivision good")
+			}
+			DumpSubdivision(sd)
+		}
+	}
+	if debug {
+		log.Printf("Done adding edges, check for delaunay condition")
 	}
 
 	// Examine suspect edges to ensure that the Delaunay condition
 	// is satisfied.
 	for {
 		t := e.OPrev()
+		if debug {
+			log.Printf("se: %v", wkt.MustEncode(sd.startingEdge.AsLine()))
+			log.Printf("e: %v", wkt.MustEncode(e.AsLine()))
+			log.Printf("e.OPrev/t: %v", wkt.MustEncode(t.AsLine()))
+		}
 		crl, err := geom.CircleFromPoints([2]float64(*e.Orig()), [2]float64(*t.Dest()), [2]float64(*e.Dest()))
 		containsPoint := false
 		if err == nil {
@@ -185,7 +290,20 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		switch {
 		case quadedge.RightOf(*t.Dest(), e) &&
 			containsPoint:
+			if debug {
+				log.Printf("Circle form points: \n%v\n%v",
+					wkt.MustEncode(crl.AsPoints(500)),
+					containsPoint,
+				)
+				log.Printf("Point of consideration: %v", wkt.MustEncode(x))
+				log.Printf("%v right of %v", wkt.MustEncode(*t.Dest()), wkt.MustEncode(e.AsLine()))
+				log.Printf("Swapping e: %v", wkt.MustEncode(e.AsLine()))
+			}
 			quadedge.Swap(e)
+			if debug {
+				log.Printf("e: %v", wkt.MustEncode(e.AsLine()))
+				log.Printf("e.OPrev: %v", wkt.MustEncode(e.OPrev().AsLine()))
+			}
 			e = e.OPrev()
 
 		case e.ONext() == sd.startingEdge: // no more suspect edges
@@ -595,8 +713,6 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 // dest of the endingEdge
 func FindIntersectingEdges(startingEdge, endingEdge *quadedge.Edge) (edges []*quadedge.Edge, err error) {
 
-	//const debug = true
-
 	/*
 					 Move starting edge so that the graph look like
 					 ◌ .
@@ -727,46 +843,80 @@ func testEdge(x geom.Point, e *quadedge.Edge) (*quadedge.Edge, bool) {
 	switch {
 	case ptEqual(x, e.Orig()) || ptEqual(x, e.Dest()):
 		return e, true
+
 	case quadedge.RightOf(x, e):
+		if debug {
+			log.Printf("%v right of  %v", wkt.MustEncode(x), wkt.MustEncode(e.AsLine()))
+		}
 		return e.Sym(), false
+
 	case !quadedge.RightOf(x, e.ONext()):
+		if debug {
+			log.Printf("%v not right of  %v", wkt.MustEncode(x), wkt.MustEncode(e.ONext().AsLine()))
+		}
 		return e.ONext(), false
+
 	case !quadedge.RightOf(x, e.DPrev()):
+		if debug {
+			log.Printf("%v not right of  %v", wkt.MustEncode(x), wkt.MustEncode(e.DPrev().AsLine()))
+		}
 		return e.DPrev(), false
+
 	default:
 		return e, true
+
 	}
 }
 
 func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
+
+	//const debug = true
+
 	var (
 		e     *quadedge.Edge
 		ok    bool
 		count int
 	)
+
+	if debug {
+		log.Printf("\n\nlocate\n\n")
+		log.Printf("Original Starting Edge: %v", wkt.MustEncode(se.AsLine()))
+	}
+	se, _ = quadedge.ResolveEdge(se, x)
+	if debug {
+		log.Printf("Starting Edge: %v", wkt.MustEncode(se.AsLine()))
+	}
 	for e, ok = testEdge(x, se); !ok; e, ok = testEdge(x, e) {
-		if limit > 0 {
-
-			count++
-			if e == se || count > limit {
-				log.Println("searching all edges for", x)
-				e = nil
-
-				WalkAllEdges(se, func(ee *quadedge.Edge) error {
-					if _, ok = testEdge(x, ee); ok {
-						e = ee
-						return ErrCancelled
-					}
-					return nil
-				})
-				log.Printf(
-					"Got back to starting edge after %v iterations, only have %v points ",
-					count,
-					limit,
-				)
-				return e, false
-			}
+		if debug {
+			log.Printf("next Edge: %v", wkt.MustEncode(e.AsLine()))
 		}
+		if limit <= 0 {
+			// don't care about count
+			continue
+		}
+
+		count++
+		if e == se || count > limit {
+			log.Println("searching all edges for", x)
+			e = nil
+
+			WalkAllEdges(se, func(ee *quadedge.Edge) error {
+				if _, ok = testEdge(x, ee); ok {
+					e = ee
+					return ErrCancelled
+				}
+				return nil
+			})
+			log.Printf(
+				"Got back to starting edge after %v iterations, only have %v points ",
+				count,
+				limit,
+			)
+			return e, false
+		}
+	}
+	if debug {
+		log.Printf("found Edge: %v\n\n", wkt.MustEncode(e.AsLine()))
 	}
 	return e, true
 
