@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	coordRegexText = `\d+(?:\.\d+)?`
+	coordRegexText = `-?\d+(?:\.\d+)?`
 
 	pointRegexText      = fmt.Sprintf(`(?P<x>%[1]v)\s+(?P<y>%[1]v)`, coordRegexText)
 	singleLineRegexText = fmt.Sprintf(`\(%[1]v(?:\s*,\s*%[1]v)*\)`, pointRegexText)
@@ -28,6 +28,11 @@ func ReadMultilines(filename string) []geom.Line {
 	if err != nil {
 		panic(err)
 	}
+	return ParseMultilines(content)
+}
+
+func ParseMultilines(content []byte) []geom.Line {
+
 	allIndexes := singleLineRegex.FindAllSubmatchIndex(content, -1)
 	var lines []geom.Line
 
@@ -57,6 +62,7 @@ func ReadMultilines(filename string) []geom.Line {
 	return lines
 }
 
+
 // ReadPoints reads the points out of a file.
 // the points are expected to
 func ReadPoints(filename string) [][2]float64 {
@@ -64,6 +70,10 @@ func ReadPoints(filename string) [][2]float64 {
 	if err != nil {
 		panic(err)
 	}
+	return PrasePoints(content)
+
+}
+func PrasePoints(content []byte) [][2]float64 {
 	allIndexes := pointRegex.FindAllSubmatchIndex(content, -1)
 	var points [][2]float64
 
@@ -79,5 +89,4 @@ func ReadPoints(filename string) [][2]float64 {
 		points = append(points, [2]float64{x, y})
 	}
 	return points
-
 }
