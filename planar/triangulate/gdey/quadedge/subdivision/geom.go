@@ -54,14 +54,14 @@ func NewSubdivisionFromGeomLines(lines []geom.Line) *Subdivision {
 				// edge already in graph
 				continue
 			}
-			oe,_ = resolveEdge(oe, dest)
+			oe,_ = quadedge.ResolveEdge(oe, dest)
 			if oe == nil {
 				oe = indexMap[orig]
 			}
 		}
 
 		if de != nil {
-			de,_ = resolveEdge(de, orig)
+			de,_ = quadedge.ResolveEdge(de, orig)
 			if de == nil {
 				de = indexMap[dest]
 			}

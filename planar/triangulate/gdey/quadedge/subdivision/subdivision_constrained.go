@@ -50,8 +50,9 @@ func resolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) 
 		return nil, nil, false, ErrInvalidEndVertex
 	}
 
-	startingEdge, _ = resolveEdge(startingEdge, end)
-	endingEdge, _ = resolveEdge(endingEdge, start)
+
+	startingEdge, serr = quadedge.ResolveEdge(startingEdge, end)
+	endingEdge, eerr = quadedge.ResolveEdge(endingEdge, start)
 	return startingEdge, endingEdge, false, nil
 }
 
@@ -227,7 +228,17 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 		return nil
 	}
 
-	from,err := resolveEdge(tempEdge, end)
+	from,err := quadedge.ResolveEdge(tempEdge, end)
+		// There are two errors we care about
+		switch err {
+		case nil:
+			// do nothing
+		case geom.ErrPointsAreCoLinear:
+			// this edge already exists.
+			return nil
+		default:
+			return err
+		}
 
 	if from == nil {
 		DumpSubdivision(sd)
@@ -243,7 +254,16 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 		return ErrInvalidEndVertex
 	}
 
-	to, err := resolveEdge(tempEdge, start)
+	to, err := quadedge.ResolveEdge(tempEdge, start)
+	switch err {
+	case nil:
+		// do nothing
+	case geom.ErrPointsAreCoLinear:
+		// this edge already exists.
+		return nil
+	default:
+		return err
+	}
 	if to == nil {
 		DumpSubdivision(sd)
 		log.Printf("start:\n %v\n tempEdge :\n%v\n", wkt.MustEncode(start),wkt.MustEncode(tempEdge.AsLine()))
