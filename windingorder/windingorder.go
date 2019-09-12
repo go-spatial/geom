@@ -73,7 +73,11 @@ func Orient(pts ...[2]float64) int8 {
 	li := len(pts) - 1
 
 	for i := range pts {
-		sum += (pts[li][0] * pts[i][1]) - (pts[i][0] * pts[li][1])
+		prd := (pts[li][0] * pts[i][1]) - (pts[i][0] * pts[li][1])
+		if debug {
+			log.Printf("\t%v : %v x %v : %v",i,pts[li], pts[i], prd)
+		}
+		sum += prd
 		li = i
 	}
 	if debug {
