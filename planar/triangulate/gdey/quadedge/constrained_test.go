@@ -44,12 +44,9 @@ func TestConstraint(t *testing.T) {
 
 			for i, ct := range tc.Constraints {
 				start, end := geom.Point(ct[0]), geom.Point(ct[1])
-				if startingEdge, ok := vxidx[start]; ok {
-					if e := startingEdge.FindONextDest(end); e != nil {
-						// Nothing to do, edge already in the subdivision.
-						// t.Logf("%v already in subdivision", ct)
-						continue
-					}
+				if _, _, exists, _ := subdivision.ResolveStartingEndingEdges(vxidx, start, end); exists {
+					// Nothing to do, edge already in the subdivision.
+					continue
 				}
 
 				t.Logf("Adding Constraint %v of %v", i, total)

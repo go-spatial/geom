@@ -24,9 +24,10 @@ func roundGeomPoint(pt geom.Point) geom.Point {
 
 }
 
-func resolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) (startingEdge, endingEdge *quadedge.Edge, exists bool, err error) {
+func ResolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) (startingEdge, endingEdge *quadedge.Edge, exists bool, err error) {
 	var (
 		ok bool
+		eerr, serr error
 	)
 
 	start = roundGeomPoint(start)
@@ -53,6 +54,16 @@ func resolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) 
 
 	startingEdge, serr = quadedge.ResolveEdge(startingEdge, end)
 	endingEdge, eerr = quadedge.ResolveEdge(endingEdge, start)
+
+	if debug {
+		log.Printf("startingEdge: %v, err: %v",wkt.MustEncode(startingEdge.AsLine()),serr)
+		log.Printf("endingEdge: %v, err: %v",wkt.MustEncode(endingEdge.AsLine()),eerr)
+	}
+	if serr == geom.ErrPointsAreCoLinear && eerr == geom.ErrPointsAreCoLinear {
+		// the starting edge and ending edge end at the same place.
+		// the request edge overlaps a set of existing edges.
+		return nil, nil, true, nil
+	}
 	return startingEdge, endingEdge, false, nil
 }
 
@@ -79,7 +90,7 @@ func (sd *Subdivision) InsertConstraint(ctx context.Context, vertexIndex VertexI
 		vertexIndex = sd.VertexIndex()
 	}
 
-	startingEdge, endingEdge, exist, err := resolveStartingEndingEdges(vertexIndex, start, end)
+	startingEdge, endingEdge, exist, err := ResolveStartingEndingEdges(vertexIndex, start, end)
 	if err != nil {
 		var dumpStr strings.Builder
 
