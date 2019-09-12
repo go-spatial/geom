@@ -156,7 +156,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		if debug {
 			log.Printf("removing %v", wkt.MustEncode(e.ONext().AsLine()))
 		}
-		quadedge.Delete(e.ONext())
+
 	}
 
 	// Connect the new point to the vertices of the containing
