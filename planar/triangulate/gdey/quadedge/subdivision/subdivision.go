@@ -177,13 +177,27 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 	// is satisfied.
 	for {
 		t := e.OPrev()
+		crl, err := geom.CircleFromPoints([2]float64(*e.Orig()), [2]float64(*t.Dest()), [2]float64(*e.Dest()))
+		containsPoint := false
+		if err == nil {
+			containsPoint = crl.ContainsPoint([2]float64(x))
+		}
 		switch {
 		case quadedge.RightOf(*t.Dest(), e) &&
-			x.WithinCircle(*e.Orig(), *t.Dest(), *e.Dest()):
+			containsPoint:
 			quadedge.Swap(e)
 			e = e.OPrev()
 
 		case e.ONext() == sd.startingEdge: // no more suspect edges
+			if debug {
+				if err := sd.Validate(context.Background()); err != nil {
+					if err1, ok := err.(quadedge.ErrInvalid); ok {
+						for i, estr := range err1 {
+							log.Printf("err: %03v : %v", i, estr)
+						}
+					}
+				}
+			}
 			return true
 
 		default: // pop a suspect edge
@@ -241,10 +255,13 @@ func (sd *Subdivision) Validate(ctx context.Context) error {
 
 	if err := sd.WalkAllEdges(func(e *quadedge.Edge) error {
 		l := e.AsLine()
-		if debug {
-			if err := quadedge.Validate(e); err != nil {
-				return err
+		if err := quadedge.Validate(e); err != nil {
+			if verr, ok := err.(quadedge.ErrInvalid); ok {
+				err1 = append(err1, fmt.Sprintf("edge: %v", wkt.MustEncode(l)))
+				err1 = append(err1, verr...)
+				return err1
 			}
+			return err
 		}
 		l2 := l.LengthSquared()
 		if l2 == 0 {
@@ -255,7 +272,7 @@ func (sd *Subdivision) Validate(ctx context.Context) error {
 					"Line (%p) %v -- %v ", e, l2, l,
 				)
 			}
-			err1 = append(err1, "zero length edge")
+			err1 = append(err1, "zero length edge: %v", wkt.MustEncode(l))
 			return err1
 		}
 		lines = append(lines, l)
