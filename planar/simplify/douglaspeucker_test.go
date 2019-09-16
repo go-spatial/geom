@@ -5,15 +5,9 @@ import (
 	"flag"
 	"math"
 	"testing"
-	"strings"
-	"os"
-	"path/filepath"
-	"log"
 
-	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	gtesting "github.com/go-spatial/geom/testing"
-	"github.com/go-spatial/geom/encoding/wkt"
 )
 
 var ignoreSanityCheck bool
@@ -54,7 +48,6 @@ func TestDouglasPeucker(t *testing.T) {
 		// More sanity checking.
 		gl, _ = tc.dp.Simplify(ctx, tc.l, true)
 
-
 		if !cmp.LineStringEqual(tc.el, gl) {
 			t.Errorf("simplified points (true), expected %v got %v", tc.el, gl)
 			return
@@ -88,7 +81,7 @@ func TestDouglasPeucker(t *testing.T) {
 			el: [][2]float64{{0, 0}, {100, 100}},
 		},
 		"sin": { // should be left with a zigzag
-			l: gtesting.SinLineString(1, 0, 2 * math.Pi, 9),
+			l: gtesting.SinLineString(1, 0, 2*math.Pi, 9),
 			dp: DouglasPeucker{
 				Tolerance: 0.5,
 			},
@@ -108,7 +101,7 @@ func BenchmarkDouglasPeuckerCircle(b *testing.B) {
 	}
 	ctx := context.Background()
 
-	circleFn := func (t float64) [2]float64 {
+	circleFn := func(t float64) [2]float64 {
 		return [2]float64{math.Cos(t), math.Sin(t)}
 	}
 
@@ -136,8 +129,8 @@ func BenchmarkDouglasPeuckerWavyCircle0(b *testing.B) {
 
 	circleFn := func(t float64) [2]float64 {
 		return [2]float64{
-			math.Sin(10*t) * math.Cos(t) + 3 * math.Cos(t),
-			math.Sin(10*t) * math.Sin(t) + 3 * math.Sin(t),
+			math.Sin(10*t)*math.Cos(t) + 3*math.Cos(t),
+			math.Sin(10*t)*math.Sin(t) + 3*math.Sin(t),
 		}
 	}
 
@@ -165,8 +158,8 @@ func BenchmarkDouglasPeuckerWavyCircle1(b *testing.B) {
 
 	circleFn := func(t float64) [2]float64 {
 		return [2]float64{
-			math.Sin(10*t) * math.Cos(t) + 3 * t * math.Cos(t),
-			math.Sin(10*t) * math.Sin(t) + 3 * t * math.Sin(t),
+			math.Sin(10*t)*math.Cos(t) + 3*t*math.Cos(t),
+			math.Sin(10*t)*math.Sin(t) + 3*t*math.Sin(t),
 		}
 	}
 
@@ -186,7 +179,6 @@ func BenchmarkDouglasPeuckerWavyCircle1(b *testing.B) {
 	}
 }
 
-
 // BenchmarkDouglasPeuckerZigZag is the worst case scenario. No points
 // are dropped, so the recursion eliminates 1 point each time resulting
 // in an n^2 time complexity
@@ -199,7 +191,7 @@ func BenchmarkDouglasPeuckerZigZag(b *testing.B) {
 
 	zigZagFn := func(t float64) [2]float64 {
 		var y float64
-		if int(t) % 2 == 0 {
+		if int(t)%2 == 0 {
 			y = -1
 		} else {
 			y = 1
@@ -230,9 +222,7 @@ func BenchmarkDouglasPeuckerSA(b *testing.B) {
 	}
 	ctx := context.Background()
 
-
 	sa := gtesting.SouthAfrica[0]
-
 
 	for i := 0; i < b.N; i++ {
 		rdp.Simplify(ctx, sa, false)
