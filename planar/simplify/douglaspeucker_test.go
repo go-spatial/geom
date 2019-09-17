@@ -4,9 +4,12 @@ import (
 	"context"
 	"flag"
 	"math"
+	"strings"
 	"testing"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/encoding/wkt"
 	gtesting "github.com/go-spatial/geom/testing"
 )
 
@@ -14,6 +17,16 @@ var ignoreSanityCheck bool
 
 func init() {
 	flag.BoolVar(&ignoreSanityCheck, "ignoreSanityCheck", false, "ignore sanity checks in test cases.")
+}
+
+// string2line
+func s2l(s string) [][2]float64 {
+	g, err := wkt.NewDecoder(strings.NewReader(s)).Decode()
+	if err != nil {
+		panic(err)
+	}
+
+	return ([][2]float64)(g.(geom.LineString))
 }
 
 func TestDouglasPeucker(t *testing.T) {
@@ -36,7 +49,7 @@ func TestDouglasPeucker(t *testing.T) {
 		}
 
 		if !cmp.LineStringEqual(tc.el, gl) {
-			t.Errorf("simplified points, expected %v got %v", tc.el, gl)
+			t.Errorf("simplified points, expected\n%v\n\tgot\n%v", tc.el, gl)
 			return
 		}
 
@@ -86,6 +99,13 @@ func TestDouglasPeucker(t *testing.T) {
 				Tolerance: 0.5,
 			},
 			el: [][2]float64{{0, 0}, {math.Pi / 2, 1}, {3 * math.Pi / 2, -1}, {2 * math.Pi, 0}},
+		},
+		"natural earth line string 0": {
+			l: gtesting.NaturalEarthLineStrings[0],
+			dp: DouglasPeucker{
+				Tolerance: 500,
+			},
+			el: s2l("LINESTRING(-7785560.894 5112305.653,-7784854.276 5122268.298,-7786050.091 5139676.21,-7790380.39 5154033.469,-7793922.539 5160820.971,-7798053.535 5166936.297,-7805482.082 5172042.522,-7813762.194 5173879.48,-7817897.72 5173061.654)"),
 		},
 	}
 
