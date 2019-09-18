@@ -2,7 +2,6 @@ package qetriangulate_test
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,8 +11,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/go-spatial/geom/encoding/gpkg"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
@@ -68,77 +65,23 @@ func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...geom.Point) {
 
 	start = time.Now()
 
-	rec.Record(
-		tri,
-		ffl,
-		debugger.TestDescription{
-			Category:    "frame:triangle",
-			Description: "triangle frame.",
-			Name:        name,
-		},
-	)
+	t.Logf("frame:triangle: %v",wkt.MustEncode(tri))
+	t.Logf("frame:extent: %v",wkt.MustEncode(ext.AsPolygon()))
 
-	rec.Record(
-		ext,
-		ffl,
-		debugger.TestDescription{
-			Category:    "frame:extent",
-			Description: "extent frame.",
-			Name:        name,
-		},
-	)
+
 
 	if len(badPoints) > 0 {
 		t.Logf("Failed to insert %v points\n", len(badPoints))
 		for i, pt := range badPoints {
-			rec.Record(
-				pt,
-				ffl,
-				debugger.TestDescription{
-					Category:    "initial:point:failed",
-					Description: fmt.Sprintf("point:%v %v:failed", i, pt),
-					Name:        name,
-				},
-			)
+			t.Logf("initial:point:failed:%03v: %v", i, wkt.MustEncode(pt))
 		}
 	}
 	for i, pt := range goodPoints {
-		rec.Record(
-			pt,
-			ffl,
-			debugger.TestDescription{
-				Category:    "initial:point:failed",
-				Description: fmt.Sprintf("point:%v %v:failed", i, pt),
-				Name:        name,
-			},
-		)
+		t.Logf("initial:point:good:%03v: %v", i, wkt.MustEncode(pt))
 	}
 
 	count := 0
-	_ = sd.WalkAllEdges(func(e *quadedge.Edge) error {
-		org := *e.Orig()
-		dst := *e.Dest()
-
-		rec.Record(
-			geom.Line{
-				[2]float64(org),
-				[2]float64(dst),
-			},
-			ffl,
-			debugger.TestDescription{
-				Category: fmt.Sprintf("edge:%v", count),
-				Description: fmt.Sprintf(
-					"edge:%v [%p]( %v %v, %v %v)",
-					count, e,
-					org[0], org[1],
-					dst[0], dst[1],
-				),
-				Name: name,
-			},
-		)
-		count++
-		return nil
-	})
+	dumpSD(t,sd)
 	t.Logf("writing out triangulation setup info: %v", time.Since(start))
 	start = time.Now()
 	triangles, err := sd.Triangles(true)
@@ -148,21 +91,7 @@ func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...geom.Point) {
 	t.Logf("triangulation took: %v", time.Since(start))
 	start = time.Now()
 	for i, tri := range triangles {
-		rec.Record(
-			geom.Triangle{
-				[2]float64(tri[0]),
-				[2]float64(tri[1]),
-				[2]float64(tri[2]),
-			},
-			ffl,
-			debugger.TestDescription{
-				Category: fmt.Sprintf("triangle:%v", i),
-				Description: fmt.Sprintf(
-					"triangle:%v (%v)", i, tri,
-				),
-				Name: name,
-			},
-		)
+		t.Logf("triangle:%03v: %v", i, wkt.MustEncode(tri))
 	}
 	t.Logf("writing out triangles took: %v", time.Since(start))
 }
@@ -241,6 +170,8 @@ func init() {
 	debugger.DefaultOutputDir = "output"
 }
 
+
+/*
 const (
 	inputdir                       = "testdata"
 	triangulationTestCrateTableSQL = `
@@ -430,6 +361,8 @@ func (tcase gpkgTriangulationTestDBRow) Points() (pts []geom.Point) {
 	}
 	return pts
 }
+ */
+
 
 func TestTriangulation(t *testing.T) {
 

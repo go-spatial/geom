@@ -1,3 +1,5 @@
+// +build cgo
+
 package subdivision
 
 // OpenTestDB(filename)  *TestDB,error
