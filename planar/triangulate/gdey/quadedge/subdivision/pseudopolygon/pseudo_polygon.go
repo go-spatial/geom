@@ -325,7 +325,9 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 	// We now need to triangulate the pseudo-polygon
 	newEdges, err = Triangulate(ply)
 	if err != nil {
-		log.Printf("Called Self(%v) with\n%v\n", len(ply), wkt.MustEncode(ply))
+		if debug {
+			log.Printf("Called Self(%v) with\n%v\n", len(ply), wkt.MustEncode(ply))
+		}
 		return nil, err
 	}
 	edges = append(edges, newEdges...)

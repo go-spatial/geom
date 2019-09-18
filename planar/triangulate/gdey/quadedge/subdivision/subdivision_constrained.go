@@ -104,25 +104,27 @@ func (sd *Subdivision) InsertConstraint(ctx context.Context, vertexIndex VertexI
 	removalList, err := FindIntersectingEdges(startingEdge, endingEdge)
 	if err != nil {
 
-		var dumpStr strings.Builder
+		if debug {
+			var dumpStr strings.Builder
 
-		fmt.Fprintf(&dumpStr, "starting edge: %v\n", wkt.MustEncode(startingEdge.AsLine()))
-		fmt.Fprintf(&dumpStr, "ending edge: %v\n", wkt.MustEncode(endingEdge.AsLine()))
-		fmt.Fprintf(&dumpStr, "intersecting edge: %v\n", wkt.MustEncode(
-			geom.LineString{
-				[2]float64(*startingEdge.Orig()),
-				[2]float64(end),
-			},
-		))
-		DumpSubdivisionW(&dumpStr, sd)
-		fmt.Fprintf(&dumpStr, `
+			fmt.Fprintf(&dumpStr, "starting edge: %v\n", wkt.MustEncode(startingEdge.AsLine()))
+			fmt.Fprintf(&dumpStr, "ending edge: %v\n", wkt.MustEncode(endingEdge.AsLine()))
+			fmt.Fprintf(&dumpStr, "intersecting edge: %v\n", wkt.MustEncode(
+				geom.LineString{
+					[2]float64(*startingEdge.Orig()),
+					[2]float64(end),
+				},
+			))
+			DumpSubdivisionW(&dumpStr, sd)
+			fmt.Fprintf(&dumpStr, `
 testcase:
 {
 	Lines: must.ReadMultilines($filename),
 	Start: %#v,
 	End: %#v,
-},`,*startingEdge.Orig(),end)
-		log.Print(dumpStr.String())
+},`, *startingEdge.Orig(), end)
+			log.Print(dumpStr.String())
+		}
 
 		return err
 
