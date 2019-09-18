@@ -57,6 +57,18 @@ func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.
 			}
 		}
 		return mp
+	case *geom.MultiPolygon:
+		if g == nil {
+			return nil
+		}
+		var mp geom.MultiPolygon
+		for _, p := range g.Polygons() {
+			np := preparePolygon(p, tile, pixelExtent)
+			if len(np) > 0 {
+				mp = append(mp, np)
+			}
+		}
+		return &mp
 	}
 
 	return nil
