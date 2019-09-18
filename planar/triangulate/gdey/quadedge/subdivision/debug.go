@@ -13,13 +13,9 @@ import (
 	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 )
 
-var (
+const (
 	debug = false
 )
-
-func TurnOnDebug() {
-	debug = true
-}
 
 func init() {
 	debugger.DefaultOutputDir = "output"

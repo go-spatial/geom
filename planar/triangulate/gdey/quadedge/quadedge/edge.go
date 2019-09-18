@@ -8,6 +8,7 @@ import (
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar/intersect"
 	"github.com/go-spatial/geom/windingorder"
+	"log"
 )
 
 const (
@@ -216,7 +217,12 @@ func (e *Edge) WalkAllONext(fn func(*Edge) (loop bool)) {
 		ccwe = ccwe.ONext()
 		count++
 		if count == 100 {
-			panic("inifite loop")
+			if debug {
+				panic("inifite loop")
+			} else {
+				log.Printf("infinite loop in WalkAllONext")
+				break
+			}
 		}
 	}
 }

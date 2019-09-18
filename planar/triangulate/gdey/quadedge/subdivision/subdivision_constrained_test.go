@@ -133,8 +133,8 @@ func TestFindIntersectingEdges(t *testing.T) {
 			}
 
 			displaysd := false
-			TurnOnDebug()
-			// Test code goes here
+			log.Printf("\n\nStarting Test\n\n")
+
 			t.Logf("Starting edge: %v\nEnding edge: %v\n%v",
 				wkt.MustEncode(startingEdge.AsLine()),
 				wkt.MustEncode(endingEdge.AsLine()),
@@ -174,14 +174,9 @@ func TestFindIntersectingEdges(t *testing.T) {
 			Lines: must.ReadMultilines("testdata/intersecting_lines_97_trucated.lines"),
 			Start: geom.Point{2674.923, 3448.779},
 			End:   geom.Point{2687.408, 3432.536},
-			ExpectedLines: []geom.Line{
-
-				{{2678.653,3446.005},{2676.168,3439.720}},
-				{{2684.923,3439.233},{2676.168,3439.720}},
-				{{2684.923,3439.233},{2676.023,3439.196}},
-				{{2685.657,3436.985},{2676.023,3439.196}},
-				{{2685.657,3436.985},{2680.390,3431.154}},
-			},
+			ExpectedLines: must.ParseMultilines([]byte(
+				`MULTILINESTRING((2676.168 3439.720,2678.653 3446.005),(2676.168 3439.720,2678.653 3446.005),(2676.168 3439.720,2685.657 3436.985),(2680.390 3431.154,2685.657 3436.985))`,
+				)),
 		},
 		{
 			Desc: "asia issue",
@@ -217,20 +212,17 @@ func TestFindIntersectingEdges(t *testing.T) {
 			Lines: must.ReadMultilines("testdata/find_intersects_test_02.lines"),
 			Start: geom.Point{4080, 312},
 			End:   geom.Point{4082, 310},
-			ExpectedLines: []geom.Line{
-				{{4083, 312}, {4081, 310}},
-			},
+			ExpectedLines: []geom.Line{ },
 		},
 		{
 			// starting edge: LINESTRING (4080 312,4081 310)
 			// ending edge: LINESTRING (4082 310,4082 309)
 			// intersecting edge: LINESTRING (4080 312,4082 310)
 			Lines:      must.ReadMultilines("testdata/find_intersects_test_02.lines"),
-			Start:      geom.Point{4080, 312},
-			End:        geom.Point{4082, 310},
-			EndingDest: &geom.Point{4082, 309},
+			Start:      geom.Point{4081, 310},
+			End:        geom.Point{4083, 312},
 			ExpectedLines: []geom.Line{
-				{{4083, 312}, {4081, 310}},
+				{{4082,310},{4080,312}},
 			},
 		},
 	}

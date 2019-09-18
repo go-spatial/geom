@@ -69,8 +69,6 @@ func ResolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) 
 
 func (sd *Subdivision) InsertConstraint(ctx context.Context, vertexIndex VertexIndex, start, end geom.Point) (err error) {
 
-	// const debug = true
-
 	if cgo && debug {
 
 		ctx = debugger.AugmentContext(ctx, "")

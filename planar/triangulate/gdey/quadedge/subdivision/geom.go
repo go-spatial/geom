@@ -2,7 +2,6 @@ package subdivision
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 
@@ -54,14 +53,14 @@ func NewSubdivisionFromGeomLines(lines []geom.Line) *Subdivision {
 				// edge already in graph
 				continue
 			}
-			oe,_ = quadedge.ResolveEdge(oe, dest)
+			oe, _ = quadedge.ResolveEdge(oe, dest)
 			if oe == nil {
 				oe = indexMap[orig]
 			}
 		}
 
 		if de != nil {
-			de,_ = quadedge.ResolveEdge(de, orig)
+			de, _ = quadedge.ResolveEdge(de, orig)
 			if de == nil {
 				de = indexMap[dest]
 			}
@@ -106,7 +105,9 @@ func NewSubdivisionFromGeomLines(lines []geom.Line) *Subdivision {
 	}
 	if err := sd.Validate(context.Background()); err != nil {
 		err1 := err.(quadedge.ErrInvalid)
-		panic(fmt.Sprintf("%v", []string(err1)))
+		for i, str := range err1 {
+			log.Printf("%03v: %v", i, str)
+		}
 	}
 	return sd
 }

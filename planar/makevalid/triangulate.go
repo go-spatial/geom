@@ -3,6 +3,7 @@ package makevalid
 import (
 	"context"
 	"fmt"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"log"
 
 	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge"
@@ -68,6 +69,7 @@ func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar
 	}
 	if debug {
 		log.Printf("Step   4 : label triangles and discard outside triangles")
+		log.Printf("Step   4a: All Triangles:\n%v",wkt.MustEncode(allTriangles))
 	}
 	triangles := make([]geom.Triangle, 0, len(allTriangles))
 
@@ -79,6 +81,9 @@ func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar
 			continue
 		}
 		triangles = append(triangles, triangle)
+	}
+	if debug {
+		log.Printf("Step   4b: Inside Triangles:\n%v", wkt.MustEncode(triangles))
 	}
 	return triangles, nil
 

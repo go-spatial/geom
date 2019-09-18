@@ -2,10 +2,10 @@ package qetriangulate
 
 import (
 	"context"
+	"github.com/go-spatial/geom/cmp"
 	"log"
-	"sort"
+	"math"
 
-	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 
 	"github.com/go-spatial/geom"
@@ -20,11 +20,36 @@ type GeomConstrained struct {
 
 func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]geom.Triangle, error) {
 	var pts [][2]float64
-	for _, pt := range ct.Points {
-		pts = append(pts, [2]float64(pt))
-	}
-	for _, ct := range ct.Constraints {
-		pts = append(pts, ct[0], ct[1])
+	var constraints []geom.Line
+	{
+		var seen = make(map[[2]float64]bool)
+		for _, pt := range ct.Points {
+
+			if seen[[2]float64(pt)] {
+				continue
+			}
+
+			seen[[2]float64(pt)] = true
+			pts = append(pts, [2]float64(pt))
+		}
+		for i := range ct.Constraints {
+			lnt := math.Sqrt(ct.Constraints[i].LengthSquared())
+			if debug {
+				log.Printf("for (%v)%v lnt: %v",i,ct.Constraints[i],lnt)
+			}
+			if cmp.Float(lnt, 0.0) {
+				continue
+			}
+			if !seen[ct.Constraints[i][0]] {
+				pts = append(pts, ct.Constraints[i][0])
+				seen[ct.Constraints[i][0]] = true
+			}
+			if !seen[ct.Constraints[i][1]] {
+				pts = append(pts, ct.Constraints[i][1])
+				seen[ct.Constraints[i][1]] = true
+			}
+			constraints = append(constraints, ct.Constraints[i])
+		}
 	}
 	sd, err := subdivision.NewForPoints(ctx, pts)
 	if err != nil {
@@ -40,8 +65,6 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		}
 		return nil, err
 	}
-	constraints := ct.Constraints
-	sort.Sort(planar.LinesByLength(constraints))
 
 	vxidx := sd.VertexIndex()
 	total := len(constraints)

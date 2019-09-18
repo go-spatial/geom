@@ -3,8 +3,8 @@ package subdivision
 import (
 	"context"
 	"fmt"
+	"github.com/go-spatial/geom/planar/intersect"
 	"log"
-	"math"
 	"strings"
 	"sync"
 
@@ -15,8 +15,6 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/encoding/wkt"
-	"github.com/go-spatial/geom/internal/debugger"
-	"github.com/go-spatial/geom/planar/intersect"
 	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 )
 
@@ -59,6 +57,10 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 	for i := range points {
 		points[i] = [2]float64(roundGeomPoint(geom.Point(points[i])))
 	}
+
+	// Sorting makes things worse it seems....
+	//sort.Sort(cmp.ByXY(points))
+
 	tri := geom.NewTriangleContainingPoints(points...)
 	sd := New(tri[0], tri[1], tri[2])
 
@@ -87,15 +89,11 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 	seen[tri[1]] = true
 	seen[tri[2]] = true
 
-	for i, pt2f := range points {
+	for i, pt := range points {
 
 		_ = i
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
-		}
-		pt := geom.Point{
-			math.Round(pt2f[0]*RoundingFactor) / RoundingFactor,
-			math.Round(pt2f[1]*RoundingFactor) / RoundingFactor,
 		}
 		if seen[pt] {
 			continue
@@ -147,13 +145,15 @@ var internal_debug = false
 // from Guibas and Stolfi (1985) p.120, with slight modifications and a bug fix.
 func (sd *Subdivision) InsertSite(x geom.Point) bool {
 
-	if cmp.GeomPointEqual(x, geom.Point{45, 2620}) ||
-		cmp.GeomPointEqual(x, geom.Point{45, 2624}) ||
-		cmp.GeomPointEqual(x, geom.Point{45, 2622}) ||
-		cmp.GeomPointEqual(x, geom.Point{45, 2620}) {
-		internal_debug = true
-	}
-	debug := internal_debug
+	/*
+		if cmp.GeomPointEqual(x, geom.Point{45, 2620}) ||
+			cmp.GeomPointEqual(x, geom.Point{45, 2624}) ||
+			cmp.GeomPointEqual(x, geom.Point{45, 2622}) ||
+			cmp.GeomPointEqual(x, geom.Point{45, 2620}) {
+			internal_debug = true
+		}
+		debug := internal_debug
+	*/
 
 	if debug {
 		log.Printf("\n\nInsertSite   %v  \n\n", wkt.MustEncode(x))
@@ -291,8 +291,11 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		case quadedge.RightOf(*t.Dest(), e) &&
 			containsPoint:
 			if debug {
-				log.Printf("Circle form points: \n%v\n%v",
-					wkt.MustEncode(crl.AsPoints(500)),
+				log.Printf("Circle from points: %v,%v,%v \n%v\n%v",
+					wkt.MustEncode(*e.Orig()),
+					wkt.MustEncode(*t.Dest()),
+					wkt.MustEncode(*e.Dest()),
+					wkt.MustEncode(crl.AsLineString(100)),
 					containsPoint,
 				)
 				log.Printf("Point of consideration: %v", wkt.MustEncode(x))
@@ -314,7 +317,10 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 							log.Printf("err: %03v : %v", i, estr)
 						}
 					}
+				} else {
+					log.Printf("subdivision good")
 				}
+				DumpSubdivision(sd)
 			}
 			return true
 
@@ -359,13 +365,6 @@ func (sd *Subdivision) Triangles(includeFrame bool) (triangles [][3]geom.Point, 
 // the sd was built correctly. This process is very cpu and memory intensitive
 func (sd *Subdivision) Validate(ctx context.Context) error {
 
-	if cgo && debug {
-
-		ctx = debugger.AugmentContext(ctx, "")
-		defer debugger.Close(ctx)
-
-	}
-
 	var (
 		lines []geom.Line
 		err1  quadedge.ErrInvalid
@@ -383,13 +382,6 @@ func (sd *Subdivision) Validate(ctx context.Context) error {
 		}
 		l2 := l.LengthSquared()
 		if l2 == 0 {
-			if debug {
-				debugger.Record(ctx,
-					l,
-					"ZeroLenght:Edge",
-					"Line (%p) %v -- %v ", e, l2, l,
-				)
-			}
 			err1 = append(err1, "zero length edge: %v", wkt.MustEncode(l))
 			return err1
 		}
@@ -569,11 +561,6 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 	if se == nil || fn == nil {
 		return
 	}
-	var rcd debugger.Recorder
-
-	if debug {
-		rcd = debugger.GetRecorderFromContext(ctx)
-	}
 
 	var (
 		// Hold the edges we still have to look at
@@ -593,9 +580,6 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 		count int
 		loop  int
 	)
-	if debug {
-		debugger.RecordOn(rcd, se.AsLine(), "WalkAllTriangles", "starting edge %v", se.AsLine())
-	}
 
 	edgeStack = append(edgeStack, se)
 
@@ -610,22 +594,15 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 		edgeStack = edgeStack[:len(edgeStack)-1]
 		startPoint = *startingEdge.Orig()
 		if seenVerticies[startPoint] {
-			if debug {
-				debugger.RecordOn(rcd, startPoint, "WalkAllTriangles:SkipVertex", "count:%v loop:%v vertex:%v", count, loop, startPoint)
-			}
 			// we have already processed this vertix
 			continue
 		}
 
 		seenVerticies[startPoint] = true
-		debugger.RecordOn(rcd, startPoint, "WalkAllTriangles:Vertex", "count:%v loop:%v vertex:%v", count, loop, startPoint)
 
 		workingEdge = startingEdge
 		nextEdge = startingEdge.ONext()
 		if workingEdge == nextEdge {
-			if debug {
-				debugger.RecordOn(rcd, workingEdge.AsLine(), "WalkAllTriangles:SkipEdge:work==next", "count:%v loop:%v edge:%v", count, loop, workingEdge.AsLine())
-			}
 			continue
 		}
 
@@ -633,69 +610,24 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 			loop++
 			endPoint = *nextEdge.Dest()
 			midPoint = *workingEdge.Dest()
-			if debug {
-				debugger.RecordOn(
-					rcd,
-					geom.MultiPoint{
-						[2]float64(startPoint),
-						[2]float64(midPoint),
-						[2]float64(endPoint),
-					},
-					"WalkAllTriangles:Vertex:Initial", "count:%v loop:%v initial verticies", count, loop,
-				)
-				debugger.RecordOn(
-					rcd,
-					geom.Triangle{
-						[2]float64(startPoint),
-						[2]float64(midPoint),
-						[2]float64(endPoint),
-					},
-					"WalkAllTriangles:Triangle:Initial", "count:%v loop:%v prospective triangle", count, loop,
-				)
-				wln := workingEdge.AsLine()
-				nln := nextEdge.AsLine()
-				debugger.RecordOn(
-					rcd,
-					geom.MultiLineString{
-						wln[:],
-						nln[:],
-					},
-					"WalkAllTriangles:Edge:Initial", "count:%v loop:%v initial edges", count, loop,
-				)
-			}
 			if seenVerticies[endPoint] || seenVerticies[midPoint] {
-				if debug {
-					skipPoint := midPoint
-					if seenVerticies[endPoint] {
-						skipPoint = endPoint
-					}
-
-					debugger.RecordOn(rcd, skipPoint, "WalkAllTriangles:SkipTriangle", "count:%v loop:%v vertex:%v(%v),%v(%v)", count, loop, midPoint, seenVerticies[midPoint], endPoint, seenVerticies[endPoint])
-				}
 				// we have already accounted for this triangle
 				goto ADVANCE
 			}
 
 			// Add the working edge to the stack.
 			edgeStack = append(edgeStack, workingEdge.Sym())
-			if debug {
-				debugger.RecordOn(rcd, workingEdge.AsLine(), "WalkAllTriangles:Edge", "count:%v loop:%v work-edge:%v", count, loop, workingEdge.AsLine())
-			}
 
 			if workingEdge.Sym().FindONextDest(endPoint) != nil {
 				// found a triangle
 				// *workingEdge.Orig(),*workingEdge.Dest(), *nextEdge.Dest()
-				if debug {
-					tri := geom.Triangle{[2]float64(startPoint), [2]float64(midPoint), [2]float64(endPoint)}
-					debugger.RecordOn(rcd, tri, "WalkAllTriangles:Triangle", "count:%v loop:%v triangle:%v", count, loop, tri)
-				}
-				if !fn(startPoint, midPoint, endPoint) {
+				if !fn(
+					startPoint,
+					midPoint,
+					endPoint,
+				) {
 					return
 				}
-			} else if debug {
-				debugger.RecordOn(rcd, endPoint, "WalkAllTriangles:Vertex", "count:%v loop:%v endPoint:%v not connected", count, loop, endPoint)
-				debugger.RecordOn(rcd, workingEdge.Sym().AsLine(), "WalkAllTriangles:Edge", "count:%v loop:%v work-edge-sym:%v not connected", count, loop, workingEdge.Sym().AsLine())
-				debugger.RecordOn(rcd, nextEdge.AsLine(), "WalkAllTriangles:Edge", "count:%v loop:%v next-edge:%v not connected", count, loop, nextEdge.AsLine())
 			}
 
 		ADVANCE:
@@ -712,7 +644,6 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 // FindIntersectingEdges will find all edges in the graph that would be intersected by the origin of the starting edge and the
 // dest of the endingEdge
 func FindIntersectingEdges(startingEdge, endingEdge *quadedge.Edge) (edges []*quadedge.Edge, err error) {
-
 	/*
 					 Move starting edge so that the graph look like
 					 ◌ .
@@ -754,6 +685,12 @@ func FindIntersectingEdges(startingEdge, endingEdge *quadedge.Edge) (edges []*qu
 
 	startingEdge, _ = quadedge.ResolveEdge(startingEdge, end)
 	endingEdge, _ = quadedge.ResolveEdge(endingEdge, start)
+
+	if cmp.GeomPointEqual(*startingEdge.Dest(),end) ||
+		cmp.GeomPointEqual(*endingEdge.Dest(),start) {
+		// the intersect lines already exists.
+		return []*quadedge.Edge{}, nil
+	}
 
 	if debug {
 		log.Printf("\n\nAfter Resolve\n\n")
@@ -876,16 +813,19 @@ func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 		e     *quadedge.Edge
 		ok    bool
 		count int
+		err   error
 	)
 
+	_ = err
 	if debug {
 		log.Printf("\n\nlocate\n\n")
 		log.Printf("Original Starting Edge: %v", wkt.MustEncode(se.AsLine()))
 	}
-	se, _ = quadedge.ResolveEdge(se, x)
+	se, err = quadedge.ResolveEdge(se, x)
 	if debug {
-		log.Printf("Starting Edge: %v", wkt.MustEncode(se.AsLine()))
+		log.Printf("Starting Edge: %v : %v", wkt.MustEncode(se.AsLine()), err)
 	}
+
 	for e, ok = testEdge(x, se); !ok; e, ok = testEdge(x, e) {
 		if debug {
 			log.Printf("next Edge: %v", wkt.MustEncode(e.AsLine()))
@@ -897,7 +837,6 @@ func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 
 		count++
 		if e == se || count > limit {
-			log.Println("searching all edges for", x)
 			e = nil
 
 			WalkAllEdges(se, func(ee *quadedge.Edge) error {
@@ -907,11 +846,6 @@ func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 				}
 				return nil
 			})
-			log.Printf(
-				"Got back to starting edge after %v iterations, only have %v points ",
-				count,
-				limit,
-			)
 			return e, false
 		}
 	}

@@ -96,8 +96,10 @@ func (c Circle) ContainsPoint(pt [2]float64) bool {
 	// get the distance between the center and the point, and if it's greater then the radius it's outside
 	// of the circle.
 	v1, v2 := c.Center[0]-pt[0], c.Center[1]-pt[1]
-	d := math.Sqrt((v1 * v1) + (v2 * v2))
-	return c.Radius >= d
+	d := math.Abs(math.Sqrt((v1 * v1) + (v2 * v2)))
+	//d = round( d ,0.001)
+//	log.Printf("pt: %v radius: %v d: %v -- %v",pt, c.Radius,d,c.Radius-d)
+	return c.Radius  >= d
 }
 
 func (c Circle) AsPoints(k uint) []Point {

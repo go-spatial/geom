@@ -3,6 +3,7 @@ package makevalid
 import (
 	"context"
 	"errors"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"log"
 	"sort"
 
@@ -188,7 +189,8 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 		return nil, nil
 	}
 	if debug {
-		log.Printf("Step   2 : Convert segments to linestrings to use in triangleuation.")
+		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
+		log.Printf("Step   2a: %v",wkt.MustEncode(segs))
 	}
 
 	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
