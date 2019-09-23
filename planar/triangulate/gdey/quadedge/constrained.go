@@ -51,6 +51,9 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 			constraints = append(constraints, ct.Constraints[i])
 		}
 	}
+	if len(pts) == 0  {
+		return nil, nil
+	}
 	sd, err := subdivision.NewForPoints(ctx, pts)
 	if err != nil {
 		if debug && err != context.Canceled {
@@ -66,7 +69,6 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		return nil, err
 	}
 
-	/*
 	vxidx := sd.VertexIndex()
 	total := len(constraints)
 	for i, ct := range constraints {
@@ -75,11 +77,9 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		}
 		err := sd.InsertConstraint(ctx, vxidx, geom.Point(ct[0]), geom.Point(ct[1]))
 		if err != nil {
-			return nil, err
+			log.Printf("Failed to add constraint[%v or %v] %v , skipping with error: %v",i,total,wkt.MustEncode(ct),err)
 		}
-
 	}
-	 */
 
 	var tris []geom.Triangle
 	triangles, err := sd.Triangles(includeFrame)
@@ -96,7 +96,6 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		)
 	}
 	return tris, nil
-
 }
 
 type Constrained struct {
@@ -108,6 +107,9 @@ func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triang
 	pts := ct.Points
 	for _, ct := range ct.Constraints {
 		pts = append(pts, ct[0], ct[1])
+	}
+	if len(pts) == 0  {
+		return nil, nil
 	}
 	sd, err := subdivision.NewForPoints(ctx, pts)
 	if err != nil {

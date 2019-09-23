@@ -201,6 +201,9 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}
+	if len(triangles) == 0 {
+		return nil, nil
+	}
 	triWalker := walker.New(triangles)
 	mplygs := triWalker.MultiPolygon(ctx)
 

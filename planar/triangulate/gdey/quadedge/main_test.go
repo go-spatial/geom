@@ -39,7 +39,6 @@ func logEdges(sd *subdivision.Subdivision) {
 func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...geom.Point) {
 
 	var (
-		ffl        = debugger.FFL(0)
 		badPoints  []geom.Point
 		goodPoints []geom.Point
 	)
@@ -80,7 +79,6 @@ func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...geom.Point) {
 		t.Logf("initial:point:good:%03v: %v", i, wkt.MustEncode(pt))
 	}
 
-	count := 0
 	dumpSD(t,sd)
 	t.Logf("writing out triangulation setup info: %v", time.Since(start))
 	start = time.Now()
@@ -422,7 +420,6 @@ func TestTriangulation(t *testing.T) {
 		}
 
 
-	*/
 	tests := make(map[string][]geom.Point)
 	gettests(inputdir, tests)
 
@@ -439,5 +436,6 @@ func TestTriangulation(t *testing.T) {
 			rec.CloseWait()
 		})
 	}
+	*/
 
 }

@@ -129,6 +129,25 @@ func TestGeomConstrained(t *testing.T) {
 		}
 	}
 	tests := []tcase{
+		{
+			Desc: "empty",
+		},
+		{
+			Desc: "empty",
+			tri:qetriangulate.GeomConstrained{
+				Points: []geom.Point{{0,0},{0,0},{0,0},{0,0}},
+			},
+		},
+		{
+			Desc: "empty",
+			tri:qetriangulate.GeomConstrained{
+				Constraints: []geom.Line{{{0,0},{0,0}}},
+			},
+		},
+		{
+			Desc: "empty",
+			tri:qetriangulate.GeomConstrained{},
+		},
 		/*
 		{
 			Desc: "bad lines",

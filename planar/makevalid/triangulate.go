@@ -71,6 +71,9 @@ func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar
 		log.Printf("Step   4 : label triangles and discard outside triangles")
 		log.Printf("Step   4a: All Triangles:\n%v",wkt.MustEncode(allTriangles))
 	}
+	if len(allTriangles) == 0 {
+		return []geom.Triangle{}, nil
+	}
 	triangles := make([]geom.Triangle, 0, len(allTriangles))
 
 	for _, triangle := range allTriangles {
