@@ -69,6 +69,7 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		return nil, err
 	}
 
+	/*
 	vxidx := sd.VertexIndex()
 	total := len(constraints)
 	for i, ct := range constraints {
@@ -80,6 +81,7 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 			log.Printf("Failed to add constraint[%v or %v] %v , skipping with error: %v",i,total,wkt.MustEncode(ct),err)
 		}
 	}
+	*/
 
 	var tris []geom.Triangle
 	triangles, err := sd.Triangles(includeFrame)
@@ -116,6 +118,7 @@ func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triang
 		return nil, err
 	}
 
+	/*
 	vxidx := sd.VertexIndex()
 	total := len(ct.Constraints)
 	for i, ct := range ct.Constraints {
@@ -125,5 +128,6 @@ func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triang
 			return nil, err
 		}
 	}
+	 */
 	return sd.Triangles(includeFrame)
 }
