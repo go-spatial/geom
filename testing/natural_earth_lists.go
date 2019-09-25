@@ -1,0 +1,100 @@
+package testing
+
+import (
+	"github.com/go-spatial/geom"
+)
+
+var NaturalEarthPolygons = []geom.Polygon{
+	_ne_10m_admin_0_countries0[0],
+	_ne_10m_admin_0_countries1[0],
+	_ne_10m_admin_0_countries2[0],
+	_ne_10m_admin_0_countries3[0],
+	_ne_10m_admin_0_countries4[0],
+	_ne_10m_admin_0_countries5[0],
+	_ne_10m_admin_0_countries6[0],
+	_ne_10m_admin_0_countries7[0],
+	_ne_10m_admin_0_countries8[0],
+	_ne_10m_admin_0_countries9[0],
+	_ne_10m_parks_and_protected_lands_area0[0],
+	_ne_10m_parks_and_protected_lands_area1[0],
+	_ne_10m_parks_and_protected_lands_area2[0],
+	_ne_10m_parks_and_protected_lands_area3[0],
+	_ne_10m_parks_and_protected_lands_area4[0],
+	_ne_10m_parks_and_protected_lands_area5[0],
+	_ne_10m_parks_and_protected_lands_area6[0],
+	_ne_10m_parks_and_protected_lands_area7[0],
+	_ne_10m_parks_and_protected_lands_area8[0],
+	_ne_10m_parks_and_protected_lands_area9[0],
+}
+
+var NaturalEarthMultiPolygons = []geom.MultiPolygon{
+	_ne_10m_admin_0_countries0,
+	_ne_10m_admin_0_countries1,
+	_ne_10m_admin_0_countries2,
+	_ne_10m_admin_0_countries3,
+	_ne_10m_admin_0_countries4,
+	_ne_10m_admin_0_countries5,
+	_ne_10m_admin_0_countries6,
+	_ne_10m_admin_0_countries7,
+	_ne_10m_admin_0_countries8,
+	_ne_10m_admin_0_countries9,
+	_ne_10m_parks_and_protected_lands_area0,
+	_ne_10m_parks_and_protected_lands_area1,
+	_ne_10m_parks_and_protected_lands_area2,
+	_ne_10m_parks_and_protected_lands_area3,
+	_ne_10m_parks_and_protected_lands_area4,
+	_ne_10m_parks_and_protected_lands_area5,
+	_ne_10m_parks_and_protected_lands_area6,
+	_ne_10m_parks_and_protected_lands_area7,
+	_ne_10m_parks_and_protected_lands_area8,
+	_ne_10m_parks_and_protected_lands_area9,
+}
+
+var NaturalEarthLineStrings = []geom.LineString{
+	_ne_10m_parks_and_protected_lands_line0[0],
+	_ne_10m_parks_and_protected_lands_line1[0],
+	_ne_10m_parks_and_protected_lands_line2[0],
+	_ne_10m_parks_and_protected_lands_line3[0],
+	_ne_10m_parks_and_protected_lands_line4[0],
+	_ne_10m_parks_and_protected_lands_line5[0],
+	_ne_10m_parks_and_protected_lands_line6[0],
+	_ne_10m_parks_and_protected_lands_line7[0],
+	_ne_10m_parks_and_protected_lands_line8[0],
+	_ne_10m_parks_and_protected_lands_line9[0],
+	_ne_110m_coastline0[0],
+	_ne_110m_coastline1[0],
+	_ne_110m_coastline2[0],
+	_ne_110m_coastline3[0],
+	_ne_110m_coastline4[0],
+	_ne_110m_coastline5[0],
+	_ne_110m_coastline6[0],
+	_ne_110m_coastline7[0],
+	_ne_110m_coastline8[0],
+	_ne_110m_coastline9[0],
+}
+
+var NaturalEarthMultiLineStrings = []geom.MultiLineString{
+	_ne_10m_parks_and_protected_lands_line0,
+	_ne_10m_parks_and_protected_lands_line1,
+	_ne_10m_parks_and_protected_lands_line2,
+	_ne_10m_parks_and_protected_lands_line3,
+	_ne_10m_parks_and_protected_lands_line4,
+	_ne_10m_parks_and_protected_lands_line5,
+	_ne_10m_parks_and_protected_lands_line6,
+	_ne_10m_parks_and_protected_lands_line7,
+	_ne_10m_parks_and_protected_lands_line8,
+	_ne_10m_parks_and_protected_lands_line9,
+	_ne_110m_coastline0,
+	_ne_110m_coastline1,
+	_ne_110m_coastline2,
+	_ne_110m_coastline3,
+	_ne_110m_coastline4,
+	_ne_110m_coastline5,
+	_ne_110m_coastline6,
+	_ne_110m_coastline7,
+	_ne_110m_coastline8,
+	_ne_110m_coastline9,
+}
+
+
+var NaturalEarth = []geom.Geometry{ _ne_10m_admin_0_countries0,_ne_10m_admin_0_countries1,_ne_10m_admin_0_countries2,_ne_10m_admin_0_countries3,_ne_10m_admin_0_countries4,_ne_10m_admin_0_countries5,_ne_10m_admin_0_countries6,_ne_10m_admin_0_countries7,_ne_10m_admin_0_countries8,_ne_10m_admin_0_countries9,_ne_10m_parks_and_protected_lands_line0,_ne_10m_parks_and_protected_lands_line1,_ne_10m_parks_and_protected_lands_line2,_ne_10m_parks_and_protected_lands_line3,_ne_10m_parks_and_protected_lands_line4,_ne_10m_parks_and_protected_lands_line5,_ne_10m_parks_and_protected_lands_line6,_ne_10m_parks_and_protected_lands_line7,_ne_10m_parks_and_protected_lands_line8,_ne_10m_parks_and_protected_lands_line9,_ne_10m_parks_and_protected_lands_area0,_ne_10m_parks_and_protected_lands_area1,_ne_10m_parks_and_protected_lands_area2,_ne_10m_parks_and_protected_lands_area3,_ne_10m_parks_and_protected_lands_area4,_ne_10m_parks_and_protected_lands_area5,_ne_10m_parks_and_protected_lands_area6,_ne_10m_parks_and_protected_lands_area7,_ne_10m_parks_and_protected_lands_area8,_ne_10m_parks_and_protected_lands_area9,_ne_110m_coastline0,_ne_110m_coastline1,_ne_110m_coastline2,_ne_110m_coastline3,_ne_110m_coastline4,_ne_110m_coastline5,_ne_110m_coastline6,_ne_110m_coastline7,_ne_110m_coastline8,_ne_110m_coastline9,_ne_50m_lakes0,_ne_50m_lakes1,_ne_50m_lakes2,_ne_50m_lakes3,_ne_50m_lakes4,_ne_50m_lakes5,_ne_50m_lakes6,_ne_50m_lakes7,_ne_50m_lakes8,_ne_50m_lakes9,_ne_50m_antarctic_ice_shelves_lines0,_ne_50m_antarctic_ice_shelves_lines1,_ne_50m_antarctic_ice_shelves_lines2,_ne_50m_antarctic_ice_shelves_lines3,_ne_50m_antarctic_ice_shelves_lines4,_ne_50m_antarctic_ice_shelves_lines5,_ne_50m_antarctic_ice_shelves_lines6,_ne_50m_antarctic_ice_shelves_lines7,_ne_50m_antarctic_ice_shelves_lines8,_ne_50m_antarctic_ice_shelves_lines9,_ne_50m_antarctic_ice_shelves_polys0,_ne_50m_antarctic_ice_shelves_polys1,_ne_50m_antarctic_ice_shelves_polys2,_ne_50m_antarctic_ice_shelves_polys3,_ne_50m_antarctic_ice_shelves_polys4,_ne_50m_antarctic_ice_shelves_polys5,_ne_50m_antarctic_ice_shelves_polys6,_ne_50m_antarctic_ice_shelves_polys7,_ne_50m_antarctic_ice_shelves_polys8,_ne_50m_antarctic_ice_shelves_polys9,SouthAfrica }

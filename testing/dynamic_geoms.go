@@ -25,20 +25,31 @@ func SinLineString(amp, start, end float64, points int) geom.LineString {
 		panic("cannot have a line with less than 2 points")
 	}
 
-	res := (end - start) / (float64(points) - 1)
-	ret := make([][2]float64, points)
-	x := 0.0
+	return FuncLineString(start, end, points, func (t float64) [2]float64 {
+		return [2]float64{t, amp * math.Sin(t)}
+	})
+}
 
-	// the last point should be end
-	var i int
-	for i = 0; i < points - 1; i++ {
-		ret[i] = [2]float64{x, math.Sin(x)}
-		x += res
+type ParamFunc func(t float64) [2]float64
+
+// FuncLineString returns a line string constructed from calling fn
+// in the interval [start, end] points number of times. The number of
+// points must be >= 2, or the function panics.
+func FuncLineString(start, end float64, points int, fn ParamFunc) geom.LineString {
+	if points < 2 {
+		panic("cannot have a line with less than 2 points")
 	}
 
-	ret[i] = [2]float64{end, math.Sin(end)}
+	res := (end - start) / (float64(points) - 1)
+	ret := make([][2]float64, points)
+	t := start
+
+	for i := 0; i < points - 1; i++ {
+		ret[i] = fn(t)
+		t += res
+	}
+
+	ret[points - 1] = fn(end)
 
 	return ret
 }
-
-
