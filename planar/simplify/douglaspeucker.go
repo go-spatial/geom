@@ -21,28 +21,28 @@ func (dp DouglasPeucker) Simplify(ctx context.Context, linestring [][2]float64, 
 	return dp.simplify(ctx, 0, linestring, isClosed, ret)
 }
 
+func rdpPrintf(msg string, depth uint8, params ...interface{}) {
+	ps := make([]interface{}, 1, len(params)+1)
+	ps[0] = depth
+	ps = append(ps, params...)
+	logger.Printf(strings.Repeat(" ", int(depth*2))+"[%v]"+msg, ps...)
+}
+
 func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [][2]float64, isClosed bool, ret [][2]float64) ([][2]float64, error) {
 
 	// helper function for debugging and tracing the code
-	var printf = func(msg string, depth uint8, params ...interface{}) {
-		ps := make([]interface{}, 1, len(params)+1)
-		ps[0] = depth
-		ps = append(ps, params...)
-		logger.Printf(strings.Repeat(" ", int(depth*2))+"[%v]"+msg, ps...)
-	}
-
 	if debug {
-		printf("starting linestring: %v ; tolerance: %v", depth, linestring, dp.Tolerance)
+		rdpPrintf("starting linestring: %v ; tolerance: %v", depth, linestring, dp.Tolerance)
 	}
 
 	if dp.Tolerance <= 0 || len(linestring) <= 2 {
 		if debug {
 			if dp.Tolerance <= 0 {
-				printf("skipping due to Tolerance (%v) ≤ zero:", depth, dp.Tolerance)
+				rdpPrintf("skipping due to Tolerance (%v) ≤ zero:", depth, dp.Tolerance)
 
 			}
 			if len(linestring) <= 2 {
-				printf("skipping due to len(linestring) (%v) ≤ two: %v", depth, len(linestring), linestring)
+				rdpPrintf("skipping due to len(linestring) (%v) ≤ two: %v", depth, len(linestring), linestring)
 			}
 		}
 		return append(ret, linestring...), nil
@@ -58,7 +58,7 @@ func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [
 	line := [2][2]float64{linestring[0], linestring[len(linestring)-1]}
 
 	if debug {
-		printf("starting dmax: %v ; idx %v ;  line : %v", depth, dmax, idx, line)
+		rdpPrintf("starting dmax: %v ; idx %v ;  line : %v", depth, dmax, idx, line)
 	}
 
 	// Find the point that is the furthest away.
@@ -69,7 +69,7 @@ func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [
 		}
 
 		if debug {
-			printf("looking at %v ; d : %v dmax %v ", depth, i, d, dmax)
+			rdpPrintf("looking at %v ; d : %v dmax %v ", depth, i, d, dmax)
 		}
 	}
 	// If the furtherest point is greater then tolerance, we split at that point, and look again at each
@@ -77,7 +77,7 @@ func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [
 	if dmax > dp.Tolerance {
 		if len(linestring) <= 3 {
 			if debug {
-				printf("returning linestring %v", depth, linestring)
+				rdpPrintf("returning linestring %v", depth, linestring)
 			}
 			return append(ret, linestring...), nil
 		}
@@ -98,14 +98,14 @@ func (dp DouglasPeucker) simplify(ctx context.Context, depth uint8, linestring [
 		firstLen := len(ret)
 		ret, _ = dp.simplify(ctx, depth+1, linestring[idx:], isClosed, ret[:firstLen-1])
 		if debug {
-			printf("returning combined lines: %v, %v", depth, ret[startLen:firstLen], ret[firstLen:])
+			rdpPrintf("returning combined lines: %v, %v", depth, ret[startLen:firstLen], ret[firstLen:])
 		}
 		return ret, ctx.Err()
 	}
 
 	// Drop all points between the end points.
 	if debug {
-		printf("dropping all points between the end points: %v", depth, line)
+		rdpPrintf("dropping all points between the end points: %v", depth, line)
 	}
 	return append(ret, line[:]...), nil
 }
