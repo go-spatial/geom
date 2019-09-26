@@ -11,7 +11,7 @@ import (
 const Tolerance = 0.000001
 
 // BitTolerance is the epsilon value for comaparing float bit-patterns.
-// It was calculated as math.Float64Bbits(1.000001) - math.Float64bits(1.0)
+// It was calculated as math.Float64bits(1.000001) - math.Float64bits(1.0)
 const BitTolerance = 4503599627
 
 var (
@@ -69,9 +69,8 @@ func Float64(f1, f2, tolerance float64, bitTolerance int64) bool {
 
 	if d < 0 {
 		return d > -bitTolerance
-	} else {
-		return d < bitTolerance
 	}
+	return d < bitTolerance
 }
 
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.

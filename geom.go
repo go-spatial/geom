@@ -1,7 +1,8 @@
 // Package geom describes geometry interfaces.
 package geom
 
-const TOLERANCE = 0.000001
+const Tolerance = 0.000001
+const BitTolerance = 4503599627
 
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
