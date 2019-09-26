@@ -21,6 +21,7 @@ type Encoder struct {
 }
 
 func NewEncoder(w io.Writer) *Encoder {
+	// for reference, the min value of EPSG:3857 -20026376.390 -> 13 characters
 	return &Encoder{
 		w: w,
 		fbuf: make([]byte, 0, 16),
@@ -40,18 +41,7 @@ func (enc *Encoder) puts(s string) error {
 
 
 func (enc *Encoder) formatFloat(f float64) error {
-	// for reference, the min value of EPSG:3857 -20026376.390 -> 13 characters
-	buf := strconv.AppendFloat(enc.fbuf[:0], f, 'f', 3, 64)
-	i := len(buf) - 1;
-	for ; i >= 0; i-- {
-		if buf[i] != '0' {
-			break
-		}
-	}
-	if buf[i] == '.' {
-		i--
-	}
-	buf = buf[:i+1]
+	buf := strconv.AppendFloat(enc.fbuf[:0], f, 'g', 5, 64)
 	_, err := enc.w.Write(buf)
 	return err
 }
