@@ -31,7 +31,7 @@ type Feature struct {
 }
 
 func (f Feature) String() string {
-	g, err := wkt.Encode(f.Geometry)
+	g, err := wkt.EncodeString(f.Geometry)
 	if err != nil {
 		return fmt.Sprintf("encoding error for geom geom, %v", err)
 	}

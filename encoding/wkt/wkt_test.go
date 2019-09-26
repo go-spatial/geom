@@ -1,9 +1,13 @@
 package wkt
 
 import (
+	"bytes"
+	"errors"
+	"math"
 	"testing"
 
 	"github.com/go-spatial/geom"
+	gtesting "github.com/go-spatial/geom/testing"
 )
 
 func TestEncode(t *testing.T) {
@@ -16,13 +20,16 @@ func TestEncode(t *testing.T) {
 		return tc.Rep, func(t *testing.T) {
 			t.Parallel()
 
-			grep, gerr := Encode(tc.Geom)
+			grep, gerr := EncodeString(tc.Geom)
+			t.Logf("partial: %v", grep)
 			if tc.Err != nil {
-				if tc.Err.Error() != gerr.Error() {
-					t.Errorf("error, expected %v got %v", tc.Err.Error(), gerr.Error())
+				if gerr == nil || tc.Err.Error() != gerr.Error() {
+					t.Errorf("error, expected %v got %v", tc.Err, gerr)
 				}
 				return
 			}
+
+
 			if tc.Err == nil && gerr != nil {
 				t.Errorf("error, expected nil got %v", gerr)
 				return
@@ -61,6 +68,10 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTIPOINT EMPTY",
 			},
 			{
+				Geom: geom.MultiPoint{{math.NaN(), math.NaN()}},
+				Rep:  "MULTIPOINT EMPTY",
+			},
+			{
 				Geom: geom.MultiPoint{{0, 0}},
 				Rep:  "MULTIPOINT (0 0)",
 			},
@@ -84,7 +95,11 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.LineString{{0, 0}},
-				Rep:  "LINESTRING (0 0)",
+				Err:  errors.New("not enough points for LINESTRING [[0 0]]"),
+			},
+			{
+				Geom: geom.LineString{{0, 0}, {math.NaN(), math.NaN()}},
+				Err:  errors.New("cannot have empty points in LINESTRING"),
 			},
 			{
 				Geom: geom.LineString{{10, 10}, {0, 0}},
@@ -109,8 +124,16 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTILINESTRING EMPTY",
 			},
 			{
+				Geom: geom.MultiLineString{{}},
+				Rep:  "MULTILINESTRING EMPTY",
+			},
+			{
+				Geom: geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {}},
+				Err: errors.New("cannot have empty points in MULTILINESTRING"),
+			},
+			{
 				Geom: geom.MultiLineString{{{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
@@ -122,7 +145,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{}, {{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{}, {{10, 10}, {20, 20}}},
@@ -130,15 +153,15 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {}},
-				Rep:  "MULTILINESTRING ((10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10),(10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
-				Rep:  "MULTILINESTRING ((10 10),(10 10,20 20))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {}},
@@ -146,7 +169,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
-				Rep:  "MULTILINESTRING ((10 10,20 20),(10 10))",
+				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
@@ -175,8 +198,28 @@ func TestEncode(t *testing.T) {
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {11, 11}, {12, 12}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {12, 12}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {12, 12}, {10, 10}}},
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
+				Err: errors.New("cannot have empty points in POLYGON"),
+			},
+			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10),(20 20,21 21,22 22,20 20))",
+			},
+			{
+				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {math.NaN(), math.NaN()}, {22, 22}}},
+				Err: errors.New("cannot have empty points in POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
@@ -219,6 +262,22 @@ func TestEncode(t *testing.T) {
 			{
 				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}}},
 				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {10, 10}, {11, 11}, {12, 12}}}},
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}, {12, 12}}}},
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}, {10, 10}, {10, 10}}}},
+				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
+			},
+			{
+				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {math.NaN(), math.NaN()}, {12, 12}}}},
+				Err: errors.New("cannot have empty points in MULTIPOLYGON"),
 			},
 		},
 		"Collectioner": {
@@ -317,5 +376,42 @@ func TestEncode(t *testing.T) {
 				t.Run(fn(tc))
 			}
 		})
+	}
+}
+
+func BenchmarkEncodeSin100(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		EncodeBytes(gtesting.SinLineString(1.0, 0.0, 100.0, 100))
+	}
+}
+
+func BenchmarkEncodeSin1000(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		EncodeBytes(gtesting.SinLineString(1.0, 0.0, 100.0, 1000))
+	}
+}
+
+func BenchmarkEncodeTile(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		EncodeBytes(gtesting.Tiles[0])
+	}
+}
+
+
+func BenchmarkEncodeTilePrealloc(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		// the encoded wkt is ~32MB
+		buf := bytes.NewBuffer(make([]byte, 0, (1 << 20) * 32))
+		enc := NewEncoder(buf)
+		enc.Encode(gtesting.Tiles[0], true)
+	}
+}
+
+
+func BenchmarkEncodeTileNoprealloc(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		buf := bytes.NewBuffer(make([]byte, 0, 0))
+		enc := NewEncoder(buf)
+		enc.Encode(gtesting.Tiles[0], true)
 	}
 }
