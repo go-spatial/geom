@@ -1,6 +1,7 @@
 package slippy_test
 
 import (
+	"math"
 	"strconv"
 	"testing"
 
@@ -41,8 +42,9 @@ func TestNewTile(t *testing.T) {
 			}
 			{
 				bounds := tile.Extent4326()
+				bitTolerence2 := int64(math.Float64bits(1.01) - math.Float64bits(1.00))
 				for i := 0; i < 4; i++ {
-					if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01) {
+					if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01, bitTolerence2) {
 						t.Errorf("bounds[%v] , expected %v got %v", i, tc.eBounds[i], bounds[i])
 
 					}

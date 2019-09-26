@@ -7,8 +7,12 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// TOLERANCE is the epsilon value used in comparing floats.
-const TOLERANCE = 0.000001
+// Tolerance is the epsilon value used in comparing floats with zero
+const Tolerance = 0.000001
+
+// BitTolerance is the epsilon value for comaparing float bit-patterns.
+// It was calculated as math.Float64bits(1.000001) - math.Float64bits(1.0)
+const BitTolerance = 4503599627
 
 var (
 	NilPoint           = (*geom.Point)(nil)
@@ -21,10 +25,10 @@ var (
 )
 
 // FloatSlice compare two sets of float slices.
-func FloatSlice(f1, f2 []float64) bool { return Float64Slice(f1, f2, TOLERANCE) }
+func FloatSlice(f1, f2 []float64) bool { return Float64Slice(f1, f2, Tolerance, BitTolerance) }
 
 // Float64Slice compares two sets of float64 slices within the given tolerance.
-func Float64Slice(f1, f2 []float64, tolerance float64) bool {
+func Float64Slice(f1, f2 []float64, tolerance float64, bitTolerance int64) bool {
 	if len(f1) != len(f2) {
 		return false
 	}
@@ -38,7 +42,7 @@ func Float64Slice(f1, f2 []float64, tolerance float64) bool {
 	sort.Float64s(f1s)
 	sort.Float64s(f2s)
 	for i := range f1s {
-		if !Float64(f1s[i], f2s[i], tolerance) {
+		if !Float64(f1s[i], f2s[i], tolerance, bitTolerance) {
 			return false
 		}
 	}
@@ -46,24 +50,31 @@ func Float64Slice(f1, f2 []float64, tolerance float64) bool {
 }
 
 // Float64 compares two floats to see if they are within the given tolerance.
-func Float64(f1, f2, tolerance float64) bool {
-	if math.IsInf(f1, 1) {
-		return math.IsInf(f2, 1)
+func Float64(f1, f2, tolerance float64, bitTolerance int64) bool {
+
+	// handle infinity
+	if math.IsInf(f1, 0) || math.IsInf(f2, 0) {
+		return math.IsInf(f1, -1) == math.IsInf(f2, -1) &&
+			math.IsInf(f1, 1) == math.IsInf(f2, 1)
 	}
-	if math.IsInf(f2, 1) {
-		return math.IsInf(f1, 1)
+
+	// -0.0 exist but -0.0 == 0.0 is true
+	if f1 == 0 || f2 == 0 {
+		return math.Abs(f2 - f1) < tolerance
 	}
-	if math.IsInf(f1, -1) {
-		return math.IsInf(f2, -1)
+
+	i1 := int64(math.Float64bits(f1))
+	i2 := int64(math.Float64bits(f2))
+	d := i2 - i1
+
+	if d < 0 {
+		return d > -bitTolerance
 	}
-	if math.IsInf(f2, -1) {
-		return math.IsInf(f1, -1)
-	}
-	return math.Abs(f1-f2) < tolerance
+	return d < bitTolerance
 }
 
 // Float compares two floats to see if they are within 0.00001 from each other. This is the best way to compare floats.
-func Float(f1, f2 float64) bool { return Float64(f1, f2, TOLERANCE) }
+func Float(f1, f2 float64) bool { return Float64(f1, f2, Tolerance, BitTolerance) }
 
 // Extent will check to see if the Extents's are the same.
 func Extent(extent1, extent2 [4]float64) bool {
