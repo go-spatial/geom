@@ -9,7 +9,6 @@ package utm
 
 import (
 	"fmt"
-	"log"
 	"math"
 
 	"github.com/go-spatial/geom/planar/coord"
@@ -118,7 +117,6 @@ func newDigraph(zone Zone, lnglat coord.LngLat) (Digraph, error) {
 	if degreeDiff < 0 {
 		sideSelect = 1
 	}
-	log.Printf("kmDist: %v : degreeDiff %v", kmDist, degreeDiff)
 	lngLetter := dZone[sideSelect][letterIdx]
 
 	kmDistLat := math.Abs(111.0 * lnglat.Lat)
@@ -131,8 +129,6 @@ func newDigraph(zone Zone, lnglat coord.LngLat) (Digraph, error) {
 		offset = 4 // start at f
 	}
 
-	log.Printf("kmDistLat: %v lat: %v", kmDistLat, lnglat.Lat)
-	log.Printf("km%%2000 %v", int(kmDistLat)%2000)
 	// there are 2000km per set of 20 100km blocks from the eq to the pole which is defined to be 40,000km
 	idx := int(math.Abs(math.Ceil(
 		float64(int(kmDistLat)%2000) / 100.0,
@@ -141,8 +137,6 @@ func newDigraph(zone Zone, lnglat coord.LngLat) (Digraph, error) {
 	if !zone.IsNorthern() {
 		idx = 21 - idx
 	}
-
-	log.Printf("idx: %v offset: %v", idx, offset)
 
 	letterIdx = offset + idx
 	latLetter := latDigraphZones[letterIdx]
@@ -408,7 +402,6 @@ func FromLngLat(lnglat coord.LngLat, ellips coord.Ellipsoid) (Coord, error) {
 	return fromLngLat(lnglat.NormalizeLng(), zone, ellips), nil
 }
 
-
 // ToLngLat transforms the utm Coord to it's Lat Lng representation based on the given datum
 func (c Coord) ToLngLat(ellips coord.Ellipsoid) (coord.LngLat, error) {
 
@@ -485,6 +478,7 @@ func (c Coord) ToLngLat(ellips coord.Ellipsoid) (coord.LngLat, error) {
 	}, nil
 }
 
-var x50 = int(math.Pow(10,5))
-func (utm Coord) NatoEasting() int { return int(utm.Easting)%x50 }
-func (utm Coord) NatoNorthing() int { return int(utm.Northing)%x50 }
+var x50 = int(math.Pow(10, 5))
+
+func (utm Coord) NatoEasting() int  { return int(utm.Easting) % x50 }
+func (utm Coord) NatoNorthing() int { return int(utm.Northing) % x50 }
