@@ -2,15 +2,17 @@
 Package utm provides the ability to work with UTM grids
 
 Ref: https://stevedutch.net/FieldMethods/UTMSystem.htm
+Ref: https://gisgeography.com/central-meridian/
 
 */
 package utm
 
 import (
 	"fmt"
-	"github.com/go-spatial/geom/planar/coord"
 	"log"
 	"math"
+
+	"github.com/go-spatial/geom/planar/coord"
 )
 
 const (
@@ -93,7 +95,7 @@ var digraphZones = [...][2][4]rune{
 	},
 }
 
-var latDigraphZones = [...]rune{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'A', 'B', 'C', 'D','E'}
+var latDigraphZones = [...]rune{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'A', 'B', 'C', 'D', 'E'}
 
 type Digraph [2]rune
 
@@ -119,23 +121,22 @@ func newDigraph(zone Zone, lnglat coord.LngLat) (Digraph, error) {
 	log.Printf("kmDist: %v : degreeDiff %v", kmDist, degreeDiff)
 	lngLetter := dZone[sideSelect][letterIdx]
 
-
 	kmDistLat := math.Abs(111.0 * lnglat.Lat)
 
 	// if zone is even start at F
 	// even zones are f-z
 	// odd zones are a-v
 	offset := -1
-	if zone.Number%2 == 0  {
+	if zone.Number%2 == 0 {
 		offset = 4 // start at f
 	}
 
 	log.Printf("kmDistLat: %v lat: %v", kmDistLat, lnglat.Lat)
-	log.Printf("km%%2000 %v",int(kmDistLat)%2000 )
+	log.Printf("km%%2000 %v", int(kmDistLat)%2000)
 	// there are 2000km per set of 20 100km blocks from the eq to the pole which is defined to be 40,000km
 	idx := int(math.Abs(math.Ceil(
 		float64(int(kmDistLat)%2000) / 100.0,
-		)))
+	)))
 	// Southern hemishere the values are laid out from the pole to the equator
 	if !zone.IsNorthern() {
 		idx = 21 - idx
@@ -406,3 +407,84 @@ func FromLngLat(lnglat coord.LngLat, ellips coord.Ellipsoid) (Coord, error) {
 	}
 	return fromLngLat(lnglat.NormalizeLng(), zone, ellips), nil
 }
+
+
+// ToLngLat transforms the utm Coord to it's Lat Lng representation based on the given datum
+func (c Coord) ToLngLat(ellips coord.Ellipsoid) (coord.LngLat, error) {
+
+	if !c.Zone.IsValid() {
+		return coord.LngLat{}, fmt.Errorf("invalid zone")
+	}
+
+	radius, ecc := ellips.Radius, ellips.Eccentricity
+	x := c.Easting - 500000.0 // remove longitude offset
+	y := c.Northing
+
+	if !c.Zone.IsNorthern() {
+		// remove Southern offset
+		y -= 10000000.0
+	}
+
+	ecc2 := math.Pow(ecc, 2.0)
+	ecc3 := math.Pow(ecc, 3.0)
+
+	lngOrigin := float64((c.Zone.Number-1)*6 - 180 + 3)
+	eccPrimeSqr := (ecc / (1.0 - ecc))
+	m := y / k0
+	mu := m / (radius * (1.0 - (ecc / 4.0) - (3.0 / 64.0 * ecc2) - (5.0 / 256.0 * ecc3)))
+
+	e_1 := 1.0 - ecc
+	e1 := (1.0 - math.Sqrt(e_1)) / (1.0 + math.Sqrt(e_1))
+	e12 := math.Pow(e1, 2.0)
+	e13 := math.Pow(e1, 3.0)
+	e14 := math.Pow(e1, 4.0)
+	p1 := 3.0 / 2.0 * e1
+	p2 := 27.0 / 32.0 * e13
+	p3 := math.Sin(mu * 2.0)
+	p4 := 21.0 / 16.0 * e12
+	p5 := 55.0 / 32.0 * e14
+	p6 := math.Sin(mu * 4.0)
+	p7 := 151.0 / 96.0 * e13
+	p8 := math.Sin(mu * 6.0)
+
+	phi1Rad := mu + (p1-p2)*p3 + (p4-p5)*p6 + (p7)*p8
+
+	phi1Tan := math.Tan(phi1Rad)
+	phi1Sin := math.Sin(phi1Rad)
+	phi1Cos := math.Cos(phi1Rad)
+
+	a := 1 - (ecc * phi1Sin * phi1Sin)
+
+	n1 := radius / math.Sqrt(a)
+	t1 := math.Pow(phi1Tan, 2)
+	t12 := math.Pow(t1, 2)
+	c1 := ecc * math.Pow(phi1Cos, 2)
+	c12 := math.Pow(c1, 2)
+	c12_3 := 3 * c12
+	r1 := radius * e_1 / math.Pow(a, 1.5)
+	d := x / (n1 * k0)
+
+	latRad := phi1Rad -
+		(n1*phi1Tan/r1)*
+			((math.Pow(d, 2)/2)-
+				(5+3*t1+10*c1-4*c12-9*eccPrimeSqr)*
+					math.Pow(d, 4)/24+
+				(61+90*t1+298*c1+45*t12-252*eccPrimeSqr-c12_3)*
+					math.Pow(d, 6)*720)
+
+	lngRad := (d -
+		(1+2*t1+c1)*
+			math.Pow(d, 3)/6 +
+		(5-2*c1+28*t1-c12_3+8*eccPrimeSqr+24*t12)*
+			math.Pow(d, 5)/120) /
+		phi1Cos
+
+	return coord.LngLat{
+		Lng: lngOrigin + coord.ToDegree(lngRad),
+		Lat: coord.ToDegree(latRad),
+	}, nil
+}
+
+var x50 = int(math.Pow(10,5))
+func (utm Coord) NatoEasting() int { return int(utm.Easting)%x50 }
+func (utm Coord) NatoNorthing() int { return int(utm.Northing)%x50 }

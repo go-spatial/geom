@@ -2,11 +2,12 @@ package utm
 
 import (
 	"fmt"
-	"github.com/go-spatial/geom/cmp"
-	"github.com/go-spatial/geom/planar/coord"
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/planar/coord"
 )
 
 // datum is the ellipsoid Structure for various datums.
@@ -303,9 +304,70 @@ func TestNewDigraph(t *testing.T) {
 			Desc: "Brasil odd zone",
 			LngLat: coord.LngLat{
 				Lat: -11.126665015021864,
-				Lng: -43.46380056756961 ,
+				Lng: -43.46380056756961,
 			},
 			Digraph: Digraph{'P', 'H'},
+		},
+	}
+
+	for i := range tests {
+		t.Run(tests[i].Desc, fn(tests[i]))
+	}
+}
+
+func TestCoord_ToLngLat(t *testing.T) {
+	type tcase struct {
+		Desc   string
+		Datum  string
+		UTM    Coord
+		LngLat coord.LngLat
+		Err    error
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			ellp := getEllipsoidByName(tc.Datum)
+			got, _ := tc.UTM.ToLngLat(ellp)
+			if !cmp.Float(got.Lng, tc.LngLat.Lng) {
+				t.Errorf("lng, expected %v got %v", tc.LngLat.Lng, got.Lng)
+			}
+			if !cmp.Float(got.Lat, tc.LngLat.Lat) {
+				t.Errorf("lat, expected %v got %v", tc.LngLat.Lat, got.Lat)
+			}
+		}
+	}
+
+	tests := []tcase{
+		// Subtests
+		{
+			Desc: "Kabul",
+			LngLat: coord.LngLat{
+				Lng: 69.1503666510912,
+				Lat: 34.52518357633554,
+			},
+			UTM: Coord{
+				Northing: 3820400.0,
+				Easting:  513800.0,
+				Zone: Zone{
+					Letter: ZoneS,
+					Number: 42,
+				},
+			},
+		},
+		{
+			Desc: "Brazil",
+			LngLat: coord.LngLat{
+				Lat: -11.126489480072872,
+				Lng: -43.46380056756961,
+			},
+			UTM: Coord{
+				Northing: 8769581.0,
+				Easting:  667767.0,
+				Zone: Zone{
+					Letter: ZoneL,
+					Number: 23,
+				},
+			},
 		},
 	}
 
