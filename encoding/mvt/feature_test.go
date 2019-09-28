@@ -30,6 +30,7 @@ func TestEncodePolygon(t *testing.T) {
 				x: tc.x,
 				y: tc.y,
 			}
+
 			g := c.encodePolygon(tc.Polygon)
 			if len(g) != len(tc.g) {
 				t.Errorf("g length, expected %v, got %v", len(tc.g), len(g))
@@ -54,23 +55,36 @@ func TestEncodePolygon(t *testing.T) {
 				}
 				return
 			}
+
+			// pad index
+			iPad := int(math.Log10(float64(len(tc.g)))) + 1
+			// pad expected
+			ePad := 0
+			// pad got
+			gPad := 0
+
 			for i := range tc.g {
-				// calculate the amount of padding needed to format the numbers
-				gl := int(math.Log10(float64(g[i]))) + 1
-				tcl := int(math.Log10(float64(tc.g[i]))) + 1
-				if gl < tcl {
-					gl = tcl
+				v := int(math.Log10(float64(tc.g[i]))) + 1
+				if ePad < v {
+					ePad = v
 				}
+
+				v = int(math.Log10(float64(g[i]))) + 1
+				if gPad < v {
+					gPad = v
+				}
+			}
+
+			for i := range tc.g {
 				if tc.g[i] != g[i] {
-					t.Errorf("value not correct for %d, expected %0*d got %0*d", i, gl, tc.g[i], gl, g[i])
+					t.Errorf("value not correct for %*d, expected %*d got %*d",
+						iPad, i, ePad, tc.g[i], gPad, g[i])
 				}
 			}
 		}
 	}
 
-	tests := map[string]tcase{}
-
-	testForFile := func(file string) {
+	testForFile := func(file string) tcase {
 
 		var sol []uint32
 		filename := filepath.Join("testdata", file)
@@ -90,15 +104,15 @@ func TestEncodePolygon(t *testing.T) {
 			}
 		}
 
-		tests[file] = tcase{
+		return tcase{
 			Polygon: poly,
 			g:       sol,
 		}
 	}
-	for _, file := range []string{"florida_keys"} {
-		testForFile(file)
-	}
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
+
+	tests := []string{"florida_keys"}
+
+	for _, name := range tests {
+		t.Run(name, fn(testForFile(name)))
 	}
 }

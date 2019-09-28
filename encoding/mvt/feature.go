@@ -244,20 +244,31 @@ func (c *cursor) encodeLinearRing(order winding.Order, wo winding.Winding, ring 
 }
 
 func (c *cursor) encodePolygon(geo geom.Polygon) []uint32 {
-	var (
-		order winding.Order
-		g     []uint32
-	)
+	g := []uint32{}
+
 	lines := geo.LinearRings()
 	for i := range lines {
-		// bail if number of points is less then or equal two
-		if len(lines[i]) <= 2 {
+		// bail if number of points is less than two
+		if len(lines[i]) < 2 {
 			if i != 0 {
 				continue
 			}
 			return g
 		}
-		// when we flip the y our rotation gets inverted
+
+		// https://github.com/mapbox/vector-tile-spec/tree/master/2.1#4344-polygon-geometry-type
+		// An exterior ring is DEFINED as a linear ring having a positive area
+		// as calculated by applying the surveyor's formula to the vertices of
+		// the polygon in tile coordinates. In the tile coordinate system (with
+		// the Y axis positive down and X axis positive to the right) this makes
+		// the exterior ring's winding order appear clockwise.
+		//
+		// An interior ring is DEFINED as a linear ring having a negative area as
+		// calculated by applying the surveyor's formula to the vertices of the
+		// polygon in tile coordinates. In the tile coordinate system (with the
+		// Y axis positive down and X axis positive to the right) this makes the
+		// interior ring's winding order appear counterclockwise.
+		order := winding.Order{YPositiveDown: true}
 		wo := winding.CounterClockwise
 		if i == 0 {
 			wo = winding.Clockwise
