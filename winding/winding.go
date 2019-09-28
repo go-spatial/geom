@@ -162,7 +162,7 @@ func Orientation(yPositiveDown bool, pts ...[2]float64) Winding {
 		adjusted[i] = [2]float64{pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]}
 	}
 
-	return Winding(mul * Orient(pts...))
+	return Winding(mul * Orient(adjusted...))
 }
 
 // Order configures how the orientation of a set of points is determined
