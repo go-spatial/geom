@@ -9,7 +9,7 @@ import (
 // BoxPolygon returns a polygon that is a box with side lengths of
 // dim, a clockwise winding order, and points at (0, 0) and (dim, dim).
 func BoxPolygon(dim float64) geom.Polygon {
-	return geom.Polygon{{{0, 0}, {dim, 0}, {dim, dim}, {0, dim}}}
+	return geom.Polygon{{{0, 0}, {0, dim}, {dim, dim}, {dim, 0}}}
 }
 
 func SelfIntBoxLineString(dim float64) geom.LineString {

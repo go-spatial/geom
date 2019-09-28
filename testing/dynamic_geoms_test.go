@@ -34,11 +34,11 @@ func TestBoxPolygon(t *testing.T) {
 	tcases := map[string]tcase{
 		"dim 1": {
 			dim: 1.0,
-			res: geom.Polygon{{{0, 0}, {1.0, 0}, {1.0, 1.0}, {0, 1.0}}},
+			res: geom.Polygon{{{0, 0}, {0, 1.0}, {1.0, 1.0}, {1.0, 0}}},
 		},
 		"dim -1": {
 			dim: -1.0,
-			res: geom.Polygon{{{0, 0}, {-1.0, 0}, {-1.0, -1.0}, {0, -1.0}}},
+			res: geom.Polygon{{{0, 0}, {0, -1.0}, {-1.0, -1.0}, {-1.0, 0}}},
 		},
 	}
 
