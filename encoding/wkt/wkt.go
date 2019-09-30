@@ -23,6 +23,15 @@ func EncodeString(geo geom.Geometry) (string, error) {
 	return string(byt), err
 }
 
+func MustEncode(geo geom.Geometry) string {
+	str, err := EncodeString(geo)
+	if err != nil {
+		panic(err)
+	}
+
+	return str
+}
+
 func Decode(r io.Reader) (geo geom.Geometry, err error) {
 	return NewDecoder(r).Decode()
 }
