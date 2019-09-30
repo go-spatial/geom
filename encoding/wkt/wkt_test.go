@@ -1,7 +1,6 @@
 package wkt
 
 import (
-	"bytes"
 	"errors"
 	"math"
 	"testing"
@@ -28,7 +27,6 @@ func TestEncode(t *testing.T) {
 				}
 				return
 			}
-
 
 			if tc.Err == nil && gerr != nil {
 				t.Errorf("error, expected nil got %v", gerr)
@@ -129,11 +127,11 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {}},
-				Err: errors.New("cannot have empty points in MULTILINESTRING"),
+				Err:  errors.New("cannot have empty points in MULTILINESTRING"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}},
-				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
+				Err:  errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {11, 11}}},
@@ -145,7 +143,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{}, {{10, 10}}},
-				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
+				Err:  errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{}, {{10, 10}, {20, 20}}},
@@ -153,15 +151,15 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {}},
-				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
+				Err:  errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}}},
-				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
+				Err:  errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}, {{10, 10}, {20, 20}}},
-				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
+				Err:  errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {}},
@@ -169,7 +167,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}}},
-				Err: errors.New("not enough points for LINESTRING [[10 10]]"),
+				Err:  errors.New("not enough points for LINESTRING [[10 10]]"),
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}, {20, 20}}, {{10, 10}, {20, 20}}},
@@ -211,7 +209,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
-				Err: errors.New("cannot have empty points in POLYGON"),
+				Err:  errors.New("cannot have empty points in POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
@@ -219,7 +217,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {math.NaN(), math.NaN()}, {22, 22}}},
-				Err: errors.New("cannot have empty points in POLYGON"),
+				Err:  errors.New("cannot have empty points in POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
@@ -277,7 +275,7 @@ func TestEncode(t *testing.T) {
 			},
 			{
 				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {math.NaN(), math.NaN()}, {12, 12}}}},
-				Err: errors.New("cannot have empty points in MULTIPOLYGON"),
+				Err:  errors.New("cannot have empty points in MULTIPOLYGON"),
 			},
 		},
 		"Collectioner": {
@@ -388,30 +386,5 @@ func BenchmarkEncodeSin100(b *testing.B) {
 func BenchmarkEncodeSin1000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		EncodeBytes(gtesting.SinLineString(1.0, 0.0, 100.0, 1000))
-	}
-}
-
-func BenchmarkEncodeTile(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		EncodeBytes(gtesting.Tiles[0])
-	}
-}
-
-
-func BenchmarkEncodeTilePrealloc(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		// the encoded wkt is ~32MB
-		buf := bytes.NewBuffer(make([]byte, 0, (1 << 20) * 32))
-		enc := NewEncoder(buf)
-		enc.Encode(gtesting.Tiles[0], true)
-	}
-}
-
-
-func BenchmarkEncodeTileNoprealloc(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		buf := bytes.NewBuffer(make([]byte, 0, 0))
-		enc := NewEncoder(buf)
-		enc.Encode(gtesting.Tiles[0], true)
 	}
 }

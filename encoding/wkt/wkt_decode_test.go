@@ -175,6 +175,10 @@ func TestDecode(t *testing.T) {
 			in: "geometrycollection(MULTIPOLYGON())",
 			err: errors.New("syntax error (1:34): not enough polys in MULTIPOLYGON, 0"),
 		},
+		"collection 4": {
+			in: "geometrycollection(multipolygon(((0 0, 1 1, 1 0, 0 0))), point(1 1))",
+			out: geom.Collection{geom.MultiPolygon{{{{0, 0}, {1, 1}, {1, 0}}}}, geom.Point{1, 1}},
+		},
 	}
 
 	for k, v := range tcases {
