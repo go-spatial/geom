@@ -350,11 +350,11 @@ func (enc *Encoder) encodePolys(polys [][][][2]float64, removePointless bool, la
 	return enc.putc(')')
 }
 
-func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) error {
+func (enc *Encoder) encode(geo geom.Geometry, removePointless, isCollectionItem bool) error {
 
 	switch g := geo.(type) {
 	case [2]float64:
-		if recursive && IsEmptyPoint(g) && removePointless {
+		if isCollectionItem && IsEmptyPoint(g) && removePointless {
 			return nil
 		}
 		err := enc.puts("POINT ")
@@ -364,7 +364,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 		return enc.encodePoint(g)
 
 	case geom.Pointer:
-		if removePointless && recursive && (isNil(g) || IsEmptyPoint(g.XY())) {
+		if removePointless && isCollectionItem && (isNil(g) || IsEmptyPoint(g.XY())) {
 			return nil
 		}
 
@@ -388,7 +388,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 
 		last, isPointless := isPointlessPoints(mp)
 		if isPointless {
-			if removePointless && recursive {
+			if removePointless && isCollectionItem {
 				return nil
 			} else if removePointless {
 				return enc.puts("MULTIPOINT EMPTY")
@@ -412,7 +412,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 
 		last, isPointless := isPointlessPoints(mp)
 		if isPointless {
-			if removePointless && recursive {
+			if removePointless && isCollectionItem {
 				return nil
 			} else if removePointless {
 				return enc.puts("LINESTRING EMPTY")
@@ -443,7 +443,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 
 		last, isPointless := isPointlessLines(lines)
 		if isPointless {
-			if removePointless && recursive {
+			if removePointless && isCollectionItem {
 				return nil
 			} else if removePointless {
 				return enc.puts("MULTILINESTRING EMPTY")
@@ -466,7 +466,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 
 		last, isPointless := isPointlessLines(lines)
 		if isPointless {
-			if removePointless && recursive {
+			if removePointless && isCollectionItem {
 				return nil
 			} else if removePointless {
 				return enc.puts("POLYGON EMPTY")
@@ -489,7 +489,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 
 		last, isPointless := isPointlessPolys(polys)
 		if isPointless {
-			if removePointless && recursive {
+			if removePointless && isCollectionItem {
 				return nil
 			} else if removePointless {
 				return enc.puts("MULTIPOLYGON EMPTY")
@@ -526,7 +526,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 		}
 
 		if isPointless {
-			if removePointless && recursive {
+			if removePointless && isCollectionItem {
 				return nil
 			} else if removePointless {
 				return enc.puts("GEOMETRYCOLLECTION EMPTY")
@@ -576,6 +576,46 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, recursive bool) e
 		}
 
 		return enc.putc(')')
+
+	// non basic types
+
+	case geom.Line:
+		return enc.encode(geom.LineString(g[:]), removePointless, false)
+
+	case [2][2]float64:
+		return enc.encode(geom.LineString(g[:]), removePointless, false)
+
+	case [][2]float64:
+		return enc.encode(geom.LineString(g), removePointless, false)
+
+	case []geom.Line:
+		lines := make(geom.MultiLineString, len(g))
+		for i, v := range g {
+			lines[i] = [][2]float64(v[:])
+		}
+
+		return enc.encode(lines, removePointless, false)
+
+	case []geom.Point:
+		points := make(geom.MultiPoint, len(g))
+		for i, v := range g {
+			points[i] = v
+		}
+
+		return enc.encode(points, removePointless, false)
+
+	case geom.Triangle:
+		return enc.encode(geom.Polygon{g[:]}, false, false)
+
+	case geom.Extent:
+		return enc.encode(g.AsPolygon(), false, false)
+
+	case *geom.Extent:
+		if g != nil {
+			return enc.encode(g.AsPolygon(), false, false)
+		}
+
+		return enc.encode(geom.Polygon{}, false, false)
 
 	default:
 		return fmt.Errorf("unknown geometry: %T", geo)
