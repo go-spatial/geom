@@ -13,7 +13,9 @@ func simplifyPolygon(ctx context.Context, simplifer Simplifer, plg [][][2]float6
 		if err != nil {
 			return nil, err
 		}
-		ret[i] = ls
+		if len(ls) > 2 || !isClosed {
+			ret[i] = ls
+		}
 	}
 	return ret, nil
 
