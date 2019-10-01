@@ -1,8 +1,9 @@
 package coord
 
 import (
-	"github.com/go-spatial/geom/cmp"
 	"testing"
+
+	"github.com/go-spatial/geom/cmp"
 )
 
 func tolerance(tol *float64) (float64, int64) {
@@ -30,14 +31,14 @@ func TestToRadianDegree(t *testing.T) {
 
 			t.Run("ToRadian", func(t *testing.T) {
 				rad := ToRadian(tc.Degree)
-				if !cmp.Float64(rad, tc.Radian, tol,bitTol) {
+				if !cmp.Float64(rad, tc.Radian, tol, bitTol) {
 					t.Errorf("radian, expect %v, got %v", tc.Radian, rad)
 				}
 			})
 
 			t.Run("ToDegree", func(t *testing.T) {
 				deg := ToDegree(tc.Radian)
-				if !cmp.Float64(deg, tc.Degree, tol,bitTol) {
+				if !cmp.Float64(deg, tc.Degree, tol, bitTol) {
 					t.Errorf("degree, expect %v, got %v", tc.Degree, deg)
 				}
 			})
@@ -105,14 +106,14 @@ func TestLngLat_ToDMS(t *testing.T) {
 
 			t.Run("LatDMS", func(t *testing.T) {
 				dms := tc.LngLat.LatAsDMS()
-				if !cmpDMS(dms,tc.LatDMS) {
+				if !cmpDMS(dms, tc.LatDMS) {
 					t.Errorf("dms, expected %v got %v", tc.LatDMS, dms)
 				}
 			})
 
 			t.Run("LngDMS", func(t *testing.T) {
 				dms := tc.LngLat.LngAsDMS()
-				if !cmpDMS(dms,tc.LngDMS) {
+				if !cmpDMS(dms, tc.LngDMS) {
 					t.Errorf("dms, expected %v got %v", tc.LngDMS, dms)
 				}
 			})
@@ -175,7 +176,7 @@ func TestLngLat_ToDMS(t *testing.T) {
 			LngDMS: DMS{
 				Degree:     26,
 				Minute:     9,
-				Second:    45.3816,
+				Second:     45.3816,
 				Hemisphere: 'E',
 			},
 		},
@@ -194,7 +195,7 @@ func TestLngLat_ToDMS(t *testing.T) {
 			LngDMS: DMS{
 				Degree:     49,
 				Minute:     2,
-				Second:    19.0788,
+				Second:     19.0788,
 				Hemisphere: 'W',
 			},
 		},
@@ -213,7 +214,7 @@ func TestLngLat_ToDMS(t *testing.T) {
 			LngDMS: DMS{
 				Degree:     102,
 				Minute:     27,
-				Second:    9.3492,
+				Second:     9.3492,
 				Hemisphere: 'W',
 			},
 		},
@@ -228,7 +229,7 @@ func TestDMS_String(t *testing.T) {
 	type tcase struct {
 		Desc string
 		// Add Additonal Fields here
-		DMS DMS
+		DMS  DMS
 		Form string
 	}
 
@@ -236,7 +237,7 @@ func TestDMS_String(t *testing.T) {
 		return func(t *testing.T) {
 			str := tc.DMS.String()
 			if str == tc.Form {
-				t.Errorf("str, got %v expected %v",str, tc.Form)
+				t.Errorf("str, got %v expected %v", str, tc.Form)
 			}
 		}
 	}
@@ -246,11 +247,100 @@ func TestDMS_String(t *testing.T) {
 		{
 			Form: `66°44'36.1428" N`,
 			DMS: DMS{
-				Degree: 66,
-				Minute: 44,
-				Second: 36.1428,
-				Hemisphere:'N',
+				Degree:     66,
+				Minute:     44,
+				Second:     36.1428,
+				Hemisphere: 'N',
 			},
+		},
+	}
+
+	for i := range tests {
+		t.Run(tests[i].Desc, fn(tests[i]))
+	}
+}
+
+func TestLngLat_InRadians(t *testing.T) {
+	type tcase struct {
+		Desc       string
+		LngLat     LngLat
+		LngRadians float64
+		LatRadians float64
+		Tolerance  *float64
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		tol, bitTol := tolerance(tc.Tolerance)
+		return func(t *testing.T) {
+
+			t.Run("LatInRadians", func(t *testing.T) {
+				lat := tc.LngLat.LatInRadians()
+				if !cmp.Float64(lat, tc.LatRadians, tol, bitTol) {
+					t.Errorf("radians, expected %v, got %v", tc.LatRadians, lat)
+				}
+			})
+
+			t.Run("LngInRadians", func(t *testing.T) {
+				lng := tc.LngLat.LngInRadians()
+				if !cmp.Float64(lng, tc.LngRadians, tol, bitTol) {
+					t.Errorf("radians, expected %v, got %v", tc.LngRadians, lng)
+				}
+			})
+
+		}
+	}
+
+	tests := []tcase{
+		// Subtests
+		{
+			LngLat: LngLat{
+				Lng: 69.1503666510912,
+				Lat: 34.5251835763355,
+			},
+			LatRadians: 0.602578128262526,
+			LngRadians: 1.20690157702283,
+		},
+	}
+
+	for i := range tests {
+		t.Run(tests[i].Desc, fn(tests[i]))
+	}
+}
+
+func TestLngLat_NormalizeLng(t *testing.T) {
+	type tcase struct {
+		Desc   string
+		LngLat LngLat
+		Lng    float64
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+
+		return func(t *testing.T) {
+			lng := tc.LngLat.NormalizeLng()
+			if !cmp.Float(lng.Lng, tc.Lng) {
+				t.Errorf("normalized lng, expected %v, got %v", tc.Lng, lng.Lng)
+			}
+		}
+	}
+
+	tests := []tcase{
+		{
+			Desc: "Brasil",
+			LngLat: LngLat{
+				Lng: -49.463803,
+				Lat: -11.126665,
+			},
+			Lng: -49.463803,
+		},
+		{
+
+			Desc: "Kabul",
+			LngLat: LngLat{
+				Lng: 69.1503666510912,
+				Lat: 34.52518357633554,
+			},
+			Lng: 69.1503666510912,
 		},
 	}
 

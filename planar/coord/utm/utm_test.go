@@ -12,7 +12,7 @@ import (
 
 // datum is the ellipsoid Structure for various datums.
 // this is here to reduce the dependency tree. Don't count on these
-// to be valid or accuract, better to use the official values
+// to be valid or accurate, better to use the official values
 var knownEllipsoids = []coord.Ellipsoid{
 	{
 		Name:         normalizeName("Airy"),
@@ -165,84 +165,10 @@ func TestFromLngLat(t *testing.T) {
 	}
 }
 
-func TestLngLat_NormalizeLng(t *testing.T) {
-	type tcase struct {
-		Desc   string
-		LngLat coord.LngLat
-		Lng    float64
-	}
-
-	fn := func(tc tcase) func(*testing.T) {
-
-		return func(t *testing.T) {
-			lng := tc.LngLat.NormalizeLng()
-			if !cmp.Float(lng.Lng, tc.Lng) {
-				t.Errorf("normalized lng, expected %v, got %v", tc.Lng, lng.Lng)
-			}
-		}
-	}
-
-	tests := []tcase{
-		// Subtests
-		{},
-	}
-
-	for i := range tests {
-		t.Run(tests[i].Desc, fn(tests[i]))
-	}
-}
-
-func TestLngLat_InRadians(t *testing.T) {
-	type tcase struct {
-		Desc       string
-		LngLat     coord.LngLat
-		LngRadians float64
-		LatRadians float64
-		Tolerance  *float64
-	}
-
-	fn := func(tc tcase) func(*testing.T) {
-		tol, bitTol := tolerance(tc.Tolerance)
-		return func(t *testing.T) {
-
-			t.Run("LatInRadians", func(t *testing.T) {
-				lat := tc.LngLat.LatInRadians()
-				if !cmp.Float64(lat, tc.LatRadians, tol, bitTol) {
-					t.Errorf("radians, expected %v, got %v", tc.LatRadians, lat)
-				}
-			})
-
-			t.Run("LngInRadians", func(t *testing.T) {
-				lng := tc.LngLat.LngInRadians()
-				if !cmp.Float64(lng, tc.LngRadians, tol, bitTol) {
-					t.Errorf("radians, expected %v, got %v", tc.LngRadians, lng)
-				}
-			})
-
-		}
-	}
-
-	tests := []tcase{
-		// Subtests
-		{
-			LngLat: coord.LngLat{
-				Lng: 69.1503666510912,
-				Lat: 34.5251835763355,
-			},
-			LatRadians: 0.602578128262526,
-			LngRadians: 1.20690157702283,
-		},
-	}
-
-	for i := range tests {
-		t.Run(tests[i].Desc, fn(tests[i]))
-	}
-}
-
 func TestNewDigraph(t *testing.T) {
 	type tcase struct {
 		Desc string
-		// Add Additonal Fields here
+		// Add Additional Fields here
 		LngLat  coord.LngLat
 		Zone    *Zone
 		Digraph Digraph

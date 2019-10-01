@@ -1,8 +1,9 @@
 /*
-Package utm provides the ability to work with UTM grids
+Package utm provides the ability to work with UTM coordinates
 
-Ref: https://stevedutch.net/FieldMethods/UTMSystem.htm
-Ref: https://gisgeography.com/central-meridian/
+	References:
+		https://stevedutch.net/FieldMethods/UTMSystem.htm
+		https://gisgeography.com/central-meridian/
 
 */
 package utm
@@ -15,9 +16,8 @@ import (
 )
 
 const (
-	k0        = 0.9996 // k0 - 0.9996  for UTM
-	l0        = 0      // λ0 = center of the map. == 0 for us.
-	precision = 0.0001
+	k0 = 0.9996 // k0 - 0.9996  for UTM
+	l0 = 0      // λ0 = center of the map. == 0 for us.
 )
 
 // UTM Zone Letters
@@ -58,16 +58,25 @@ func (zl ZoneLetter) IsNorthern() bool { return zl >= 'N' }
 func (zl ZoneLetter) IsValid() bool { return zl >= 'C' && zl <= 'X' && zl != 'O' }
 
 // quick lookup table for central meridian for each zone
-// this can be calculated using the formula i :=  zone > 30 ? zone-31 :  30 - zone
-// cmd := 3 + (6*i)
+// this can be calculated using the formula:
+//
+//      ⎧ 30 - zone if zone <= 30
+//    i ⎨ zone - 30 if zone > 30
+//      ⎩
+//    centralMeridianDegrees( zone ) = 3 + 6i
+//
 var centralMeridianDegrees = []uint{
 	3, 9, 15, 21, 27, 33, 39, 45, 51, 57, 63, 69, 75, 81, 87, 93, 99, 105, 111, 117, 123, 129, 135, 141, 147, 153, 159, 165, 171, 177,
 }
 
+// CentralMeridian returns the central meridian degree for the given zone.
+//
+// Possible errors:
+// 	ErrInvalidZone
 func CentralMeridian(zone Zone) (degree int, err error) {
 
 	if !zone.IsValid() {
-		return 0, fmt.Errorf("zone is invalid")
+		return 0, ErrInvalidZone
 	}
 
 	if zone.Number <= 30 {
@@ -79,7 +88,9 @@ func CentralMeridian(zone Zone) (degree int, err error) {
 
 }
 
-var digraphZones = [...][2][4]rune{
+// lngDigraphZones are the zone labels for the longitudinal values. The labels are split in middle
+// so that one can use the central medial to figure grouping to use
+var lngDigraphZones = [...][2][4]rune{
 	[2][4]rune{
 		[4]rune{'V', 'U', 'T', 'S'},
 		[4]rune{'W', 'X', 'Y', 'X'},
@@ -94,23 +105,36 @@ var digraphZones = [...][2][4]rune{
 	},
 }
 
+// latDigraphZones are the zone labels for the latitudinal values.
 var latDigraphZones = [...]rune{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'A', 'B', 'C', 'D', 'E'}
 
+// Digraph is the NATO diagraph
 type Digraph [2]rune
 
+// String returns the string representation of a diagraph
 func (d Digraph) String() string { return string(d[:]) }
 
+// newDigraph will calculate the digraph based on the provided zone and lnglat values.
+// only error returned is ErrInvalidZone
+//
+// Reference: https://stevedutch.net/FieldMethods/UTMSystem.htm
 func newDigraph(zone Zone, lnglat coord.LngLat) (Digraph, error) {
 	if !zone.IsValid() {
-		return Digraph{}, fmt.Errorf("zone is invalid")
+		return Digraph{}, ErrInvalidZone
 	}
-	// Howmany times have we cycled through the zones.
-	dZone := digraphZones[zone.Number%3]
+
+	// How many times have we cycled through the zones.
+	// There are only 3 zones total
+	dZone := lngDigraphZones[zone.Number%3]
+
 	// We already know the zone is valid
 	cm, _ := CentralMeridian(zone)
 	degreeDiff := float64(cm) - lnglat.Lng
-	// This is the distance in km from the centeral  meridian for the zone
-	kmDist := int(111 * math.Cos(lnglat.LatInRadians()) * degreeDiff)
+
+	// This is the distance in km from the central meridian for the zone
+	// Note by the definition of a zone, we know there are 111km per degree.
+	kmDist := int(111 * degreeDiff * math.Cos(lnglat.LatInRadians()))
+
 	// each square is 100 km wide, so we need to see how many of these do we cross.
 	letterIdx := int(math.Abs(float64(kmDist / 100)))
 	sideSelect := 0
@@ -133,7 +157,7 @@ func newDigraph(zone Zone, lnglat coord.LngLat) (Digraph, error) {
 	idx := int(math.Abs(math.Ceil(
 		float64(int(kmDistLat)%2000) / 100.0,
 	)))
-	// Southern hemishere the values are laid out from the pole to the equator
+	// Southern hemisphere the values are laid out from the pole to the equator
 	if !zone.IsNorthern() {
 		idx = 21 - idx
 	}
@@ -159,11 +183,14 @@ func (z Zone) IsNorthern() bool { return z.Letter.IsNorthern() }
 // IsValid will run validity check on the zone letter and number
 func (z Zone) IsValid() bool { return z.Letter.IsValid() && z.Number >= 1 && z.Number <= 60 }
 
-// zoneNumberFromLatLng get the lat zone given the two values.
-// The returned value will be from 1-60, if 0 is returned
-// it means that the lat,lng value was in the polar region
-// and UPS should be used.
-// Transcribed from: https://github.com/gdey/GDGeoCocoa/blob/master/GDGeoCoordConv.m
+// ZoneNumberFromLngLat will get the zone number for the given LngLat value.
+//
+// The returned value will be from 1-60.
+// If 0 is returned it means that the lat,lng value was in the polar region
+// and UPS should be used instead.
+//
+//	 Transcribed from:
+//		 https://github.com/gdey/GDGeoCocoa/blob/master/GDGeoCoordConv.m
 func ZoneNumberFromLngLat(lnglat coord.LngLat) int {
 	lng, lat := lnglat.Lng, lnglat.Lat
 	if (lat > 84.0 && lat < 90.0) || // North Pole
@@ -194,6 +221,9 @@ func ZoneNumberFromLngLat(lnglat coord.LngLat) int {
 }
 
 // ZoneLetterForLat returns the UTM zone letter for the given latitude value
+//
+// Possible errors:
+//	 ErrLatitudeOutOfRange
 func ZoneLetterForLat(lat float64) (ZoneLetter, error) {
 	switch {
 	case 84 >= lat && lat >= 72:
@@ -257,11 +287,14 @@ func ZoneLetterForLat(lat float64) (ZoneLetter, error) {
 		return ZoneC, nil
 
 	default:
-		return 0, fmt.Errorf("latitude out of range")
+		return 0, ErrLatitudeOutOfRange
 	}
 }
 
-// NewZone returns the UTM zone for the given LngLat value. If there is an error, the Zone value is not valid
+// NewZone returns the UTM zone for the given LngLat value.
+//
+// Possible errors:
+//	 ErrLatitudeOutOfRange
 func NewZone(lnglat coord.LngLat) (Zone, error) {
 	number := ZoneNumberFromLngLat(lnglat)
 	letter, err := ZoneLetterForLat(lnglat.Lat)
@@ -315,7 +348,9 @@ func ScalarFactor(lnglat coord.LngLat, e float64) float64 {
 	return k0 * (1 + (dl2 * T26) + (dl4 * T27) + (dl6 * T28))
 }
 
-// fromLngLat does the majority of the work. It assumes a valid zone and ellipsoid values
+// fromLngLat does the majority of the work.
+//
+// It assumes a valid zone and ellipsoid values
 func fromLngLat(lnglat coord.LngLat, zone Zone, ellips coord.Ellipsoid) Coord {
 
 	eccentricity, radius, nato := ellips.Eccentricity, ellips.Radius, ellips.NATOCompatible
@@ -480,5 +515,8 @@ func (c Coord) ToLngLat(ellips coord.Ellipsoid) (coord.LngLat, error) {
 
 var x50 = int(math.Pow(10, 5))
 
-func (utm Coord) NatoEasting() int  { return int(utm.Easting) % x50 }
-func (utm Coord) NatoNorthing() int { return int(utm.Northing) % x50 }
+// NatoEasting returns the easting value for NATO
+func (c Coord) NatoEasting() int { return int(c.Easting) % x50 }
+
+// NatoNorthing returns the northing value for NATO
+func (c Coord) NatoNorthing() int { return int(c.Northing) % x50 }

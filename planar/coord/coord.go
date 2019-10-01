@@ -2,13 +2,14 @@ package coord
 
 import (
 	"fmt"
-	"log"
 	"math"
 )
 
-var Precision float64 = 3.0
-
-
+// Interface is an interface that wraps a ToLngLat methods
+//
+// ToLngLat should returns the a LngLat value in degrees that
+// represents that given value as closely as possible. It is
+// understood that this value may not be excate
 type Interface interface {
 	ToLngLat() LngLat
 }
@@ -37,7 +38,6 @@ func (l LngLat) LngInRadians() float64 { return ToRadian(l.Lng) }
 
 // LatAsDMS returns the latitude value in Degree Minute Seconds values
 func (l LngLat) LatAsDMS() DMS {
-	log.Printf("lng: %v",l.Lat)
 	latD, latM, latS := toDMS(l.Lat)
 	latH := 'N'
 	if l.Lat < 0 {
@@ -53,7 +53,6 @@ func (l LngLat) LatAsDMS() DMS {
 
 // LngAsDMS returns the longitude value in Degree Minute Seconds values
 func (l LngLat) LngAsDMS() DMS {
-	log.Printf("lng: %v",l.Lng)
 	lngD, lngM, lngS := toDMS(l.Lng)
 	lngH := 'E'
 	if l.Lng < 0 {
@@ -67,7 +66,6 @@ func (l LngLat) LngAsDMS() DMS {
 	}
 }
 
-
 // ToRadian will convert a value in degree to radians
 func ToRadian(degree float64) float64 {
 	return degree * math.Pi / 180.000
@@ -75,15 +73,15 @@ func ToRadian(degree float64) float64 {
 
 // ToDegree will convert a value in radians to degrees
 func ToDegree(radian float64) float64 {
-	return radian * 180.000/math.Pi
+	return radian * 180.000 / math.Pi
 }
 
 // Ellipsoid describes an Ellipsoid
 // this may change when we get a proper projection package
 type Ellipsoid struct {
-	Name         string
-	Radius       float64
-	Eccentricity float64
+	Name           string
+	Radius         float64
+	Eccentricity   float64
 	NATOCompatible bool
 }
 
