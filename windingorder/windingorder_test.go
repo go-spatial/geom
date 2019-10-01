@@ -84,7 +84,11 @@ func TestOfPoints(t *testing.T) {
 			if got != tc.order {
 				t.Errorf("OfPoints, expected %v got %v", tc.order, got)
 				for i := range tc.pts {
-					t.Logf("%03v:%v", i, wkt.MustEncode(geom.Point(tc.pts[i])))
+					str, err := wkt.EncodeString(geom.Point(tc.pts[i]))
+					if err != nil {
+						panic(err)
+					}
+					t.Logf("%03v:%v", i, str)
 				}
 				return
 			}

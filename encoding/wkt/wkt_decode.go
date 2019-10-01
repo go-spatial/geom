@@ -32,7 +32,6 @@ func (d *Decoder) readByte() (byte, error) {
 		d.row++
 		d.col = 0
 	} else {
-		d.lastCol = d.col
 		d.col++
 	}
 
@@ -446,7 +445,6 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		for b, err = d.readByte(); b != ')' && err == nil; b, err = d.readByte() {
 			d.unreadByte()
 
-
 			geo, err := d.readGeometry()
 			if err != nil {
 				return nil, err
@@ -454,6 +452,22 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			geoms = append(geoms, geo)
 
 			d.readWhitespace()
+
+			b, err := d.readByte()
+			if err != nil {
+				return nil, err
+			}
+
+			switch b {
+			case ')':
+				d.unreadByte()
+			case ',':
+				//noop
+				d.readWhitespace()
+			default:
+				return nil, d.expected(",)")
+			}
+
 		}
 
 		if err != nil {

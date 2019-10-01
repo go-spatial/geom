@@ -25,13 +25,17 @@ func logEdges(sd *subdivision.Subdivision) {
 		org := *e.Orig()
 		dst := *e.Dest()
 
-		fmt.Println(wkt.MustEncode(
+		str, err := wkt.EncodeString(
 			geom.Line{
 				[2]float64(org),
 				[2]float64(dst),
 			},
-		))
+		)
+		if err != nil {
+			return err
+		}
 
+		fmt.Println(str)
 		return nil
 	})
 }

@@ -18,7 +18,7 @@ If qes is nil a panic will occur.
 */
 func (qes *QuadEdgeSubdivision) DebugDumpEdges() string {
 	edges := qes.GetEdgesAsMultiLineString()
-	edgesWKT, err := wkt.Encode(edges)
+	edgesWKT, err := wkt.EncodeString(edges)
 	if err != nil {
 		return fmt.Sprintf("error formatting as WKT: %v", err)
 	}

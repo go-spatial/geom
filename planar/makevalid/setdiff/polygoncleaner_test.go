@@ -67,7 +67,7 @@ func TestPolygonMakeValid(t *testing.T) {
 				return
 			}
 
-			vgWKT, err := wkt.Encode(vg)
+			vgWKT, err := wkt.EncodeString(vg)
 			if err != nil {
 				t.Errorf("error, expected nil got %v", err)
 				return
@@ -98,7 +98,7 @@ func TestPolygonMakeValid(t *testing.T) {
 			// right. Should break into two polygons
 			inputWKT:       `POLYGON ((0 0, 0.2 0.3, 0 1, 2 0, 2 1, 0 0))`,
 			inputWKB:       `01030000000100000006000000000000000000000000000000000000009a9999999999c93f333333333333d33f0000000000000000000000000000f03f000000000000004000000000000000000000000000000040000000000000f03f00000000000000000000000000000000`,
-			expectedWKT:    `MULTIPOLYGON (((0.200 0.300,0 0,1 0.500,0 1,0.200 0.300)),((2 1,1 0.500,2 0,2 1)))`,
+			expectedWKT:    `MULTIPOLYGON (((0.2 0.3,0 0,1 0.5,0 1,0.2 0.3)),((2 1,1 0.5,2 0,2 1)))`,
 			expectedInside: "inside: [[0 0],[0.2 0.3],[1 0.5]]\ninside: [[0 1],[1 0.5],[0.2 0.3]]\ninside: [[1 0.5],[2 1],[2 0]]",
 		},
 		{

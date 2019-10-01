@@ -68,7 +68,7 @@ func TestQuadEdgeSubdivisionDelete(t *testing.T) {
 		uut.DebugDumpEdges()
 
 		edges := uut.GetEdgesAsMultiLineString()
-		edgesWKT, err := wkt.Encode(edges)
+		edgesWKT, err := wkt.EncodeString(edges)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -119,7 +119,7 @@ func TestQuadEdgeSubdivisionGetEdges(t *testing.T) {
 		uut.Connect(e2, e1)
 
 		edges := uut.GetEdgesAsMultiLineString()
-		edgesWKT, err := wkt.Encode(edges)
+		edgesWKT, err := wkt.EncodeString(edges)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -133,7 +133,7 @@ func TestQuadEdgeSubdivisionGetEdges(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
-		trisWKT, err := wkt.Encode(tris)
+		trisWKT, err := wkt.EncodeString(tris)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}

@@ -48,7 +48,7 @@ func worker(ctx context.Context, wg *sync.WaitGroup, id chan int, panicChan chan
 				i:  i,
 				gt: gt,
 			}
-			wkt.Encode(g)
+			wkt.EncodeBytes(g)
 		}
 	}
 }

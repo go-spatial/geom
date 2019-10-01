@@ -5,7 +5,8 @@ import (
 	"math"
 	"testing"
 
-	geom "github.com/go-spatial/geom"
+	"github.com/go-spatial/geom"
+	gtesting "github.com/go-spatial/geom/testing"
 )
 
 /*
@@ -917,26 +918,64 @@ func TestFloat64(t *testing.T) {
 	type tcase struct {
 		f1, f2 float64
 		t      float64
+		b      int64
 		e      bool
 	}
+
+	// bit tolerence for 2 significant digits
+	bitTolerance2 := int64(math.Float64bits(1.1) - math.Float64bits(1))
+	// float representation of negative zero
+	negativeZero := math.Float64frombits(1 << 63)
+
 	fn := func(t *testing.T, tc tcase) {
-		g := Float64(tc.f1, tc.f2, tc.t)
+		g := Float64(tc.f1, tc.f2, tc.t, tc.b)
 		if g != tc.e {
 			t.Errorf(" Float64, expected %v, got %v", tc.e, g)
 		}
 	}
+
 	tests := map[string]tcase{
-		"t simple .01 ": {
+		"t simple .01": {
 			f1: 0.11,
 			f2: 0.111,
 			t:  0.01,
+			b:  bitTolerance2,
 			e:  true,
 		},
 		"f simple .01": {
 			f1: 0.11,
 			f2: 0.121,
 			t:  0.01,
+			b:  bitTolerance2,
 			e:  false,
+		},
+		"t 0 .01": {
+			f1: 0.0,
+			f2: 0.001,
+			t:  0.01,
+			b:  bitTolerance2,
+			e:  true,
+		},
+		"f 0 .01": {
+			f1: 0.0,
+			f2: 0.02,
+			t:  0.01,
+			b:  bitTolerance2,
+			e:  false,
+		},
+		"t 0 0": {
+			f1: 0.0,
+			f2: 0.0,
+			t: 0.01,
+			b:  bitTolerance2,
+			e:  true,
+		},
+		"t 0 -0": {
+			f1: 0.0,
+			f2: negativeZero,
+			t: 0.01,
+			b:  bitTolerance2,
+			e:  true,
 		},
 		"t inf 1 0": {
 			f1: math.Inf(1),
@@ -982,5 +1021,25 @@ func TestFloat64(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+func BenchmarkCmpFloat(b *testing.B) {
+
+	sin := gtesting.SinLineString(10, 0, 100, 1000)
+	var result bool
+
+	for i := 0; i < b.N; i++ {
+		for _, v := range sin {
+			for _, vv := range sin {
+				// xor
+				result = result != Float(v[0], vv[0])
+			}
+		}
+	}
+
+	// use the result
+	if result {
+		print("")
 	}
 }

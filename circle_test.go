@@ -7,7 +7,8 @@ import (
 	"github.com/go-spatial/geom/cmp"
 )
 
-const tolerance = geom.TOLERANCE
+const tolerance = geom.Tolerance
+const bitTolerance = geom.BitTolerance
 
 func TestCircleFromPoints(t *testing.T) {
 	type tcase struct {
@@ -28,17 +29,17 @@ func TestCircleFromPoints(t *testing.T) {
 			return
 		}
 
-		if !cmp.Float64(circle.Radius, tc.circle.Radius, tolerance) {
+		if !cmp.Float64(circle.Radius, tc.circle.Radius, tolerance, bitTolerance) {
 			t.Errorf("circle radius, expected %v got %v", tc.circle, circle)
 			return
 		}
 
-		if !cmp.Float64(circle.Center[0], tc.circle.Center[0], tolerance) {
+		if !cmp.Float64(circle.Center[0], tc.circle.Center[0], tolerance, bitTolerance) {
 			t.Errorf("circle x, expected %v got %v", tc.circle, circle)
 			return
 		}
 
-		if !cmp.Float64(circle.Center[1], tc.circle.Center[1], tolerance) {
+		if !cmp.Float64(circle.Center[1], tc.circle.Center[1], tolerance, bitTolerance) {
 			t.Errorf("circle y, expected %v got %v", tc.circle, circle)
 			return
 		}
