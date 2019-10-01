@@ -24,6 +24,11 @@ var (
 	NilCollection      = (*geom.Collection)(nil)
 )
 
+// BitToleranceFor returns the BitToleranceFor the given tolerance
+func BitToleranceFor(tol float64) int64 {
+	return int64(math.Float64bits(1.0+tol) - math.Float64bits(1.0))
+}
+
 // FloatSlice compare two sets of float slices.
 func FloatSlice(f1, f2 []float64) bool { return Float64Slice(f1, f2, Tolerance, BitTolerance) }
 
