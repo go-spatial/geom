@@ -304,7 +304,7 @@ func NewZone(lnglat coord.LngLat) (Zone, error) {
 	}, err
 }
 
-// Coord defins an UTM coordinate
+// Coord defines an UTM coordinate
 type Coord struct {
 	Northing float64
 	Easting  float64
@@ -350,7 +350,7 @@ func ScalarFactor(lnglat coord.LngLat, e float64) float64 {
 
 // fromLngLat does the majority of the work.
 //
-// It assumes a valid zone and ellipsoid values
+// Valid zone and ellipsoid values assumed.
 func fromLngLat(lnglat coord.LngLat, zone Zone, ellips coord.Ellipsoid) Coord {
 
 	eccentricity, radius, nato := ellips.Eccentricity, ellips.Radius, ellips.NATOCompatible

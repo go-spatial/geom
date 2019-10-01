@@ -18,15 +18,15 @@ func tolerance(tol *float64) (float64, int64) {
 func TestToRadianDegree(t *testing.T) {
 	type tcase struct {
 		Desc string
-		// Add Additonal Fields here
+		// Add Additional Fields here
 		Degree    float64
 		Radian    float64
-		tolerance *float64
+		Tolerance *float64
 	}
 
 	fn := func(tc tcase) func(*testing.T) {
 
-		tol, bitTol := tolerance(tc.tolerance)
+		tol, bitTol := tolerance(tc.Tolerance)
 		return func(t *testing.T) {
 
 			t.Run("ToRadian", func(t *testing.T) {
@@ -95,7 +95,7 @@ func cmpDMS(a, b DMS) bool {
 func TestLngLat_ToDMS(t *testing.T) {
 	type tcase struct {
 		Desc string
-		// Add Additonal Fields here
+		// Add Additional Fields here
 		LngLat LngLat
 		LngDMS DMS
 		LatDMS DMS
@@ -228,7 +228,7 @@ func TestLngLat_ToDMS(t *testing.T) {
 func TestDMS_String(t *testing.T) {
 	type tcase struct {
 		Desc string
-		// Add Additonal Fields here
+		// Add Additional Fields here
 		DMS  DMS
 		Form string
 	}
@@ -291,7 +291,6 @@ func TestLngLat_InRadians(t *testing.T) {
 	}
 
 	tests := []tcase{
-		// Subtests
 		{
 			LngLat: LngLat{
 				Lng: 69.1503666510912,
