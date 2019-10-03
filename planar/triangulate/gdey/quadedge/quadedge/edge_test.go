@@ -102,7 +102,7 @@ func TestValidate(t *testing.T) {
 		edge *Edge
 		err  ErrInvalid
 	}
-	const debug = true
+	//const debug = true
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
