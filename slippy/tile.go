@@ -1,6 +1,7 @@
 package slippy
 
 import (
+	"fmt"
 	"math"
 
 	"errors"
@@ -33,15 +34,18 @@ type Tile struct {
 // NewTileMinMaxer returns the smallest tile which fits the
 // geom.MinMaxer. Note: it assumes the values of ext are
 // EPSG:4326 (lng/lat)
+//TODO (meilinger): we need this anymore?
 func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
-	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX())
+	// Assumes tile srid of 3857
+	var tileSRID uint = 3857
+	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX(), tileSRID)
 	point := &geom.Point{ext.MaxX(), ext.MinY()}
 
 	var ret *Tile
 
 	for z := uint(MaxZoom); int(z) >= 0 && ret == nil; z-- {
 		upperLeft.RangeFamilyAt(z, func(tile *Tile) error {
-			if tile.Extent4326().Contains(point) {
+			if tile.Extent4326(tileSRID).Contains(point) {
 				ret = tile
 				return errors.New("stop iter")
 			}
@@ -54,9 +58,9 @@ func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
 }
 
 // NewTileLatLon instantiates a tile containing the coordinate with the specified zoom
-func NewTileLatLon(z uint, lat, lon float64) *Tile {
-	x := Lon2Tile(z, lon)
-	y := Lat2Tile(z, lat)
+func NewTileLatLon(z uint, lat, lon float64, srid uint) *Tile {
+	x := Lon2Tile(z, lon, srid)
+	y := Lat2Tile(z, lat, srid)
 
 	return &Tile{
 		Z: z,
@@ -73,13 +77,14 @@ func minmax(a, b uint) (uint, uint) {
 }
 
 // FromBounds returns a list of tiles that make up the bound given. The bounds should be defined as the following lng/lat points [4]float64{west,south,east,north}
-func FromBounds(bounds *geom.Extent, z uint) []Tile {
+func FromBounds(bounds *geom.Extent, z uint, tileSRID uint) []Tile {
 	if bounds == nil {
 		return nil
 	}
 
-	minx, maxx := minmax(Lon2Tile(z, bounds[0]), Lon2Tile(z, bounds[2]))
-	miny, maxy := minmax(Lat2Tile(z, bounds[1]), Lat2Tile(z, bounds[3]))
+	minx, maxx := minmax(Lon2Tile(z, bounds[0], tileSRID), Lon2Tile(z, bounds[2], tileSRID))
+	miny, maxy := minmax(Lat2Tile(z, bounds[1], tileSRID), Lat2Tile(z, bounds[3], tileSRID))
+
 	// tiles := make([]Tile, (maxx-minx)*(maxy-miny))
 	var tiles []Tile
 	for x := minx; x <= maxx; x++ {
@@ -94,19 +99,35 @@ func FromBounds(bounds *geom.Extent, z uint) []Tile {
 // ZXY returns back the z,x,y of the tile
 func (t Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
+// Extent gets the extent of the tile in the units of the tileSRID
+func (t Tile) NativeExtent(tileSRID uint) *geom.Extent {
+	switch tileSRID {
+	case 3857:
+		return t.Extent3857(tileSRID)
+	case 4326:
+		return t.Extent4326(tileSRID)
+	default:
+		panic(fmt.Sprintf("unsupported tileSRID %v", tileSRID))
+	}
+}
+
 // Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
-func (t Tile) Extent3857() *geom.Extent {
+func (t Tile) Extent3857(tileSRID uint) *geom.Extent {
+	if tileSRID != 3857 {
+		// Can't necessarily get webmercator extent for 4326 tile
+		panic("unable to get 3857 extent on 4326 tile")
+	}
 	return geom.NewExtent(
-		[2]float64{Tile2WebX(t.Z, t.X), Tile2WebY(t.Z, t.Y+1)},
-		[2]float64{Tile2WebX(t.Z, t.X+1), Tile2WebY(t.Z, t.Y)},
+		[2]float64{Tile2WebX(t.Z, t.X, tileSRID), Tile2WebY(t.Z, t.Y+1, tileSRID)},
+		[2]float64{Tile2WebX(t.Z, t.X+1, tileSRID), Tile2WebY(t.Z, t.Y, tileSRID)},
 	)
 }
 
-// Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long)
-func (t Tile) Extent4326() *geom.Extent {
+// Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long) given the tilespace's SRID
+func (t Tile) Extent4326(tileSRID uint) *geom.Extent {
 	return geom.NewExtent(
-		[2]float64{Tile2Lon(t.Z, t.X), Tile2Lat(t.Z, t.Y+1)},
-		[2]float64{Tile2Lon(t.Z, t.X+1), Tile2Lat(t.Z, t.Y)},
+		[2]float64{Tile2Lon(t.Z, t.X, tileSRID), Tile2Lat(t.Z, t.Y+1, tileSRID)},
+		[2]float64{Tile2Lon(t.Z, t.X+1, tileSRID), Tile2Lat(t.Z, t.Y, tileSRID)},
 	)
 }
 

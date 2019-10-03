@@ -18,7 +18,7 @@ func TestNewTile(t *testing.T) {
 	type tcase struct {
 		z, x, y  uint
 		buffer   float64
-		srid     uint64
+		srid     uint
 		eBounds  *geom.Extent
 		eExtent  *geom.Extent
 		eBExtent *geom.Extent
@@ -41,7 +41,7 @@ func TestNewTile(t *testing.T) {
 				}
 			}
 			{
-				bounds := tile.Extent4326()
+				bounds := tile.Extent4326(tc.srid)
 				bitTolerence2 := int64(math.Float64bits(1.01) - math.Float64bits(1.00))
 				for i := 0; i < 4; i++ {
 					if !cmp.Float64(bounds[i], tc.eBounds[i], 0.01, bitTolerence2) {
@@ -51,14 +51,14 @@ func TestNewTile(t *testing.T) {
 				}
 			}
 			{
-				bufferedExtent := tile.Extent3857().ExpandBy(slippy.Pixels2Webs(tile.Z, uint(tc.buffer)))
+				bufferedExtent := tile.NativeExtent(tc.srid).ExpandBy(slippy.PixelsToProjectedUnits(tile.Z, uint(tc.buffer), tc.srid))
 
 				if !cmp.GeomExtent(tc.eBExtent, bufferedExtent) {
 					t.Errorf("buffered extent, expected %v got %v", tc.eBExtent, bufferedExtent)
 				}
 			}
 			{
-				extent := tile.Extent3857()
+				extent := tile.NativeExtent(tc.srid)
 
 				if !cmp.GeomExtent(tc.eExtent, extent) {
 					t.Errorf("extent, expected %v got %v", tc.eExtent, extent)
@@ -73,6 +73,7 @@ func TestNewTile(t *testing.T) {
 			x:      1,
 			y:      1,
 			buffer: 64,
+			srid:   3857,
 			eExtent: &geom.Extent{
 				-10018754.17, 0,
 				0, 10018754.17,
@@ -91,6 +92,7 @@ func TestNewTile(t *testing.T) {
 			x:      11436,
 			y:      26461,
 			buffer: 64,
+			srid:   3857,
 			eExtent: &geom.Extent{
 				-13044437.497219238996, 3856095.202393799,
 				-13043826.000993041, 3856706.6986199953,
@@ -102,6 +104,25 @@ func TestNewTile(t *testing.T) {
 			eBounds: spherical.Hull(
 				[2]float64{-117.18, 32.70},
 				[2]float64{-117.17, 32.70},
+			),
+		},
+		{
+			z:      0,
+			x:      0,
+			y:      0,
+			buffer: 64,
+			srid:   4326,
+			eExtent: &geom.Extent{
+				-180, -90,
+				0, 90,
+			},
+			eBExtent: &geom.Extent{
+				-182.8125, -92.8125,
+				2.8125, 92.8125,
+			},
+			eBounds: spherical.Hull(
+				[2]float64{-180, -90},
+				[2]float64{0, 90},
 			),
 		},
 	}
@@ -116,13 +137,13 @@ func TestNewTileLatLon(t *testing.T) {
 		z, x, y  uint
 		lat, lon float64
 		buffer   float64
-		srid     uint64
+		srid     uint
 	}
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 
 			// Test the new functions.
-			tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon)
+			tile := slippy.NewTileLatLon(tc.z, tc.lat, tc.lon, tc.srid)
 			{
 				gz, gx, gy := tile.ZXY()
 				if gz != tc.z {
@@ -146,6 +167,7 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    0,
 			lon:    0,
 			buffer: 64,
+			srid:   3857,
 		},
 		"center": {
 			z:      8,
@@ -154,6 +176,7 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    0,
 			lon:    0,
 			buffer: 64,
+			srid:   3857,
 		},
 		"arbitrary zoom 2": {
 			z:      2,
@@ -162,6 +185,7 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    -70,
 			lon:    20,
 			buffer: 64,
+			srid:   3857,
 		},
 		"arbitrary zoom 16": {
 			z:      16,
@@ -170,6 +194,7 @@ func TestNewTileLatLon(t *testing.T) {
 			lat:    32.705,
 			lon:    -117.176,
 			buffer: 64,
+			srid:   3857,
 		},
 	}
 
@@ -308,7 +333,7 @@ func TestNewTileMinMaxer(t *testing.T) {
 			tile: slippy.NewTile(0, 0, 0),
 		},
 		"2": {
-			mm:   slippy.NewTile(15, 2, 98).Extent4326(),
+			mm:   slippy.NewTile(15, 2, 98).Extent4326(3857),
 			tile: slippy.NewTile(15, 2, 98),
 		},
 	}
@@ -321,15 +346,16 @@ func TestNewTileMinMaxer(t *testing.T) {
 func TestFromBounds(t *testing.T) {
 
 	type tcase struct {
-		Bounds *geom.Extent
-		Z      uint
-		Tiles  []slippy.Tile
+		Bounds   *geom.Extent
+		Z        uint
+		Tiles    []slippy.Tile
+		TileSRID uint
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 
-			tiles := slippy.FromBounds(tc.Bounds, tc.Z)
+			tiles := slippy.FromBounds(tc.Bounds, tc.Z, 3857)
 			if !reflect.DeepEqual(tiles, tc.Tiles) {
 				t.Errorf("tiles, expected %v, got %v", tc.Tiles, tiles)
 			}
@@ -339,8 +365,9 @@ func TestFromBounds(t *testing.T) {
 	tests := map[string]tcase{
 		"nil bounds": tcase{},
 		"San Diego 15z": tcase{
-			Z:      15,
-			Bounds: spherical.Hull([2]float64{-117.15, 32.6894743}, [2]float64{-116.804, 32.6339}),
+			Z:        15,
+			Bounds:   spherical.Hull([2]float64{-117.15, 32.6894743}, [2]float64{-116.804, 32.6339}),
+			TileSRID: 3857,
 			Tiles: []slippy.Tile{
 				{Z: 15, X: 5720, Y: 13232}, {Z: 15, X: 5720, Y: 13233}, {Z: 15, X: 5720, Y: 13234}, {Z: 15, X: 5720, Y: 13235}, {Z: 15, X: 5720, Y: 13236},
 				{Z: 15, X: 5720, Y: 13237}, {Z: 15, X: 5720, Y: 13238}, {Z: 15, X: 5721, Y: 13232}, {Z: 15, X: 5721, Y: 13233}, {Z: 15, X: 5721, Y: 13234},
@@ -392,14 +419,16 @@ func TestFromBounds(t *testing.T) {
 			},
 		},
 		"San Diego 11z": tcase{
-			Z:      11,
-			Bounds: spherical.Hull([2]float64{-117.15, 32.6894743}, [2]float64{-116.804, 32.6339}),
-			Tiles:  []slippy.Tile{{Z: 11, X: 357, Y: 827}, {Z: 11, X: 358, Y: 827}, {Z: 11, X: 359, Y: 827}},
+			Z:        11,
+			Bounds:   spherical.Hull([2]float64{-117.15, 32.6894743}, [2]float64{-116.804, 32.6339}),
+			TileSRID: 3857,
+			Tiles:    []slippy.Tile{{Z: 11, X: 357, Y: 827}, {Z: 11, X: 358, Y: 827}, {Z: 11, X: 359, Y: 827}},
 		},
 		"San Diego 9z": tcase{
-			Z:      9,
-			Bounds: spherical.Hull([2]float64{-117.15, 32.6894743}, [2]float64{-116.804, 32.6339}),
-			Tiles:  []slippy.Tile{{Z: 9, X: 89, Y: 206}},
+			Z:        9,
+			Bounds:   spherical.Hull([2]float64{-117.15, 32.6894743}, [2]float64{-116.804, 32.6339}),
+			TileSRID: 3857,
+			Tiles:    []slippy.Tile{{Z: 9, X: 89, Y: 206}},
 		},
 	}
 	for name, tc := range tests {
