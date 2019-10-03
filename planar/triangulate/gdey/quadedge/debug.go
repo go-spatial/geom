@@ -1,3 +1,3 @@
 package qetriangulate
 
-const debug = false
+const debug = true

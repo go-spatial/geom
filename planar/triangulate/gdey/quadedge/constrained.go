@@ -2,9 +2,13 @@ package qetriangulate
 
 import (
 	"context"
-	"github.com/go-spatial/geom/cmp"
+	"fmt"
 	"log"
 	"math"
+	"os"
+	"strings"
+
+	"github.com/go-spatial/geom/cmp"
 
 	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 
@@ -16,6 +20,15 @@ import (
 type GeomConstrained struct {
 	Points      []geom.Point
 	Constraints []geom.Line
+}
+
+var EnableConstraints bool
+
+func init() {
+	if strings.Contains(strings.ToUpper(os.Getenv("TEGOLA_MAKEVALID")), "CONSTRAINED") {
+		fmt.Fprintln(os.Stdout, "* experimental makevalid constraints enabled")
+		EnableConstraints = true
+	}
 }
 
 func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]geom.Triangle, error) {
@@ -35,7 +48,7 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		for i := range ct.Constraints {
 			lnt := math.Sqrt(ct.Constraints[i].LengthSquared())
 			if debug {
-				log.Printf("for (%v)%v lnt: %v",i,ct.Constraints[i],lnt)
+				log.Printf("for (%v)%v lnt: %v", i, ct.Constraints[i], lnt)
 			}
 			if cmp.Float(lnt, 0.0) {
 				continue
@@ -51,7 +64,7 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 			constraints = append(constraints, ct.Constraints[i])
 		}
 	}
-	if len(pts) == 0  {
+	if len(pts) == 0 {
 		return nil, nil
 	}
 	sd, err := subdivision.NewForPoints(ctx, pts)
@@ -69,19 +82,19 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 		return nil, err
 	}
 
-	/*
-	vxidx := sd.VertexIndex()
-	total := len(constraints)
-	for i, ct := range constraints {
-		if debug {
-			log.Printf("working on constraint %v of %v", i, total)
-		}
-		err := sd.InsertConstraint(ctx, vxidx, geom.Point(ct[0]), geom.Point(ct[1]))
-		if err != nil {
-			log.Printf("Failed to add constraint[%v or %v] %v , skipping with error: %v",i,total,wkt.MustEncode(ct),err)
+	if EnableConstraints {
+		vxidx := sd.VertexIndex()
+		total := len(constraints)
+		for i, ct := range constraints {
+			if debug {
+				log.Printf("working on constraint %v of %v", i, total)
+			}
+			err := sd.InsertConstraint(ctx, vxidx, geom.Point(ct[0]), geom.Point(ct[1]))
+			if err != nil {
+				log.Printf("Failed to add constraint[%v or %v] %v , skipping with error: %v", i, total, wkt.MustEncode(ct), err)
+			}
 		}
 	}
-	*/
 
 	var tris []geom.Triangle
 	triangles, err := sd.Triangles(includeFrame)
@@ -110,7 +123,7 @@ func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triang
 	for _, ct := range ct.Constraints {
 		pts = append(pts, ct[0], ct[1])
 	}
-	if len(pts) == 0  {
+	if len(pts) == 0 {
 		return nil, nil
 	}
 	sd, err := subdivision.NewForPoints(ctx, pts)
@@ -118,16 +131,18 @@ func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triang
 		return nil, err
 	}
 
-	/*
-	vxidx := sd.VertexIndex()
-	total := len(ct.Constraints)
-	for i, ct := range ct.Constraints {
-		log.Printf("working on constraint %v of %v", i, total)
-		err = sd.InsertConstraint(ctx, vxidx, geom.Point(ct[0]), geom.Point(ct[1]))
-		if err != nil {
-			return nil, err
+	if EnableConstraints {
+		vxidx := sd.VertexIndex()
+		total := len(ct.Constraints)
+		for i, ct := range ct.Constraints {
+			if debug {
+				log.Printf("working on constraint %v of %v", i, total)
+			}
+			err = sd.InsertConstraint(ctx, vxidx, geom.Point(ct[0]), geom.Point(ct[1]))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	 */
 	return sd.Triangles(includeFrame)
 }
