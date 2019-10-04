@@ -2,12 +2,12 @@ package must
 
 import (
 	"fmt"
-	"github.com/go-spatial/geom/encoding/wkt"
 	"io/ioutil"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/go-spatial/geom/encoding/wkt"
 
 	"github.com/go-spatial/geom"
 )
@@ -62,7 +62,7 @@ func ParseMultilines(content []byte) []geom.Line {
 
 		lines = append(lines, geom.Line{{x1, y1}, {x2, y2}})
 	}
-	log.Printf("got %v lines:\n%v", len(lines), allIndexes)
+	//log.Printf("got %v lines:\n%v", len(lines), allIndexes)
 
 	return lines
 }
@@ -114,7 +114,7 @@ func DecodeAsLines(content []byte) (segs []geom.Line) {
 			panic(err)
 		}
 		for i := range s {
-			segs = append(segs,s[i]...)
+			segs = append(segs, s[i]...)
 		}
 	case geom.Polygon:
 		s, err := geo.AsSegments()
@@ -122,7 +122,7 @@ func DecodeAsLines(content []byte) (segs []geom.Line) {
 			panic(err)
 		}
 		for i := range s {
-				segs = append(segs,s[i]...)
+			segs = append(segs, s[i]...)
 		}
 	case geom.MultiPolygon:
 		s, err := geo.AsSegments()
@@ -139,4 +139,3 @@ func DecodeAsLines(content []byte) (segs []geom.Line) {
 	}
 	return segs
 }
-

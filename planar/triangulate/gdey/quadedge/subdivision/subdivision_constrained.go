@@ -3,10 +3,11 @@ package subdivision
 import (
 	"context"
 	"fmt"
-	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/subdivision/pseudopolygon"
 	"log"
 	"math"
 	"strings"
+
+	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/subdivision/pseudopolygon"
 
 	"github.com/gdey/errors"
 
@@ -26,7 +27,7 @@ func roundGeomPoint(pt geom.Point) geom.Point {
 
 func ResolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) (startingEdge, endingEdge *quadedge.Edge, exists bool, err error) {
 	var (
-		ok bool
+		ok         bool
 		eerr, serr error
 	)
 
@@ -51,13 +52,12 @@ func ResolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) 
 		return nil, nil, false, ErrInvalidEndVertex
 	}
 
-
 	startingEdge, serr = quadedge.ResolveEdge(startingEdge, end)
 	endingEdge, eerr = quadedge.ResolveEdge(endingEdge, start)
 
 	if debug {
-		log.Printf("startingEdge: %v, err: %v",wkt.MustEncode(startingEdge.AsLine()),serr)
-		log.Printf("endingEdge: %v, err: %v",wkt.MustEncode(endingEdge.AsLine()),eerr)
+		log.Printf("startingEdge: %v, err: %v", wkt.MustEncode(startingEdge.AsLine()), serr)
+		log.Printf("endingEdge: %v, err: %v", wkt.MustEncode(endingEdge.AsLine()), eerr)
 	}
 	if serr == geom.ErrPointsAreCoLinear && eerr == geom.ErrPointsAreCoLinear {
 		// the starting edge and ending edge end at the same place.
@@ -129,12 +129,12 @@ testcase:
 		return err
 
 	}
-	if len(removalList) == 0  {
+	if len(removalList) == 0 {
 		// nothing to do.
 		return nil
 	}
 
-	if  debug {
+	if debug {
 		log.Printf("got %v edges to remove", len(removalList))
 	}
 
@@ -157,7 +157,7 @@ testcase:
 		}
 
 		if err = pppc.AddEdge(e); err != nil {
-			if  debug {
+			if debug {
 				log.Printf("Failed to added edge (%v) to pppc", wkt.MustEncode(e.AsLine()))
 				log.Printf("StartingEdge: %v , end: %v", startingEdge.AsLine(), end)
 			}
@@ -239,23 +239,23 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 		return nil
 	}
 
-	from,err := quadedge.ResolveEdge(tempEdge, end)
-		// There are two errors we care about
-		switch err {
-		case nil:
-			// do nothing
-		case geom.ErrPointsAreCoLinear:
-			// this edge already exists.
-			return nil
-		default:
-			return err
-		}
+	from, err := quadedge.ResolveEdge(tempEdge, end)
+	// There are two errors we care about
+	switch err {
+	case nil:
+		// do nothing
+	case geom.ErrPointsAreCoLinear:
+		// this edge already exists.
+		return nil
+	default:
+		return err
+	}
 
 	if from == nil {
 		DumpSubdivision(sd)
-		log.Printf("end:\n %v\n tempEdge :\n%v\n", wkt.MustEncode(end),wkt.MustEncode(tempEdge.AsLine()))
-		log.Printf("%v",err)
-		log.Printf("tempedge:\n%v",tempEdge.DumpAllEdges())
+		log.Printf("end:\n %v\n tempEdge :\n%v\n", wkt.MustEncode(end), wkt.MustEncode(tempEdge.AsLine()))
+		log.Printf("%v", err)
+		log.Printf("tempedge:\n%v", tempEdge.DumpAllEdges())
 
 	}
 
@@ -277,11 +277,10 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 	}
 	if to == nil {
 		DumpSubdivision(sd)
-		log.Printf("start:\n %v\n tempEdge :\n%v\n", wkt.MustEncode(start),wkt.MustEncode(tempEdge.AsLine()))
-		log.Printf("%v",err)
-		log.Printf("tempedge:\n%v",tempEdge.DumpAllEdges())
+		log.Printf("start:\n %v\n tempEdge :\n%v\n", wkt.MustEncode(start), wkt.MustEncode(tempEdge.AsLine()))
+		log.Printf("%v", err)
+		log.Printf("tempedge:\n%v", tempEdge.DumpAllEdges())
 	}
-
 
 	newEdge := quadedge.Connect(from.ONext().Sym(), to)
 

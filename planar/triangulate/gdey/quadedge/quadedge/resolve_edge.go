@@ -1,12 +1,13 @@
 package quadedge
 
 import (
+	"log"
+	"math"
+
 	"github.com/gdey/errors"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/encoding/wkt"
-	"log"
-	"math"
 )
 
 const (
@@ -27,7 +28,7 @@ func xprd(ao, bo [2]float64) float64 {
 }
 
 func sign(f float64) float64 {
-	if f == 0  {
+	if cmp.Float(f, 0.0) {
 		return 0.0
 	}
 	if math.Signbit(f) {
@@ -45,7 +46,6 @@ func toOrtStr(s float64) string {
 	}
 	return "⟳"
 }
-
 
 // ResolveEdge will find the edge such that dest lies between it and it's next edge.
 // It does this using the following table:
@@ -93,7 +93,6 @@ func toOrtStr(s float64) string {
 //  * geom.ErrColinearPoints
 func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 
-	// const debug = true
 	var (
 		candidate *Edge
 		err       error = ErrInvalidEndVertex
@@ -104,7 +103,7 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 			}
 			return true
 		}
-		a    = func(e *Edge) bool {
+		a = func(e *Edge) bool {
 			candidate = e
 			err = nil
 			if debug {
@@ -145,7 +144,6 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 	}
 	dest := geom.Point{odest[0] - orig[0], odest[1] - orig[1]}
 
-
 	gse.WalkAllONext(func(e *Edge) bool {
 
 		apt := *e.Dest()
@@ -173,7 +171,6 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 			log.Printf("d: %v", wkt.MustEncode(odest))
 			log.Printf("ab: %v %v da: %v %v db: %v %v", ab, toOrtStr(ab), da, toOrtStr(da), db, toOrtStr(db))
 		}
-
 
 		switch {
 		case ccwab && ccwda && ccwdb: // case 1

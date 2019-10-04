@@ -1,6 +1,7 @@
 package geom
 
 import (
+	"log"
 	"math"
 )
 
@@ -97,9 +98,11 @@ func (c Circle) ContainsPoint(pt [2]float64) bool {
 	// of the circle.
 	v1, v2 := c.Center[0]-pt[0], c.Center[1]-pt[1]
 	d := math.Abs(math.Sqrt((v1 * v1) + (v2 * v2)))
-	//d = round( d ,0.001)
-//	log.Printf("pt: %v radius: %v d: %v -- %v",pt, c.Radius,d,c.Radius-d)
-	return c.Radius  >= d
+	d = round(d, 0.001)
+	if debug {
+		log.Printf("pt: %v radius: %v d: %v -- %v", pt, c.Radius, d, c.Radius-d)
+	}
+	return c.Radius >= d
 }
 
 func (c Circle) AsPoints(k uint) []Point {

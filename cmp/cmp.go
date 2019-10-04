@@ -8,11 +8,13 @@ import (
 )
 
 // Tolerance is the epsilon value used in comparing floats with zero
-const Tolerance = 0.000001
+const Tolerance = 0.0000000001
 
 // BitTolerance is the epsilon value for comaparing float bit-patterns.
 // It was calculated as math.Float64bits(1.000001) - math.Float64bits(1.0)
-const BitTolerance = 4503599627
+//const BitTolerance = 4503599627
+
+var BitTolerance = BitToleranceFor(Tolerance)
 
 var (
 	NilPoint           = (*geom.Point)(nil)
@@ -65,7 +67,7 @@ func Float64(f1, f2, tolerance float64, bitTolerance int64) bool {
 
 	// -0.0 exist but -0.0 == 0.0 is true
 	if f1 == 0 || f2 == 0 {
-		return math.Abs(f2 - f1) < tolerance
+		return math.Abs(f2-f1) < tolerance
 	}
 
 	i1 := int64(math.Float64bits(f1))

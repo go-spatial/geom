@@ -3,10 +3,11 @@ package subdivision
 import (
 	"context"
 	"fmt"
-	"github.com/go-spatial/geom/planar/intersect"
 	"log"
 	"strings"
 	"sync"
+
+	"github.com/go-spatial/geom/planar/intersect"
 
 	"github.com/gdey/errors"
 
@@ -49,11 +50,36 @@ func New(a, b, c geom.Point) *Subdivision {
 	}
 }
 
+func newFromPointsTestCase(desc string, points [][2]float64, sd *Subdivision) {
+	var strBuf strings.Builder
+
+	fmt.Fprintf(&strBuf, `
+TestCase:
+	{ 
+		Desc: "%v",
+		Points: %#v,
+	},
+
+Desc: %v,
+`, desc, points, desc)
+	fmt.Fprintf(&strBuf, "Original Points: %v\n\n", wkt.MustEncode(geom.MultiPoint(points)))
+	if sd != nil {
+		fmt.Fprintf(&strBuf, "edges: %v", sd.startingEdge.DumpAllEdges())
+	}
+	log.Printf(strBuf.String())
+}
+
 // NewForPoints creates a new subdivision for the given points, the points are
 // sorted and duplicate points are not added
-func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error) {
+func NewForPoints(ctx context.Context, points [][2]float64) (sd *Subdivision, err error) {
+	//	if debug {
+	defer func() {
+		if err != nil {
+			newFromPointsTestCase(fmt.Sprintf("error:%v", err), points, sd)
+		}
+	}()
+	//}
 
-	// const debug = true
 	for i := range points {
 		points[i] = [2]float64(roundGeomPoint(geom.Point(points[i])))
 	}
@@ -62,7 +88,7 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 	//sort.Sort(cmp.ByXY(points))
 
 	tri := geom.NewTriangleContainingPoints(points...)
-	sd := New(tri[0], tri[1], tri[2])
+	sd = New(tri[0], tri[1], tri[2])
 
 	if debug {
 		//	log.Printf("Validating Subdivision (%v of %v", i, len(points))
@@ -73,9 +99,8 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 				for i, estr := range err1 {
 					fmt.Fprintf(&strBuf, "\t%v : %v\n", i, estr)
 				}
-				fmt.Fprintf(&strBuf, "Original Points: %v\n\n", wkt.MustEncode(geom.MultiPoint(points)))
-				fmt.Fprintf(&strBuf, "edges: %v", sd.startingEdge.DumpAllEdges())
 				log.Printf(strBuf.String())
+				newFromPointsTestCase("invalid subdivision triangle", points, sd)
 			}
 
 			return sd, err
@@ -121,6 +146,7 @@ func NewForPoints(ctx context.Context, points [][2]float64) (*Subdivision, error
 				fmt.Fprintf(&strBuf, "Original Points: %v\n\n", wkt.MustEncode(geom.MultiPoint(points)))
 				fmt.Fprintf(&strBuf, "edges: %v", sd.startingEdge.DumpAllEdges())
 				log.Printf(strBuf.String())
+				newFromPointsTestCase("invalid subdivision", points, sd)
 			}
 
 			return sd, err
@@ -686,8 +712,8 @@ func FindIntersectingEdges(startingEdge, endingEdge *quadedge.Edge) (edges []*qu
 	startingEdge, _ = quadedge.ResolveEdge(startingEdge, end)
 	endingEdge, _ = quadedge.ResolveEdge(endingEdge, start)
 
-	if cmp.GeomPointEqual(*startingEdge.Dest(),end) ||
-		cmp.GeomPointEqual(*endingEdge.Dest(),start) {
+	if cmp.GeomPointEqual(*startingEdge.Dest(), end) ||
+		cmp.GeomPointEqual(*endingEdge.Dest(), start) {
 		// the intersect lines already exists.
 		return []*quadedge.Edge{}, nil
 	}
@@ -806,8 +832,6 @@ func testEdge(x geom.Point, e *quadedge.Edge) (*quadedge.Edge, bool) {
 }
 
 func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
-
-	//const debug = true
 
 	var (
 		e     *quadedge.Edge
