@@ -16,14 +16,14 @@ func isNil(a interface{}) bool {
 }
 
 type Encoder struct {
-	w io.Writer
+	w    io.Writer
 	fbuf []byte
 }
 
 func NewEncoder(w io.Writer) *Encoder {
 	// for reference, the min value of EPSG:3857 -20026376.390 -> 13 characters
 	return &Encoder{
-		w: w,
+		w:    w,
 		fbuf: make([]byte, 0, 16),
 	}
 }
@@ -39,9 +39,8 @@ func (enc *Encoder) puts(s string) error {
 	return err
 }
 
-
 func (enc *Encoder) formatFloat(f float64) error {
-	buf := strconv.AppendFloat(enc.fbuf[:0], f, 'g', 5, 64)
+	buf := strconv.AppendFloat(enc.fbuf[:0], f, 'g', 10, 64)
 	_, err := enc.w.Write(buf)
 	return err
 }
