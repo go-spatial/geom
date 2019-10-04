@@ -3,13 +3,14 @@ package wkt
 import (
 	"bytes"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/go-spatial/geom"
 )
 
 func Encode(w io.Writer, geo geom.Geometry) error {
-	return NewEncoder(w).Encode(geo, true)
+	return NewEncoder(w).Encode(geo, false)
 }
 
 func EncodeBytes(geo geom.Geometry) ([]byte, error) {
@@ -26,7 +27,9 @@ func EncodeString(geo geom.Geometry) (string, error) {
 func MustEncode(geo geom.Geometry) string {
 	str, err := EncodeString(geo)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		//panic(err)
+		return ""
 	}
 
 	return str
