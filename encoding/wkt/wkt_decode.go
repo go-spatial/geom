@@ -45,7 +45,9 @@ func (d *Decoder) unreadByte() error {
 	return d.src.UnreadByte()
 }
 
-func (d *Decoder) readWhitespace() error {
+// readWhitespace eats up the whitespace and returns
+// true iff any characters were read
+func (d *Decoder) readWhitespace() (bool, error) {
 	isSpace := func(b byte) bool {
 		return b == ' ' ||
 			b == '\t' ||
@@ -63,15 +65,12 @@ func (d *Decoder) readWhitespace() error {
 	}
 
 	if err != nil {
-		return err
+		return read, err
 	}
 
 	d.unreadByte()
-	if !read {
-		return d.syntaxErr("expected whitespace got %q", b)
-	}
 
-	return nil
+	return read, nil
 }
 
 func (d *Decoder) expected(chars string) error {
@@ -90,8 +89,10 @@ func (d *Decoder) expected(chars string) error {
 }
 
 func (d *Decoder) syntaxErr(format string, v ...interface{}) error {
-	return fmt.Errorf("syntax error (%d:%d): "+format,
+
+	err := fmt.Errorf("syntax error (%d:%d): "+format,
 		append([]interface{}{d.row + 1, d.col + 1}, v...)...)
+	return err
 }
 
 func (d *Decoder) readFloat() (float64, error) {
@@ -135,9 +136,12 @@ func (d *Decoder) readPoint() (pt [2]float64, err error) {
 	}
 
 	// we need white space here
-	err = d.readWhitespace()
+	didRead, err := d.readWhitespace()
 	if err != nil {
 		return pt, err
+	}
+	if !didRead {
+		return pt, d.expected("WHIESPACE")
 	}
 
 	pt[1], err = d.readFloat()
@@ -153,7 +157,10 @@ func (d *Decoder) readPoints() (pts [][2]float64, err error) {
 	if b != '(' {
 		return nil, d.expected("(")
 	}
-	d.readWhitespace()
+	_, err = d.readWhitespace()
+	if err != nil {
+		return nil, err
+	}
 
 	b, err = d.readByte()
 	if err != nil {
@@ -171,7 +178,10 @@ func (d *Decoder) readPoints() (pts [][2]float64, err error) {
 		}
 		pts = append(pts, pt)
 
-		d.readWhitespace()
+		_, err = d.readWhitespace()
+		if err != nil {
+			return nil, err
+		}
 
 		b, err := d.readByte()
 		if err != nil {
@@ -180,7 +190,10 @@ func (d *Decoder) readPoints() (pts [][2]float64, err error) {
 
 		switch b {
 		case ',':
-			d.readWhitespace()
+			_, err = d.readWhitespace()
+			if err != nil {
+				return nil, err
+			}
 			continue
 		case ')':
 			return pts, nil
@@ -228,7 +241,10 @@ func (d *Decoder) readLines() ([][][2]float64, error) {
 	}
 
 
-	d.readWhitespace()
+	_, err = d.readWhitespace()
+	if err != nil {
+		return nil, err
+	}
 
 	b, err = d.readByte()
 	if err != nil {
@@ -249,7 +265,11 @@ func (d *Decoder) readLines() ([][][2]float64, error) {
 
 		lines = append(lines, pts)
 
-		d.readWhitespace()
+		_, err = d.readWhitespace()
+		if err != nil {
+			return nil, err
+		}
+
 		b, err = d.readByte()
 		if err != nil {
 			return nil, err
@@ -257,7 +277,11 @@ func (d *Decoder) readLines() ([][][2]float64, error) {
 
 		switch b {
 		case ',':
-			d.readWhitespace()
+			_, err = d.readWhitespace()
+			if err != nil {
+				return nil, err
+			}
+
 			continue
 		case ')':
 			return lines, nil
@@ -277,7 +301,11 @@ func (d *Decoder) readPolys() ([][][][2]float64, error) {
 		return nil, d.expected("(")
 	}
 
-	d.readWhitespace()
+	_, err = d.readWhitespace()
+	if err != nil {
+		return nil, err
+	}
+
 
 	b, err = d.readByte()
 	if err != nil {
@@ -297,7 +325,11 @@ func (d *Decoder) readPolys() ([][][][2]float64, error) {
 
 		polys = append(polys, lines)
 
-		d.readWhitespace()
+		_, err = d.readWhitespace()
+		if err != nil {
+			return nil, err
+		}
+
 		b, err = d.readByte()
 		if err != nil {
 			return nil, err
@@ -305,7 +337,10 @@ func (d *Decoder) readPolys() ([][][][2]float64, error) {
 
 		switch b {
 		case ',':
-			d.readWhitespace()
+			_, err = d.readWhitespace()
+			if err != nil {
+				return nil, err
+			}
 			continue
 		case ')':
 			return polys, nil
@@ -321,7 +356,10 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		return nil, err
 	}
 
-	d.readWhitespace()
+	_, err = d.readWhitespace()
+	if err != nil {
+		return nil, err
+	}
 
 	switch tag {
 	case "point":
@@ -438,7 +476,10 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		if b != '(' {
 			return nil, d.expected("(")
 		}
-		d.readWhitespace()
+		_, err = d.readWhitespace()
+		if err != nil {
+			return nil, err
+		}
 
 		geoms := geom.Collection{}
 
@@ -451,7 +492,10 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			}
 			geoms = append(geoms, geo)
 
-			d.readWhitespace()
+			_, err = d.readWhitespace()
+			if err != nil {
+				return nil, err
+			}
 
 			b, err := d.readByte()
 			if err != nil {
@@ -463,7 +507,10 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 				d.unreadByte()
 			case ',':
 				//noop
-				d.readWhitespace()
+				_, err = d.readWhitespace()
+				if err != nil {
+					return nil, err
+				}
 			default:
 				return nil, d.expected(",)")
 			}

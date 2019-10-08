@@ -4,57 +4,83 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
 	"strconv"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
-
-func isNil(a interface{}) bool {
-	defer func() { recover() }()
-	return a == nil || reflect.ValueOf(a).IsNil()
-}
 
 type Encoder struct {
 	w io.Writer
 	fbuf []byte
+
+	// Strict causes the encoder to return errors if the geometries have empty
+	// sub geometries where not allowed by the wkt spec. When Strict
+	// false, empty geometries are ignored.
+	//		Point: can be empty
+	//		MultiPoint: can have empty points
+	//		LineString: cannot have empty points
+	//		MultiLineString: can have empty line strings non-empty line strings cannot have empty points
+	//		Polygon: cannot have empty line strings, non-empty line strings cannot have empty points
+	//		MultiPolygon: can have empty linestrings, polygons cannot have empty linestrings, line strings cannot have empty points
+	//		Collection: can have empty geometries
+	Strict bool
+
+	// The precision that is passed into strconv.FormatFloat
+	// https://golang.org/pkg/strconv/#FormatFloat
+	Precision *int
+
+	// The format flag that is passed into strconv.FormatFloat. If
+	// performance is an issue then, the 'E' or 'e' flag is recommended.
+	// https://golang.org/pkg/strconv/#FormatFloat
+	Fmt byte
 }
 
+var (
+	DefaultEncoderStrict = true
+	DefaultEncoderPrecision = 5
+	DefaultEncoderFmt = byte('g')
+)
+
 func NewEncoder(w io.Writer) *Encoder {
-	// for reference, the min value of EPSG:3857 -20026376.390 -> 13 characters
+	// our float would be one of
+	// ddd.ddd with Precision+1 number of d's => Precision + 1 + 1
+	// d.ddde+xx with Precision+1 number of d's => Precision + 1 + 5
+	prec := DefaultEncoderPrecision
 	return &Encoder{
 		w: w,
-		fbuf: make([]byte, 0, 16),
+		fbuf: make([]byte, 0, prec + 6),
+		Strict: DefaultEncoderStrict,
+		Precision: &prec,
+		Fmt: DefaultEncoderFmt,
 	}
 }
 
-func (enc *Encoder) putc(b byte) error {
+func (enc *Encoder) byte(b byte) error {
 	buf := append(enc.fbuf[:0], b)
 	_, err := enc.w.Write(buf)
 	return err
 }
 
-func (enc *Encoder) puts(s string) error {
+func (enc *Encoder) string(s string) error {
 	_, err := enc.w.Write([]byte(s))
 	return err
 }
 
 
 func (enc *Encoder) formatFloat(f float64) error {
-	buf := strconv.AppendFloat(enc.fbuf[:0], f, 'g', 5, 64)
+	buf := strconv.AppendFloat(enc.fbuf[:0], f, enc.Fmt, *enc.Precision, 64)
 	_, err := enc.w.Write(buf)
 	return err
 }
 
 // var EmptyPoint = [2]float64{math.NaN(), math.NaN()}
 
-func IsEmptyPoint(pt [2]float64) bool {
-	return pt != pt
-}
 
 func (enc *Encoder) encodePair(pt [2]float64) error {
-	if IsEmptyPoint(pt) {
-		return enc.puts("EMPTY")
+	// should onlt be called for multipoints
+	if cmp.IsEmptyPoint(pt) {
+		return enc.string("EMPTY")
 	}
 
 	err := enc.formatFloat(pt[0])
@@ -62,7 +88,7 @@ func (enc *Encoder) encodePair(pt [2]float64) error {
 		return err
 	}
 
-	err = enc.putc(' ')
+	err = enc.byte(' ')
 	if err != nil {
 		return err
 	}
@@ -72,12 +98,12 @@ func (enc *Encoder) encodePair(pt [2]float64) error {
 
 func (enc *Encoder) encodePoint(pt [2]float64) error {
 	// empty point
-	if IsEmptyPoint(pt) {
-		err := enc.puts("EMPTY")
+	if cmp.IsEmptyPoint(pt) {
+		err := enc.string("EMPTY")
 		return err
 	}
 
-	err := enc.putc('(')
+	err := enc.byte('(')
 	if err != nil {
 		return err
 	}
@@ -87,105 +113,47 @@ func (enc *Encoder) encodePoint(pt [2]float64) error {
 		return err
 	}
 
-	return enc.putc(')')
+	return enc.byte(')')
 }
 
-func isPointlessPoints(mp [][2]float64) (last int, isPointless bool) {
+func lastNonEmptyIdxPoints(mp [][2]float64) (last int) {
 	for i := len(mp) - 1; i >= 0; i-- {
-		if !IsEmptyPoint(mp[i]) {
-			return i, false
+		if !cmp.IsEmptyPoint(mp[i]) {
+			return i
 		}
 	}
 
-	return -1, true
+	return -1
 }
 
-func isPointlessLines(lines [][][2]float64) (last int, isPointless bool) {
+func lastNonEmptyIdxLines(lines [][][2]float64) (last int) {
 	for i := len(lines) - 1; i >= 0; i-- {
-		_, pl := isPointlessPoints(lines[i])
-		if !pl {
-			return i, false
+		last := lastNonEmptyIdxPoints(lines[i])
+		if last != -1 {
+			return i
 		}
 	}
-	return -1, true
+	return -1
 }
 
-func isPointlessPolys(polys [][][][2]float64) (last int, isPointless bool) {
+func lastNonEmptyIdxPolys(polys [][][][2]float64) (last int) {
 	for i := len(polys) - 1; i >= 0; i-- {
-		_, pl := isPointlessLines(polys[i])
-		if !pl {
-			return i, false
+		last := lastNonEmptyIdxLines(polys[i])
+		if last != -1 {
+			return i
 		}
 	}
-	return -1, true
+	return -1
 }
 
-func isPointlessGeo(geo geom.Geometry) (isPointless bool, err error) {
-	if isNil(geo) {
-		return true, nil
-	}
 
-	switch g := geo.(type) {
-	case [2]float64:
-		return IsEmptyPoint(g), nil
-
-	case geom.Pointer:
-		return IsEmptyPoint(g.XY()), nil
-
-	case geom.MultiPointer:
-		_, pl := isPointlessPoints(g.Points())
-		return pl, nil
-
-	case geom.LineStringer:
-		_, pl := isPointlessPoints(g.Verticies())
-		return pl, nil
-
-	case geom.MultiLineStringer:
-		_, pl := isPointlessLines(g.LineStrings())
-		return pl, nil
-
-	case geom.Polygoner:
-		_, pl := isPointlessLines(g.LinearRings())
-		return pl, nil
-
-	case geom.MultiPolygoner:
-		_, pl := isPointlessPolys(g.Polygons())
-		return pl, nil
-
-	case geom.Collectioner:
-		for _, v := range g.Geometries() {
-			pl, err := isPointlessGeo(v)
-			if err != nil {
-				return false, err
-			}
-			if !pl {
-				return false, nil
-			}
-		}
-		return true, nil
-	default:
-		return false, fmt.Errorf("unknown geometry %T", geo)
-	}
-}
-
-func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int, gType byte) (count int, err error) {
-	if !removePointless || gType != mpType {
-		last = len(mp) - 1
-	}
+func (enc *Encoder) encodePoints(mp [][2]float64, last int, gType byte) (err error) {
 
 	// the last encode point
-	// _v := mp[last]
-	lastToEnc := &mp[last]
-	if gType == polyType || gType == mPolyType {
-		lastToEnc = nil
-	}
-
+	var firstEnc *[2]float64
 	var lastEnc *[2]float64
+	var count int
 
-	err = enc.putc('(')
-	if err != nil {
-		return count, err
-	}
 
 	for i, v := range mp[:last+1] {
 		// if the last point is the same as this point and
@@ -194,63 +162,86 @@ func (enc *Encoder) encodePoints(mp [][2]float64, removePointless bool, last int
 			continue
 		}
 
-		if IsEmptyPoint(v) {
-			switch gType {
-			case mpType:
+		if cmp.IsEmptyPoint(v) {
+			if enc.Strict {
+				switch gType {
+				case mpType:
+					// multipoints can have empty points
+					// encodePair will write EMPTY
+					break
+				case lsType:
+					return errors.New("cannot have empty points in strict LINESTRING")
+				case mlType:
+					return errors.New("cannot have empty points in strict MULTILINESTRING")
+				case polyType:
+					return errors.New("cannot have empty points in strict POLYGON")
+				case mPolyType:
+					return errors.New("cannot have empty points in strict MULTIPOLYGON")
+				default:
+					panic("unrechable")
+				}
+			} else {
 				// multipoints can have empty points
-				if removePointless {
+				// encodePair will write EMPTY
+				if gType != mpType {
 					continue
 				}
-			case lsType:
-				return count, errors.New("cannot have empty points in LINESTRING")
-			case mlType:
-				return count, errors.New("cannot have empty points in MULTILINESTRING")
-			case polyType:
-				return count, errors.New("cannot have empty points in POLYGON")
-			case mPolyType:
-				return count, errors.New("cannot have empty points in MULTIPOLYGON")
-			default:
-				panic("unrechable")
 			}
 		}
 
 		// this also the first encoded point
 		// we save it in case we need to close the polygon later
-		if lastToEnc == nil {
-			lastToEnc = &mp[i]
+		if firstEnc == nil {
+			firstEnc = &mp[i]
 		}
 
 		// update what the last encoded value is
 		lastEnc = &mp[i]
 
-		if count != 0 {
-			err = enc.putc(',')
-			if err != nil {
-				return count, err
-			}
+		switch count {
+		case 0:
+			err = enc.byte('(')
+		default:
+			err = enc.byte(',')
 		}
+		if err != nil {
+			return err
+		}
+
 		count++
 		err = enc.encodePair(v)
 		if err != nil {
-			return count, err
+			return err
 		}
 	}
+
+	// do size checking before encoding a closing point
+	if count == 0 {
+		return enc.string("EMPTY")
+	}
+
+	if (gType == polyType || gType == mPolyType) && count < 3 {
+		return fmt.Errorf("not enough points for linear ring of POLYGON %v", mp)
+	} else if (gType == lsType || gType == mlType) && count < 2{
+		return fmt.Errorf("not enough points for LINESTRING %v", mp)
+	}
+
 
 	// if we need to close the polygon/multipolygon
 	// and the value we encoded last isn't (already) the last
 	// value to encode
-	if (gType == polyType || gType == mPolyType) && *lastToEnc != *lastEnc {
-		err = enc.putc(',')
+	if (gType == polyType || gType == mPolyType) && *firstEnc != *lastEnc {
+		err = enc.byte(',')
 		if err != nil {
-			return count, err
+			return err
 		}
-		err = enc.encodePair(*lastToEnc)
+		err = enc.encodePair(*firstEnc)
 		if err != nil {
-			return count, err
+			return err
 		}
 	}
 
-	return count, enc.putc(')')
+	return enc.byte(')')
 }
 
 const (
@@ -261,120 +252,135 @@ const (
 	mPolyType
 )
 
-func (enc *Encoder) encodeLines(lines [][][2]float64, removePointless bool, last int, gType byte) error {
-	if !removePointless {
-		last = len(lines) - 1
+func (enc *Encoder) encodeLines(lines [][][2]float64, last int, gType byte) error {
+	if gType != mlType {
+		idx := lastNonEmptyIdxLines(lines)
+		if idx != last && enc.Strict {
+			switch gType {
+			case polyType:
+				return errors.New("cannot have empty linear ring in strict POLYGON")
+			case mPolyType:
+				return errors.New("cannot have empty linear ring in strict MULTIPOLYGON")
+			case mlType:
+				// empty linestrings are allowed in multilines
+				break
+			default:
+				panic("unrechable")
+			}
+		} else {
+			last = idx
+		}
 	}
 
-	err := enc.putc('(')
+	if last == -1 {
+		return enc.string("EMPTY")
+	}
+
+	err := enc.byte('(')
 	if err != nil {
 		return err
 	}
 
 	for _, v := range lines[:last] {
-		lastt, pointless := isPointlessPoints(v)
-		if removePointless && pointless {
-			continue
+		// polygons and multipolygons cannot have empty linestrings
+		if lastNonEmptyIdxPoints(v) == -1 {
+			if enc.Strict {
+				switch gType {
+				case polyType:
+					return errors.New("cannot have empty linear ring in strict POLYGON")
+				case mPolyType:
+					return errors.New("cannot have emtpy linear ring in strict MULTIPOLYGON")
+				case mlType:
+					// empty linestrings are allowed in
+					// encodePoints writes EMPTY
+					break
+				default:
+					panic("unrechable")
+				}
+			} else {
+				// empty linestrings are allowed in
+				// encodePoints writes EMPTY
+				if gType != mlType {
+					continue
+				}
+			}
 		}
 
-		count, err := enc.encodePoints(v, removePointless, lastt, gType)
+		err := enc.encodePoints(v, len(v) - 1, gType)
 		if err != nil {
 			return err
 		}
 
-		if (gType == polyType || gType == mPolyType) && count < 3 {
-			return fmt.Errorf("not enough points for POLYGON %v", v)
-		} else if count < 2 {
-			return fmt.Errorf("not enough points for LINESTRING %v", v)
-		}
-
-		err = enc.putc(',')
+		err = enc.byte(',')
 		if err != nil {
 			return err
 		}
 	}
-	lastt, pointless := isPointlessPoints(lines[last])
-	if removePointless && pointless {
-		panic("the last element must always be poinfull, set by caller")
-	}
 
-	count, err := enc.encodePoints(lines[last], removePointless, lastt, gType)
+	err = enc.encodePoints(lines[last], len(lines[last]) - 1, gType)
 	if err != nil {
 		return err
 	}
-	if (gType == polyType || gType == mPolyType) && count < 3 {
-		return fmt.Errorf("not enough points for POLYGON %v", lines[last])
-	} else if count < 2 {
-		return fmt.Errorf("not enough points for LINESTRING %v", lines[last])
-	}
 
-	return enc.putc(')')
+	return enc.byte(')')
 }
 
-func (enc *Encoder) encodePolys(polys [][][][2]float64, removePointless bool, last int) error {
-	if !removePointless {
-		last = len(polys) - 1
+func (enc *Encoder) encodePolys(polys [][][][2]float64, last int) error {
+	if last == -1 {
+		return enc.string("EMPTY")
 	}
 
-	err := enc.putc('(')
+	err := enc.byte('(')
 	if err != nil {
 		return err
 	}
 
 	for _, v := range polys[:last] {
-		lastt, pointless := isPointlessLines(v)
-		if removePointless && pointless {
-			continue
-		}
-		err = enc.encodeLines(v, removePointless, lastt, mPolyType)
+		err = enc.encodeLines(v, len(v) - 1, mPolyType)
 		if err != nil {
 			return err
 		}
 
-		err = enc.putc(',')
+		err = enc.byte(',')
 		if err != nil {
 			return err
 		}
 	}
 
-	lastt, pointless := isPointlessLines(polys[last])
-	if removePointless && pointless {
-		panic("the last element must always be poinfull, set by caller")
-	}
-
-	err = enc.encodeLines(polys[last], removePointless, lastt, mPolyType)
+	err = enc.encodeLines(polys[last], len(polys[last]) - 1, mPolyType)
 	if err != nil {
 		return err
 	}
 
-	return enc.putc(')')
+	if err != nil {
+		return err
+	}
+
+	return enc.byte(')')
 }
 
-func (enc *Encoder) encode(geo geom.Geometry, removePointless, isCollectionItem bool) error {
+func (enc *Encoder) encode(geo geom.Geometry, isCollectionItem bool) error {
 
 	switch g := geo.(type) {
 	case [2]float64:
-		if isCollectionItem && IsEmptyPoint(g) && removePointless {
-			return nil
-		}
-		err := enc.puts("POINT ")
+		err := enc.string("POINT ")
 		if err != nil {
 			return err
 		}
 		return enc.encodePoint(g)
 
 	case geom.Pointer:
-		if removePointless && isCollectionItem && (isNil(g) || IsEmptyPoint(g.XY())) {
+		if enc.Strict && isCollectionItem && (cmp.IsNil(g) || cmp.IsEmptyPoint(g.XY())) {
 			return nil
 		}
 
-		err := enc.puts("POINT ")
+		err := enc.string("POINT ")
 		if err != nil {
 			return err
 		}
 
-		if isNil(g) {
-			return enc.puts("EMPTY")
+		if cmp.IsNil(g) {
+			return enc.string("EMPTY")
 		}
 
 		return enc.encodePoint(g.XY())
@@ -382,54 +388,33 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, isCollectionItem 
 	case geom.MultiPointer:
 		var mp [][2]float64
 
-		if !isNil(g) {
+		if !cmp.IsNil(g) {
 			mp = g.Points()
 		}
 
-		last, isPointless := isPointlessPoints(mp)
-		if isPointless {
-			if removePointless && isCollectionItem {
-				return nil
-			} else if removePointless {
-				return enc.puts("MULTIPOINT EMPTY")
-			}
-		}
-
-		err := enc.puts("MULTIPOINT ")
+		err := enc.string("MULTIPOINT ")
 		if err != nil {
 			return err
 		}
 
-		_, err = enc.encodePoints(mp, removePointless, last, mpType)
+		err = enc.encodePoints(mp, len(mp) - 1, mpType)
 		return err
 
 	case geom.LineStringer:
 		var mp [][2]float64
 
-		if !isNil(g) {
+		if !cmp.IsNil(g) {
 			mp = g.Verticies()
 		}
 
-		last, isPointless := isPointlessPoints(mp)
-		if isPointless {
-			if removePointless && isCollectionItem {
-				return nil
-			} else if removePointless {
-				return enc.puts("LINESTRING EMPTY")
-			}
-		}
-
-		err := enc.puts("LINESTRING ")
+		err := enc.string("LINESTRING ")
 		if err != nil {
 			return err
 		}
 
-		count, err := enc.encodePoints(mp, removePointless, last, lsType)
+		err = enc.encodePoints(mp, len(mp) - 1, lsType)
 		if err != nil {
 			return err
-		}
-		if count < 2 {
-			return fmt.Errorf("not enough points for LINESTRING %v", mp)
 		}
 
 		return nil
@@ -437,156 +422,98 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, isCollectionItem 
 	case geom.MultiLineStringer:
 		var lines [][][2]float64
 
-		if !isNil(g) {
+		if !cmp.IsNil(g) {
 			lines = g.LineStrings()
 		}
 
-		last, isPointless := isPointlessLines(lines)
-		if isPointless {
-			if removePointless && isCollectionItem {
-				return nil
-			} else if removePointless {
-				return enc.puts("MULTILINESTRING EMPTY")
-			}
-		}
 
-		err := enc.puts("MULTILINESTRING ")
+		err := enc.string("MULTILINESTRING ")
 		if err != nil {
 			return err
 		}
 
-		return enc.encodeLines(lines, removePointless, last, mlType)
+		return enc.encodeLines(lines, len(lines) - 1, mlType)
 
 	case geom.Polygoner:
 		var lines [][][2]float64
 
-		if !isNil(g) {
+		if !cmp.IsNil(g) {
 			lines = g.LinearRings()
 		}
 
-		last, isPointless := isPointlessLines(lines)
-		if isPointless {
-			if removePointless && isCollectionItem {
-				return nil
-			} else if removePointless {
-				return enc.puts("POLYGON EMPTY")
-			}
-		}
-
-		err := enc.puts("POLYGON ")
+		err := enc.string("POLYGON ")
 		if err != nil {
 			return err
 		}
 
-		return enc.encodeLines(lines, removePointless, last, polyType)
+		return enc.encodeLines(lines, len(lines) - 1, polyType)
 
 	case geom.MultiPolygoner:
 		var polys [][][][2]float64
 
-		if !isNil(g) {
+		if !cmp.IsNil(g) {
 			polys = g.Polygons()
 		}
 
-		last, isPointless := isPointlessPolys(polys)
-		if isPointless {
-			if removePointless && isCollectionItem {
-				return nil
-			} else if removePointless {
-				return enc.puts("MULTIPOLYGON EMPTY")
-			}
-		}
-
-		err := enc.puts("MULTIPOLYGON ")
+		err := enc.string("MULTIPOLYGON ")
 		if err != nil {
 			return err
 		}
 
-		return enc.encodePolys(polys, removePointless, last)
+		return enc.encodePolys(polys, len(polys) - 1)
 
 	case geom.Collectioner:
 		var geoms []geom.Geometry
 
-		if !isNil(g) {
+		if !cmp.IsNil(g) {
 			geoms = g.Geometries()
 		}
 
-		last := -1
-		isPointless := true
-
-		for i := len(geoms) - 1; i >= 0; i-- {
-			pl, err := isPointlessGeo(geoms[i])
-			if err != nil {
-				return err
-			}
-			if !pl {
-				last = i
-				isPointless = false
-				break
-			}
+		if len(geoms) == 0 {
+			return enc.string("GEOMETRYCOLLECTION EMPTY")
 		}
 
-		if isPointless {
-			if removePointless && isCollectionItem {
-				return nil
-			} else if removePointless {
-				return enc.puts("GEOMETRYCOLLECTION EMPTY")
-			}
-		}
-
-		err := enc.puts("GEOMETRYCOLLECTION ")
+		err := enc.string("GEOMETRYCOLLECTION ")
 		if err != nil {
 			return err
 		}
 
-		err = enc.putc('(')
+		err = enc.byte('(')
 		if err != nil {
 			return err
 		}
+
+		last := len(geoms) - 1
 
 		for _, v := range geoms[:last] {
-			pl, err := isPointlessGeo(v)
-			if err != nil {
-				return err
-			}
-			if removePointless && pl {
-				continue
-			}
-			err = enc.encode(v, removePointless, true)
+			err = enc.encode(v, true)
 			if err != nil {
 				return err
 			}
 
-			err = enc.putc(',')
+			err = enc.byte(',')
 			if err != nil {
 				return err
 			}
 		}
 
-		pl, err := isPointlessGeo(geoms[last])
-		if err != nil {
-			return err
-		}
-		if removePointless && pl {
-			panic("the last element must always be poinfull, set by caller")
-		}
-
-		err = enc.encode(geoms[last], removePointless, true)
+		err = enc.encode(geoms[last], true)
 		if err != nil {
 			return err
 		}
 
-		return enc.putc(')')
+		return enc.byte(')')
 
 	// non basic types
 
 	case geom.Line:
-		return enc.encode(geom.LineString(g[:]), removePointless, false)
+		return enc.encode(geom.LineString(g[:]), false)
 
 	case [2][2]float64:
-		return enc.encode(geom.LineString(g[:]), removePointless, false)
+		return enc.encode(geom.LineString(g[:]), false)
 
 	case [][2]float64:
-		return enc.encode(geom.LineString(g), removePointless, false)
+		return enc.encode(geom.LineString(g), false)
 
 	case []geom.Line:
 		lines := make(geom.MultiLineString, len(g))
@@ -594,7 +521,7 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, isCollectionItem 
 			lines[i] = [][2]float64(v[:])
 		}
 
-		return enc.encode(lines, removePointless, false)
+		return enc.encode(lines, false)
 
 	case []geom.Point:
 		points := make(geom.MultiPoint, len(g))
@@ -602,26 +529,40 @@ func (enc *Encoder) encode(geo geom.Geometry, removePointless, isCollectionItem 
 			points[i] = v
 		}
 
-		return enc.encode(points, removePointless, false)
+		return enc.encode(points, false)
 
 	case geom.Triangle:
-		return enc.encode(geom.Polygon{g[:]}, false, false)
+		return enc.encode(geom.Polygon{g[:]}, false)
 
 	case geom.Extent:
-		return enc.encode(g.AsPolygon(), false, false)
+		return enc.encode(g.AsPolygon(), false)
 
 	case *geom.Extent:
 		if g != nil {
-			return enc.encode(g.AsPolygon(), false, false)
+			return enc.encode(g.AsPolygon(), false)
 		}
 
-		return enc.encode(geom.Polygon{}, false, false)
+		return enc.encode(geom.Polygon{}, false)
 
 	default:
 		return fmt.Errorf("unknown geometry: %T", geo)
 	}
 }
 
-func (enc *Encoder) Encode(geo geom.Geometry, removePointless bool) error {
-	return enc.encode(geo, removePointless, false)
+func (enc *Encoder) Encode(geo geom.Geometry) error {
+
+	if enc.Precision == nil {
+		prec := DefaultEncoderPrecision
+		enc.Precision = &prec
+	}
+
+	if enc.fbuf == nil {
+		enc.fbuf = make([]byte, 0, *enc.Precision + 6)
+	}
+
+	if enc.Fmt == 0 {
+		enc.Fmt = DefaultEncoderFmt
+	}
+
+	return enc.encode(geo, false)
 }

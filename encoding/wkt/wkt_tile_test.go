@@ -22,7 +22,7 @@ func BenchmarkEncodeTilePrealloc(b *testing.B) {
 		// the encoded wkt is ~32MB
 		buf := bytes.NewBuffer(make([]byte, 0, (1<<20)*32))
 		enc := NewEncoder(buf)
-		enc.Encode(gtesting.Tiles()[0], true)
+		enc.Encode(gtesting.Tiles()[0])
 	}
 }
 
@@ -30,6 +30,6 @@ func BenchmarkEncodeTileNoprealloc(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		buf := bytes.NewBuffer(make([]byte, 0, 0))
 		enc := NewEncoder(buf)
-		enc.Encode(gtesting.Tiles()[0], true)
+		enc.Encode(gtesting.Tiles()[0])
 	}
 }
