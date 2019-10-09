@@ -59,8 +59,9 @@ func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
 
 // NewTileLatLon instantiates a tile containing the coordinate with the specified zoom
 func NewTileLatLon(z uint, lat, lon float64, srid uint) *Tile {
-	x := Lon2Tile(z, lon, srid)
-	y := Lat2Tile(z, lat, srid)
+	grid := GetGrid(srid)
+	x := grid.Lon2XIndex(z, lon)
+	y := grid.Lat2YIndex(z, lat)
 
 	return &Tile{
 		Z: z,
@@ -82,8 +83,10 @@ func FromBounds(bounds *geom.Extent, z uint, tileSRID uint) []Tile {
 		return nil
 	}
 
-	minx, maxx := minmax(Lon2Tile(z, bounds[0], tileSRID), Lon2Tile(z, bounds[2], tileSRID))
-	miny, maxy := minmax(Lat2Tile(z, bounds[1], tileSRID), Lat2Tile(z, bounds[3], tileSRID))
+	grid := GetGrid(tileSRID)
+
+	minx, maxx := minmax(grid.Lon2XIndex(z, bounds[0]), grid.Lon2XIndex(z, bounds[2]))
+	miny, maxy := minmax(grid.Lat2YIndex(z, bounds[1]), grid.Lat2YIndex(z, bounds[3]))
 
 	// tiles := make([]Tile, (maxx-minx)*(maxy-miny))
 	var tiles []Tile
@@ -125,9 +128,10 @@ func (t Tile) Extent3857(tileSRID uint) *geom.Extent {
 
 // Extent4326 returns the tile's extent in EPSG:4326 (aka lat/long) given the tilespace's SRID
 func (t Tile) Extent4326(tileSRID uint) *geom.Extent {
+	grid := GetGrid(tileSRID)
 	return geom.NewExtent(
-		[2]float64{Tile2Lon(t.Z, t.X, tileSRID), Tile2Lat(t.Z, t.Y+1, tileSRID)},
-		[2]float64{Tile2Lon(t.Z, t.X+1, tileSRID), Tile2Lat(t.Z, t.Y, tileSRID)},
+		[2]float64{grid.XIndex2Lon(t.Z, t.X), grid.YIndex2Lat(t.Z, t.Y+1)},
+		[2]float64{grid.XIndex2Lon(t.Z, t.X+1), grid.YIndex2Lat(t.Z, t.Y)},
 	)
 }
 

@@ -5,6 +5,130 @@ import (
 	"testing"
 )
 
+func TestTileGridSize(t *testing.T) {
+	type tcase struct {
+		srid          uint
+		zoom          uint
+		expectedSizeX uint
+		expectedSizeY uint
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		return func(t *testing.T) {
+			grid := GetGrid(tc.srid)
+			sizex, sizey := grid.GridSize(tc.zoom)
+			if sizex != tc.expectedSizeX {
+				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), sizex, tc.expectedSizeX)
+			}
+			if sizey != tc.expectedSizeY {
+				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), sizey, tc.expectedSizeY)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"4326_zoom0": {
+			srid:          4326,
+			zoom:          0,
+			expectedSizeX: 2,
+			expectedSizeY: 1,
+		},
+		"3857_zoom0": {
+			srid:          3857,
+			zoom:          0,
+			expectedSizeX: 1,
+			expectedSizeY: 1,
+		},
+		"4326_zoom15": {
+			srid:          4326,
+			zoom:          15,
+			expectedSizeX: 65536,
+			expectedSizeY: 32768,
+		},
+		"3857_zoom15": {
+			srid:          3857,
+			zoom:          15,
+			expectedSizeX: 32768,
+			expectedSizeY: 32768,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+func TestTileGridContains(t *testing.T) {
+	type tcase struct {
+		srid     uint
+		zoom     uint
+		x        uint
+		y        uint
+		expected bool
+	}
+
+	fn := func(tc tcase) func(t *testing.T) {
+		grid := GetGrid(tc.srid)
+
+		return func(t *testing.T) {
+			output := grid.ContainsIndex(tc.zoom, tc.x, tc.y)
+
+			if output != tc.expected {
+				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"3857_zoom0_pass": {
+			srid:     3857,
+			zoom:     0,
+			x:        0,
+			y:        0,
+			expected: true,
+		},
+		"3857_zoom0_fail": {
+			srid:     3857,
+			zoom:     0,
+			x:        1,
+			y:        0,
+			expected: false,
+		},
+		"3857_zoom15_extent": {
+			srid:     3857,
+			zoom:     15,
+			x:        32767,
+			y:        32767,
+			expected: true,
+		},
+		"4326_zoom0_pass": {
+			srid:     4326,
+			zoom:     0,
+			x:        1,
+			y:        0,
+			expected: true,
+		},
+		"4326_zoom0_fail": {
+			srid:     4326,
+			zoom:     0,
+			x:        0,
+			y:        1,
+			expected: false,
+		},
+		"4326_zoom12_pass": {
+			srid:     4326,
+			zoom:     12,
+			x:        8191,
+			y:        4095,
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
 func TestLat2Tile(t *testing.T) {
 	type tcase struct {
 		lat      float64
@@ -14,8 +138,9 @@ func TestLat2Tile(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
+		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := Lat2Tile(tc.zoom, tc.lat, tc.srid)
+			output := grid.Lat2YIndex(tc.zoom, tc.lat)
 			if output != tc.expected {
 				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
 			}
@@ -99,8 +224,9 @@ func TestLon2Tile(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
+		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := Lon2Tile(tc.zoom, tc.lon, tc.srid)
+			output := grid.Lon2XIndex(tc.zoom, tc.lon)
 			if output != tc.expected {
 				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
 			}
@@ -184,8 +310,9 @@ func TestTile2Lon(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
+		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := Tile2Lon(tc.zoom, tc.x, tc.srid)
+			output := grid.XIndex2Lon(tc.zoom, tc.x)
 			if output != tc.expected {
 				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
 			}
@@ -257,8 +384,9 @@ func TestTile2Lat(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
+		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := Tile2Lat(tc.zoom, tc.y, tc.srid)
+			output := grid.YIndex2Lat(tc.zoom, tc.y)
 			outs := fmt.Sprintf("%.8f", output)
 			if outs != fmt.Sprintf("%.8f", tc.expected) {
 				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v) close enough", t.Name(), output, tc.expected)
