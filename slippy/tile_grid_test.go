@@ -129,7 +129,7 @@ func TestTileGridContains(t *testing.T) {
 	}
 }
 
-func TestLat2Tile(t *testing.T) {
+func TestLat2YIndex(t *testing.T) {
 	type tcase struct {
 		lat      float64
 		srid     uint
@@ -215,7 +215,7 @@ func TestLat2Tile(t *testing.T) {
 	}
 }
 
-func TestLon2Tile(t *testing.T) {
+func TestLon2XIndex(t *testing.T) {
 	type tcase struct {
 		lon      float64
 		srid     uint
@@ -301,7 +301,7 @@ func TestLon2Tile(t *testing.T) {
 	}
 }
 
-func TestTile2Lon(t *testing.T) {
+func TestXIndex2Lon(t *testing.T) {
 	type tcase struct {
 		x        uint
 		srid     uint
@@ -375,7 +375,7 @@ func TestTile2Lon(t *testing.T) {
 	}
 }
 
-func TestTile2Lat(t *testing.T) {
+func TestYIndex2Lat(t *testing.T) {
 	type tcase struct {
 		y        uint
 		srid     uint
