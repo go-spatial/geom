@@ -5,6 +5,7 @@ import (
 	"math"
 )
 
+// TileGrid contains the tile layout, including ability to get WGS84 coordinates for tile extents
 type TileGrid interface {
 	ContainsIndex(zoom, x, y uint) bool
 	GridSize(zoom uint) (x, y uint)

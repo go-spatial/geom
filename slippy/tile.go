@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/go-spatial/proj"
+
 	"errors"
 
 	"github.com/go-spatial/geom"
@@ -104,14 +106,30 @@ func (t Tile) ZXY() (uint, uint, uint) { return t.Z, t.X, t.Y }
 
 // Extent gets the extent of the tile in the units of the tileSRID
 func (t Tile) NativeExtent(tileSRID uint) *geom.Extent {
-	switch tileSRID {
-	case 3857:
-		return t.Extent3857(tileSRID)
-	case 4326:
-		return t.Extent4326(tileSRID)
-	default:
+	if _, ok := SupportedProjections[tileSRID]; !ok {
 		panic(fmt.Sprintf("unsupported tileSRID %v", tileSRID))
 	}
+
+	grid := GetGrid(tileSRID)
+	pts := []float64{grid.XIndex2Lon(t.Z, t.X), grid.YIndex2Lat(t.Z, t.Y+1), grid.XIndex2Lon(t.Z, t.X+1), grid.YIndex2Lat(t.Z, t.Y)}
+
+	// No need to go further, we've already got the WGS84 extents
+	if tileSRID == proj.WGS84 {
+		return geom.NewExtent(
+			[2]float64{pts[0], pts[1]},
+			[2]float64{pts[2], pts[3]},
+		)
+	}
+
+	pts, err := proj.Convert(proj.EPSGCode(tileSRID), pts)
+	if err != nil {
+		panic(fmt.Sprintf("error converting %v to %v", pts, tileSRID))
+	}
+
+	return geom.NewExtent(
+		[2]float64{pts[0], pts[1]},
+		[2]float64{pts[2], pts[3]},
+	)
 }
 
 // Extent3857 returns the tile's extent in EPSG:3857 (aka Web Mercator) projection
