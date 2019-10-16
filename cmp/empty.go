@@ -45,25 +45,58 @@ func IsEmptyGeo(geo geom.Geometry) (isEmpty bool, err error) {
 	case [2]float64:
 		return IsEmptyPoint(g), nil
 
-	case geom.Pointer:
+	case geom.Point:
+		return IsEmptyPoint(g.XY()), nil
+
+	case *geom.Point:
+		if g == nil {
+			return true, nil
+		}
+
 		return IsEmptyPoint(g.XY()), nil
 
 	case [][2]float64:
 		return IsEmptyPoints(g), nil
 
-	case geom.MultiPointer:
+	case geom.MultiPoint:
 		return IsEmptyPoints(g.Points()), nil
 
-	case geom.LineStringer:
+	case *geom.MultiPoint:
+		if g == nil {
+			return true, nil
+		}
+
+		return IsEmptyPoints(g.Points()), nil
+
+	case geom.LineString:
 		return IsEmptyPoints(g.Verticies()), nil
 
-	case geom.MultiLineStringer:
+	case *geom.LineString:
+		if g == nil {
+			return true, nil
+		}
+		return IsEmptyPoints(g.Verticies()), nil
+
+	case geom.MultiLineString:
 		return IsEmptyLines(g.LineStrings()), nil
 
-	case geom.Polygoner:
+	case *geom.MultiLineString:
+		if g == nil {
+			return true, nil
+		}
+		return IsEmptyLines(g.LineStrings()), nil
+
+
+	case geom.Polygon:
 		return IsEmptyLines(g.LinearRings()), nil
 
-	case geom.MultiPolygoner:
+	case *geom.Polygon:
+		if g == nil {
+			return true, nil
+		}
+		return IsEmptyLines(g.LinearRings()), nil
+
+	case geom.MultiPolygon:
 		for _, v := range g.Polygons() {
 			if !IsEmptyLines(v) {
 				return false, nil
@@ -72,7 +105,20 @@ func IsEmptyGeo(geo geom.Geometry) (isEmpty bool, err error) {
 
 		return true, nil
 
-	case geom.Collectioner:
+	case *geom.MultiPolygon:
+		if g == nil {
+			return true, nil
+		}
+
+		for _, v := range g.Polygons() {
+			if !IsEmptyLines(v) {
+				return false, nil
+			}
+		}
+
+		return true, nil
+
+	case geom.Collection:
 		for _, v := range g.Geometries() {
 			isEmpty, err := IsEmptyGeo(v)
 			if err != nil {
@@ -84,6 +130,24 @@ func IsEmptyGeo(geo geom.Geometry) (isEmpty bool, err error) {
 		}
 
 		return true, nil
+
+	case *geom.Collection:
+		if g == nil {
+			return true, nil
+		}
+
+		for _, v := range g.Geometries() {
+			isEmpty, err := IsEmptyGeo(v)
+			if err != nil {
+				return false, err
+			}
+			if !isEmpty {
+				return false, nil
+			}
+		}
+
+		return true, nil
+
 	default:
 		return false, fmt.Errorf("unknown geometry %T", geo)
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 func Encode(w io.Writer, geo geom.Geometry) error {
-	return NewEncoder(w).Encode(geo)
+	return NewDefaultEncoder(w).Encode(geo)
 }
 
 func EncodeBytes(geo geom.Geometry) ([]byte, error) {
