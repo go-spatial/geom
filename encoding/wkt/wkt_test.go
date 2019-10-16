@@ -6,7 +6,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/arolek/p"
 	"github.com/go-spatial/geom"
 	gtesting "github.com/go-spatial/geom/testing"
 )
@@ -23,10 +22,7 @@ func TestEncode(t *testing.T) {
 			t.Parallel()
 
 			buf := &bytes.Buffer{}
-			enc := NewEncoder(buf)
-			enc.Strict = tc.Strict
-			enc.Precision = p.Int(6)
-			enc.Fmt = 'g'
+			enc := NewEncoder(buf, tc.Strict, 6, 'g')
 
 			gerr := enc.Encode(tc.Geom)
 			grep := buf.String()

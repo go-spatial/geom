@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"unicode"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
@@ -48,19 +49,10 @@ func (d *Decoder) unreadByte() error {
 // readWhitespace eats up the whitespace and returns
 // true iff any characters were read
 func (d *Decoder) readWhitespace() (bool, error) {
-	isSpace := func(b byte) bool {
-		return b == ' ' ||
-			b == '\t' ||
-			b == '\n' ||
-			b == '\f' ||
-			b == '\r' ||
-			b == '\v'
-	}
-
 	var b byte
 	var err error
 	read := false
-	for b, err = d.readByte(); isSpace(b) && err == nil; b, err = d.readByte() {
+	for b, err = d.readByte(); unicode.IsSpace(rune(b)) && err == nil; b, err = d.readByte() {
 		read = true
 	}
 
@@ -240,7 +232,6 @@ func (d *Decoder) readLines() ([][][2]float64, error) {
 		return nil, d.expected("(")
 	}
 
-
 	_, err = d.readWhitespace()
 	if err != nil {
 		return nil, err
@@ -305,7 +296,6 @@ func (d *Decoder) readPolys() ([][][][2]float64, error) {
 	if err != nil {
 		return nil, err
 	}
-
 
 	b, err = d.readByte()
 	if err != nil {
@@ -545,4 +535,3 @@ func NewDecoder(r io.Reader) *Decoder {
 		src: bufio.NewReader(r),
 	}
 }
-
