@@ -64,9 +64,9 @@ func getEllipsoidByName(name string) coord.Ellipsoid {
 		name = "WGS 84"
 	}
 	name = normalizeName(name)
-	for _, ellp := range knownEllipsoids {
-		if ellp.Name == name {
-			return ellp
+	for _, ellps := range knownEllipsoids {
+		if ellps.Name == name {
+			return ellps
 		}
 	}
 	panic(fmt.Sprintf("Unknown ellipsoid: %v", name))
