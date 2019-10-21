@@ -57,14 +57,27 @@ func PrepareGeo(geo geom.Geometry, tile *geom.Extent, pixelExtent float64) geom.
 			}
 		}
 		return mp
+	case *geom.MultiPolygon:
+		if g == nil {
+			return nil
+		}
+		var mp geom.MultiPolygon
+		for _, p := range g.Polygons() {
+			np := preparePolygon(p, tile, pixelExtent)
+			if len(np) > 0 {
+				mp = append(mp, np)
+			}
+		}
+		return &mp
 	}
 
 	return nil
 }
 
 func preparept(g geom.Point, tile *geom.Extent, pixelExtent float64) geom.Point {
-	px := int64((g.X() - tile.MinX()) / tile.XSpan() * pixelExtent)
-	py := int64((tile.MaxY() - g.Y()) / tile.YSpan() * pixelExtent)
+
+	px := (g.X() - tile.MinX()) / tile.XSpan() * pixelExtent
+	py := (tile.MaxY() - g.Y()) / tile.YSpan() * pixelExtent
 
 	return geom.Point{float64(px), float64(py)}
 }

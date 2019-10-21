@@ -2,6 +2,7 @@ package walker
 
 import (
 	"context"
+	"github.com/go-spatial/geom/encoding/wkt"
 	"log"
 
 	"github.com/go-spatial/geom"
@@ -90,7 +91,7 @@ func (w *Walker) MultiPolygon(ctx context.Context) (mplyg geom.MultiPolygon) {
 		seen[i] = true
 		plyg := w.PolygonForTriangle(ctx, i, seen)
 		if debug {
-			log.Println(i, " : got the following plyg ", plyg)
+			log.Printf(" %v : got the following plyg\n%v\n", i, wkt.MustEncode(geom.Polygon(plyg)))
 		}
 		if len(plyg) > 0 {
 			mplyg = append(mplyg, plyg)
@@ -122,8 +123,8 @@ func (w *Walker) RingForTriangle(ctx context.Context, idx int, seen map[int]bool
 	seen[idx] = true
 
 	// This tracks the start of the ring.
-	// The segment we are adding a point will be between the endpoint and the begining of the ring.
-	// This track the original begining of the ring.
+	// The segment we are adding a point will be between the endpoint and the beginning of the ring.
+	// This tracks the original beginning of the ring.
 	var headIdx int
 
 	rng = append(rng, w.Triangles[idx][:]...)
@@ -207,6 +208,7 @@ func (w *Walker) indexForEdge(p1, p2 [2]float64, defaultIdx int, seen map[int]bo
 func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64) {
 	if debug {
 		log.Printf("turn ring into polygon.")
+		log.Printf("ring: %v", wkt.MustEncode(rng))
 	}
 
 	if len(rng) <= 2 {
@@ -275,12 +277,16 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 			delete(ptIndex, rng[pidx])
 
 			sliver := cut(&rng, pidx, nidx)
-			// remove ther start ab
+			// remove the start ab
 			sliver = sliver[2:]
 			if len(sliver) >= 3 { // make a copy to free up memory.
 				ps := make([][2]float64, len(sliver))
 				copy(ps, sliver)
 				cmp.RotateToLeftMostPoint(ps)
+				if debug {
+					log.Printf("ring: %v", wkt.MustEncode(rng))
+					log.Printf("sliver: %v", wkt.MustEncode(sliver))
+				}
 				plyg = append(plyg, ps)
 			}
 
@@ -296,11 +302,26 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 		// ab … bc The sliver is going to be from b … just before b. So, the ring will be …abc… or …ac… depending on removeB
 		if debug {
 			log.Printf("bubble type ab…bc: (% 5v)(% 5v) … (% 5v)(% 5v) == %t", pidx, idx, i, nidx, removeB)
+			log.Printf("ab..bc: [%v][%v]..[%v][%v]",
+				wkt.MustEncode(geom.Point(rng[pidx])),
+				wkt.MustEncode(geom.Point(rng[idx])),
+				wkt.MustEncode(geom.Point(rng[i])),
+				wkt.MustEncode(geom.Point(rng[nidx])),
+			)
+			log.Printf("%v , %v",
+				wkt.MustEncode(geom.Point(rng[i])),
+				wkt.MustEncode(geom.Line{rng[pidx], rng[nidx]}),
+			)
 		}
 
-		sliver := cut(&rng, idx, i)
+		sliver := removeBridge(cut(&rng, idx, i))
+
 		if len(sliver) >= 3 {
 			cmp.RotateToLeftMostPoint(sliver)
+			if debug {
+				log.Printf("ring: %v", wkt.MustEncode(rng))
+				log.Printf("sliver: %v", wkt.MustEncode(sliver))
+			}
 			plyg = append(plyg, sliver)
 		}
 

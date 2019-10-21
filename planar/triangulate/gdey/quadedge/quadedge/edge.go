@@ -1,8 +1,13 @@
 package quadedge
 
 import (
+	"context"
+	"fmt"
+	"log"
+
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/planar/intersect"
+	"github.com/go-spatial/geom/windingorder"
 )
 
 const (
@@ -115,7 +120,7 @@ func (e *Edge) ONext() *Edge {
 	return e.next
 }
 
-// OPrev returns the next cw edge around (from) the origin of the currect edge.
+// OPrev returns the next cw edge around (from) the origin of the current edge.
 func (e *Edge) OPrev() *Edge {
 	return e.Rot().ONext().Rot()
 }
@@ -169,4 +174,247 @@ func (e *Edge) FindONextDest(dest geom.Point) *Edge {
 		}
 	}
 	return nil
+}
+
+// DumpAllEdges dumps all the edges as a multiline string
+func (e *Edge) DumpAllEdges() string {
+	var ml geom.MultiLineString
+
+	e.WalkAllONext(func(ee *Edge) bool {
+		ln := ee.AsLine()
+		ml = append(ml, [][2]float64{ln[0], ln[1]})
+		return true
+	})
+	str, err := wkt.EncodeString(ml)
+	if err != nil {
+		return err.Error()
+	}
+	return str
+}
+
+func (e *Edge) WalkAllOPrev(fn func(*Edge) (loop bool)) {
+	if !fn(e) {
+		return
+	}
+	cwe := e.OPrev()
+	for cwe != e {
+		if !fn(cwe) {
+			return
+		}
+		cwe = cwe.OPrev()
+	}
+
+	// for cwe := e.OPrev(); cwe != e && fn(cwe) ; cwe = e.OPrev(){}
+
+}
+func (e *Edge) WalkAllONext(fn func(*Edge) (loop bool)) {
+	if !fn(e) {
+		return
+	}
+	ccwe := e.ONext()
+	count := 0
+	for ccwe != e {
+		if !fn(ccwe) {
+			return
+		}
+		ccwe = ccwe.ONext()
+		count++
+		if count == 100 {
+			if debug {
+				panic("inifite loop")
+			} else {
+				log.Printf("infinite loop in WalkAllONext")
+				break
+			}
+		}
+	}
+}
+
+// IsEqual checks to see if the edges are the same
+func (e *Edge) IsEqual(e1 *Edge) bool {
+	if e == nil {
+		return e1 == nil
+	}
+
+	if e1 == nil {
+		return e == nil
+	}
+	// first let's get the edge numbers the same
+	return e == &e1.qe.e[e.num]
+}
+
+// Validate check to se if the edges in the edges are correctly
+// oriented
+func Validate(e *Edge) (err1 error) {
+
+	const radius = 10
+	var err ErrInvalid
+
+	el := e.Rot()
+	ed := el.Rot()
+	er := ed.Rot()
+
+	if ed.Sym() != e {
+		// The Sym of Sym should be self
+		err = append(err, "invalid Sym")
+	}
+	if ed != e.Sym() {
+		err = append(err, fmt.Sprintf("invalid Rot: left.Rot != e.Sym %p : %p", el, e.Sym()))
+	}
+	if er != el.Sym() {
+		err = append(err, fmt.Sprintf("invalid Rot: rot != e %p : %p", er, el.Sym()))
+	}
+
+	if e != el.InvRot() {
+		err = append(err, "invalid Rot: rot != esym.InvRot")
+	}
+
+	if len(err) != 0 {
+		return err
+	}
+
+	if e.Orig() == nil {
+		err = append(err, "expected edge to have origin")
+		return err
+	}
+
+	orig := *e.Orig()
+	seen := make(map[geom.Point]bool)
+	points := []geom.Point{}
+	e.WalkAllONext(func(ee *Edge) bool {
+		dest := ee.Dest()
+		if dest == nil {
+			err = append(err, "dest is nil")
+			return false
+		}
+		if ee.Orig() == nil {
+			err = append(err, "expected edge to have origin")
+			return false
+		}
+		if seen[*dest] {
+			err = append(err, "dest not unique")
+			err = append(err, ee.DumpAllEdges())
+			return false
+		}
+		seen[*ee.Dest()] = true
+		points = append(points, *ee.Dest())
+
+		if !cmp.GeomPointEqual(*ee.Orig(), orig) {
+			err = append(
+				err,
+				fmt.Sprintf(
+					"expected edge %v to have same origin %v instead of %v",
+					len(points), wkt.MustEncode(orig),
+					wkt.MustEncode(*ee.Orig()),
+				),
+			)
+		}
+		return true
+	})
+	if len(err) != 0 {
+		return err
+	}
+
+	if len(points) > 2 {
+
+		npoints := make([]geom.Point, len(points))
+		// First we need to turn all the points into segments
+		segs := make([]geom.Line, len(points))
+		xprdSum := 0.0
+
+		for j, i := len(points)-1, 0; i < len(points); j, i = i, i+1 {
+			segs[i] = geom.Line{points[j], points[i]}
+			lpt := [2]float64{
+				points[j][0] - orig[0],
+				points[j][1] - orig[1],
+			}
+			pt := [2]float64{
+				points[i][0] - orig[0],
+				points[i][1] - orig[1],
+			}
+
+			npoints[i] = geom.Point(pt)
+			xprdSum += sign(xprd(lpt, pt))
+		}
+
+		switch sign(xprdSum) {
+		case 0:
+			// All points are colinear to each other.
+			// Need to check winding order with original point
+			// not enough information just using the outer points, we need to include the origin
+			if !windingorder.OfGeomPoints(append(points, orig)...).IsCounterClockwise() {
+				err = append(err,
+					fmt.Sprintf("1. expected all points to be counter-clockwise: %v:%v\n%v",
+						wkt.MustEncode(orig),
+						wkt.MustEncode(points),
+						wkt.MustEncode(segs),
+					))
+			}
+		case -1: //counter-clockwise
+
+		case 1: // clockwise
+			err = append(err, fmt.Sprintf("2. expected all points to be counter-clockwise: %v:%v\n%v\n%v",
+				wkt.MustEncode(orig),
+				wkt.MustEncode(points),
+				wkt.MustEncode(segs),
+				e.DumpAllEdges(),
+			))
+
+		}
+
+		/*
+			// only need to do one test.
+			switch windingorder.OfGeomPoints(npoints...) {
+			case windingorder.CounterClockwise:
+				// do nothing
+			case windingorder.Collinear:
+				// not enough information just using the outer points, we need to include the origin
+				if !windingorder.OfGeomPoints(append(npoints, geom.Point{0,0})...).IsCounterClockwise() {
+					err = append(err,
+						fmt.Sprintf("1. expected all points to be counter-clockwise: %v:%v\n%v",
+							wkt.MustEncode(orig),
+							wkt.MustEncode(points),
+							wkt.MustEncode(segs),
+						))
+				}
+			case windingorder.Clockwise:
+				err = append(err, fmt.Sprintf("2. expected all points to be counter-clockwise: %v:%v\n%v\n%v",
+					wkt.MustEncode(orig),
+					wkt.MustEncode(points),
+					wkt.MustEncode(segs),
+					e.DumpAllEdges(),
+				))
+			}
+		*/
+
+		// New we need to check that there are no self intersecting lines.
+		eq := intersect.NewEventQueue(segs)
+		eq.CMP = cmp
+		_ = eq.FindIntersects(
+			context.Background(),
+			true,
+			func(src, dest int, pt [2]float64) error {
+				// make sure the point is not an end point
+				gpt := geom.Point(pt)
+				if (cmp.GeomPointEqual(gpt, *segs[src].Point1()) || cmp.GeomPointEqual(gpt, *segs[src].Point2())) &&
+					(cmp.GeomPointEqual(gpt, *segs[dest].Point1()) || cmp.GeomPointEqual(gpt, *segs[dest].Point2())) {
+					return nil
+				}
+				// the second point in each segment should be the vertex we care about.
+				// this is because of the way we build up the segments above.
+				err = append(err,
+					fmt.Sprintf("found self interstion for vertices %v and %v",
+						wkt.MustEncode(*segs[src].Point2()),
+						wkt.MustEncode(*segs[dest].Point2()),
+					),
+				)
+				return err
+			},
+		)
+	}
+
+	if len(err) == 0 {
+		return nil
+	}
+	return err
 }
