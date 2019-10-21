@@ -1,6 +1,8 @@
 // Package geom describes geometry interfaces.
 package geom
 
+import "math"
+
 const Tolerance = 0.000001
 const BitTolerance = 4503599627
 
@@ -310,4 +312,17 @@ func IsEmpty(geo Geometry) bool {
 	default:
 		return true
 	}
+}
+
+// RoundToPrec will round the given value to the precision value.
+// The precision value should be a power of 10.
+func RoundToPrec(v float64, prec uint) float64 {
+	if v == -0.0 {
+		return 0.0
+	}
+	if prec == 0 {
+		return math.Round(v)
+	}
+	RoundingFactor := math.Pow10(int(prec))
+	return math.Round(v*RoundingFactor) / RoundingFactor
 }
