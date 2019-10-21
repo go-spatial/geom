@@ -93,7 +93,7 @@ func IsPointOnLineSegment(pt geom.Point, seg geom.Line) bool {
 // origin of the line
 func PointOnLineAt(ln geom.Line, distance float64) geom.Point {
 
-	lineDist := math.Sqrt(ln.LenghtSquared())
+	lineDist := math.Sqrt(ln.LengthSquared())
 	ratio := distance / lineDist
 	var x, y float64
 
