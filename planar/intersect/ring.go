@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
+	pkgcmp "github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
 )
 
@@ -12,6 +12,8 @@ type Ring struct {
 	segs          []geom.Line
 	index         *SearchSegmentIdxs
 	IncludeBorder bool
+
+	CMP pkgcmp.Compare
 
 	bbox geom.Extent
 }
@@ -31,6 +33,7 @@ func NewRing(segs []geom.Line) *Ring {
 	for i := range segs {
 		r.bbox.AddPoints(segs[i][0], segs[i][1])
 	}
+	r.CMP = pkgcmp.DefaultCompare()
 	return r
 }
 
@@ -71,6 +74,8 @@ func (r *Ring) ContainsPoint(pt [2]float64) bool {
 	if r == nil {
 		return false
 	}
+
+	cmp := r.CMP
 	if debug {
 		log.Printf("see of pt %+v is contained by ring: %+v ", pt, r.segs)
 	}

@@ -5,9 +5,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/go-spatial/geom/cmp"
-
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestSlope(t *testing.T) {
@@ -173,69 +172,6 @@ func TestIsPointOnLineSegment(t *testing.T) {
 	}
 }
 
-func TestIsCCW(t *testing.T) {
-	type tcase struct {
-		desc       string
-		p1, p2, p3 geom.Point
-		is         bool
-	}
-	fn := func(tc tcase) func(*testing.T) {
-		return func(t *testing.T) {
-			got := IsCCW(tc.p1, tc.p2, tc.p3)
-			if got != tc.is {
-				t.Errorf(
-					"%v:%v:%v, expected %v got %v",
-					tc.p1, tc.p2, tc.p3,
-					tc.is, got,
-				)
-				return
-			}
-		}
-	}
-
-	tests := []tcase{
-		{
-			p1: geom.Point{0, 0},
-			p2: geom.Point{1, 0},
-			p3: geom.Point{1, 1},
-			is: true,
-		},
-		{
-			p1: geom.Point{204, 694},
-			p2: geom.Point{-2511, -3640},
-			p3: geom.Point{3462, -3640},
-			is: true,
-		},
-		{
-			p2: geom.Point{204, 694},
-			p3: geom.Point{-2511, -3640},
-			p1: geom.Point{3462, -3640},
-			is: true,
-		},
-		{
-			p3: geom.Point{204, 694},
-			p1: geom.Point{-2511, -3640},
-			p2: geom.Point{3462, -3640},
-			is: true,
-		},
-		{
-			p1: geom.Point{-2511, -3640},
-			p2: geom.Point{204, 694},
-			p3: geom.Point{3462, -3640},
-			is: false,
-		},
-		{
-			p1: geom.Point{-2511, 3640},
-			p2: geom.Point{204, 694},
-			p3: geom.Point{3462, -3640},
-			is: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.desc, fn(tc))
-	}
-}
 func TestPointOnLineAt(t *testing.T) {
 
 	type tcase struct {

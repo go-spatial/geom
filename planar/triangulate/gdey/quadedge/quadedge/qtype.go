@@ -1,22 +1,28 @@
-package subdivision
+package quadedge
 
 import (
 	"fmt"
 
-	"github.com/go-spatial/geom/cmp"
-
 	"github.com/go-spatial/geom"
 )
 
+// QType describes the classification of a point to a line
 type QType uint
 
 const (
+	// LEFT indicates that the point is left of the line
 	LEFT = QType(iota)
+	// RIGHT indicates that the point is right of the line
 	RIGHT
+	// BEYOND indicates that the point is beyond the line
 	BEYOND
+	// BEHIND indicates that the point is behind the line
 	BEHIND
+	// BETWEEN indicates that the point is between the endpoints of the line
 	BETWEEN
+	// ORIGIN indicates that the point is at the origin of the line
 	ORIGIN
+	// DESTINATION indicates that the point is at the destination of the line
 	DESTINATION
 )
 
@@ -40,6 +46,19 @@ func (q QType) String() string {
 		return fmt.Sprintf("UNKNOWN(%v)", int(q))
 	}
 }
+
+/*
+func TestClassify(lbl string, a, b, c geometry.Point) QType {
+	lc := Classify(a, b, c)
+	log.Println(lbl, "a", a)
+	log.Println(lbl, lc)
+	va := quadedge.Vertex(geometry.UnwrapPoint(a))
+	vb := quadedge.Vertex(geometry.UnwrapPoint(b))
+	vc := quadedge.Vertex(geometry.UnwrapPoint(c))
+	log.Println(lbl, "geomvertex classify", va.Classify(vb, vc))
+	return lc
+}
+*/
 
 // Classify returns where b is in realation to a and c.
 func Classify(a, b, c geom.Point) QType {

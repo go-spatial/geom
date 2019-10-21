@@ -41,6 +41,7 @@ type event struct {
 type EventQueue struct {
 	events   []event
 	segments []geom.Line
+	CMP      cmp.Compare
 }
 
 func (e *event) Point() geom.Point { return e.ev }
@@ -96,11 +97,13 @@ func NewEventQueue(segments []geom.Line) (eq EventQueue) {
 			log.Printf("\t\t%03v:%v", i, seg)
 		}
 	}
+	eq.CMP = cmp.DefaultCompare()
 	return eq
 }
 
 func (eq *EventQueue) FindIntersects(ctx context.Context, connected bool, fn func(src, dest int, pt [2]float64) error) error {
 	segmap := make(map[int]struct{})
+	cmp := eq.CMP
 	keys := make([]int, 0, 2)
 	for _, ev := range eq.events {
 		if err := ctx.Err(); err != nil {

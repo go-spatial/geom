@@ -1,4 +1,4 @@
-package subdivision_test
+package quadedge_test
 
 import (
 	"strconv"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/internal/debugger"
-	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/subdivision"
+	"github.com/go-spatial/geom/planar/triangulate/gdey/quadedge/quadedge"
 )
 
 func init() {
@@ -17,11 +17,11 @@ func TestClassify(t *testing.T) {
 
 	type tcase struct {
 		a, b, c  geom.Point
-		expected subdivision.QType
+		expected quadedge.QType
 	}
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			got := subdivision.Classify(tc.a, tc.b, tc.c)
+			got := quadedge.Classify(tc.a, tc.b, tc.c)
 			if got != tc.expected {
 				t.Errorf("error, expected %v got %v", tc.expected, got)
 				return
@@ -34,43 +34,43 @@ func TestClassify(t *testing.T) {
 			a:        geom.Point{1.1, 2.5},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.RIGHT,
+			expected: quadedge.RIGHT,
 		},
 		{
 			a:        geom.Point{0.9, 2.5},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.LEFT,
+			expected: quadedge.LEFT,
 		},
 		{
 			a:        geom.Point{1, 1},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.BEHIND,
+			expected: quadedge.BEHIND,
 		},
 		{
 			a:        geom.Point{1, 4},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.BEYOND,
+			expected: quadedge.BEYOND,
 		},
 		{
 			a:        geom.Point{1, 2},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.ORIGIN,
+			expected: quadedge.ORIGIN,
 		},
 		{
 			a:        geom.Point{1, 3},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.DESTINATION,
+			expected: quadedge.DESTINATION,
 		},
 		{
 			a:        geom.Point{1, 2.5},
 			b:        geom.Point{1, 2},
 			c:        geom.Point{1, 3},
-			expected: subdivision.BETWEEN,
+			expected: quadedge.BETWEEN,
 		},
 	}
 	for i, tc := range testcases {

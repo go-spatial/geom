@@ -37,7 +37,7 @@ func Slope(line [2][2]float64) (m, b float64, defined bool) {
 	dy := line[1][1] - line[0][1]
 	if dx == 0 || dy == 0 {
 		// if dx == 0 then m == 0; and the intercept is y.
-		// However if the lines are verticle then the slope is not defined.
+		// However if the lines are vertical then the slope is not defined.
 		return 0, line[0][1], dx != 0
 	}
 	m = dy / dx
@@ -50,7 +50,7 @@ func IsPointOnLine(pt [2]float64, l1, l2 [2]float64) bool {
 	m, b, defined := Slope([2][2]float64{l1, l2})
 	switch {
 	case !defined:
-		// line is vertical, so if we the y values are the same it's on the line.
+		// line is vertical, so if we the x values are the same it's on the line.
 		return cmp.Float(pt[0], l1[0])
 	case m == 0:
 		// line is horizontal, so if the y values are the same it's on the line.
@@ -75,18 +75,7 @@ func IsPointOnLineSegment(pt geom.Point, seg geom.Line) bool {
 		// Outside the extent of the line
 		return false
 	}
-	// vertical line
-	if cmp.Float(minx, maxx) {
-		return minx == pt[0]
-	}
-	// horizontal line
-	if cmp.Float(miny, maxy) {
-		return miny == pt[1]
-	}
-
-	// Match the gradients
-	return cmp.Float((minx-pt[0])*(miny-pt[1]), (pt[0]-maxx)*(pt[1]-miny))
-
+	return IsPointOnLine(pt, seg[0], seg[1])
 }
 
 // PointOnLineAt will return a point on the given line at the distance from the
@@ -100,9 +89,4 @@ func PointOnLineAt(ln geom.Line, distance float64) geom.Point {
 	x = ln[0][0] + (ratio * (ln[1][0] - ln[0][0]))
 	y = ln[0][1] + (ratio * (ln[1][1] - ln[0][1]))
 	return geom.Point{x, y}
-}
-
-// IsCCW will check if the given points are in counter-clockwise order.
-func IsCCW(a, b, c geom.Point) bool {
-	return geom.Triangle{[2]float64(a), [2]float64(b), [2]float64(c)}.Area() > 0
 }

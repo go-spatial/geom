@@ -1,6 +1,8 @@
 package hitmap
 
 import (
+	"log"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/intersect"
@@ -8,8 +10,8 @@ import (
 
 func createSegments(ls [][2]float64, isClosed bool) (segs [][2][2]float64, err error) {
 	if len(ls) <= 1 {
+		log.Println("got an invalid linestring for hitmap: %v -- %v", ls, isClosed)
 		return nil, geom.ErrInvalidLineString
-
 	}
 	i := 0
 	for j := 1; j < len(ls); j++ {

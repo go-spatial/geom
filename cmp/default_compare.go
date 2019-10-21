@@ -1,8 +1,18 @@
 package cmp
 
 import (
+	"sync"
+
 	"github.com/go-spatial/geom"
 )
+
+// HiTolerance is a high tolerance for comparator
+const HiTolerance = 0.000000001
+
+// HiCMP is a high tolerance comparator
+var HiCMP = New(HiTolerance)
+
+var cmpLock sync.RWMutex
 
 // compare will have six digits of precision by default.
 // This is equivalent to :
@@ -11,6 +21,19 @@ var compare = Compare{
 	Tolerance: 0.000001,
 	// It was calculated as math.Float64bits(1.000001) - math.Float64bits(1.0)
 	BitTolerance: 4503599627,
+}
+
+// Default compare returns the current default compare
+func DefaultCompare() Compare { return compare }
+
+// SetDefault will set the default for the package.
+func SetDefault(cmp Compare) Compare {
+
+	cmpLock.Lock()
+	old := compare
+	compare = cmp
+	cmpLock.Unlock()
+	return old
 }
 
 // Tolerances returns the default tolerance values

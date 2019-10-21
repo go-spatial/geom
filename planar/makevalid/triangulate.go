@@ -4,34 +4,21 @@ import (
 	"context"
 	"log"
 
+	"github.com/go-spatial/geom/encoding/wkt"
+
 	qetriangulate "github.com/go-spatial/geom/planar/triangulate/gdey/quadedge"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
 )
 
-func pointsForSegments(segs []geom.Line) [][2]float64 {
-	seen := make(map[[2]float64]bool, len(segs))
-	points := make([][2]float64, len(segs)+2)
-	for i := range segs {
-		if !seen[segs[i][0]] {
-			points = append(points, segs[i][0])
-		}
-		seen[segs[i][0]] = true
-		if !seen[segs[i][1]] {
-			points = append(points, segs[i][1])
-		}
-		seen[segs[i][1]] = true
-	}
-	return points
-}
-
-func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
+func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
 	if debug {
 		log.Printf("Step   3 : generate triangles")
 	}
-	triangulator := qetriangulate.New(pointsForSegments(segs)...)
+	triangulator := qetriangulate.GeomConstrained{
+		Constraints: segs,
+	}
 	allTriangles, err := triangulator.Triangles(ctx, false)
 	if err != nil {
 		if debug {
@@ -57,7 +44,6 @@ func InsideTrianglesForGeometry(ctx context.Context, segs []geom.Line, hm planar
 		}
 		triangles = append(triangles, triangle)
 	}
-
 	if debug {
 		log.Printf("Step   4b: Inside Triangles:\n%v", wkt.MustEncode(triangles))
 	}

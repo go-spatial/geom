@@ -20,11 +20,11 @@ type makevalidCase struct {
 }
 
 // Segments returns the flattened segments of the MultiPolygon, on an error it will panic.
-func (mvc makevalidCase) Segments() (segments geom.MultiLineString) {
+func (mvc makevalidCase) Segments() (segments []geom.Line) {
 	if debug {
 		log.Printf("MakeValidTestCase Polygon: %+v", mvc.MultiPolygon)
 	}
-	segs, err := Destructure(context.Background(), nil, mvc.MultiPolygon)
+	segs, err := Destructure(context.Background(), cmp, nil, mvc.MultiPolygon)
 	if err != nil {
 		panic(err)
 	}
