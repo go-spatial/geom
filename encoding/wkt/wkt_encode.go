@@ -580,6 +580,15 @@ func (enc Encoder) NewEncoder(w io.Writer) Encoder {
 	return enc
 }
 
+// EncodeString is like Encode except it will return a string instead of encode to the internal io.Writer
+func (enc Encoder) EncodeString(geo geom.Geometry) (string, error) {
+	var str strings.Builder
+	if err := enc.NewEncoder(&str).encode(geo); err != nil {
+		return "", err
+	}
+	return str.String(), nil
+}
+
 // MustEncode is like Encode except it will panic if there is an error
 func (enc Encoder) MustEncode(geo geom.Geometry) string {
 	var str strings.Builder
