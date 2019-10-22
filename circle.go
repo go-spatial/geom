@@ -101,6 +101,7 @@ func (c Circle) ContainsPoint(pt [2]float64) bool {
 	// of the circle.
 	v1, v2 := c.Center[0]-pt[0], c.Center[1]-pt[1]
 	d := math.Sqrt((v1 * v1) + (v2 * v2))
+	d = round(d, 0.001)
 	return c.Radius >= d
 }
 
