@@ -579,13 +579,13 @@ func (sd *Subdivision) IsValid(ctx context.Context) bool {
 	}
 	_ = sd.WalkAllEdges(func(e *quadedge.Edge) error {
 		l := e.AsLine()
-		l2 := l.LenghtSquared()
+		l2 := l.LengthSquared()
 		if l2 == 0 {
 			count++
 			if debug {
 				debugger.Record(ctx,
 					l,
-					"ZeroLenght:Edge",
+					"ZeroLength:Edge",
 					"Line (%p) %v -- %v ", e, l2, l,
 				)
 			}

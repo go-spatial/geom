@@ -138,6 +138,17 @@ func (eq *EventQueue) FindIntersects(ctx context.Context, connected bool, fn fun
 		}
 		for _, edge := range keys {
 			seg1 := eq.segments[edge]
+			// we need to see if , the ipt is the endpoint of both lines, (it's a connecting point) and
+			// the polygonCheck is true, then it should not count as an intersect.
+			if connected {
+				// check to see if the end point of the segments are the same if they are we
+				// continue
+				matchStartPt := cmp.PointEqual(seg[0], seg1[0]) || cmp.PointEqual(seg[0], seg1[1])
+				matchEndPt := cmp.PointEqual(seg[1], seg1[0]) || cmp.PointEqual(seg[1], seg1[1])
+				if matchStartPt || matchEndPt {
+					continue
+				}
+			}
 
 			ipt, ok := planar.SegmentIntersect(seg, seg1)
 			if debug {
@@ -151,16 +162,6 @@ func (eq *EventQueue) FindIntersects(ctx context.Context, connected bool, fn fun
 			if !ok {
 				// Check the next edge.
 				continue
-			}
-			// we need to see if , the ipt is the endpoint of both lines, (it's a connecting point) and
-			// the polygonCheck is true, then it should not count as an intersect.
-			if connected {
-				matchseg := cmp.PointEqual(ipt, seg.Point1().XY()) || cmp.PointEqual(ipt, seg.Point2().XY())
-				matchseg1 := cmp.PointEqual(ipt, seg1.Point1().XY()) || cmp.PointEqual(ipt, seg1.Point2().XY())
-				// Check the next edge.
-				if matchseg && matchseg1 {
-					continue
-				}
 			}
 			if err := fn(edgeidx, edge, ipt); err != nil {
 				// We were told not to continue.

@@ -1,9 +1,10 @@
 package windingorder
 
 import (
+	"testing"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
-	"testing"
 )
 
 func TestAttributeMethods(t *testing.T) {
@@ -123,6 +124,11 @@ func TestOfPoints(t *testing.T) {
 			order: CounterClockwise,
 		},
 		{
+			Desc:  "not colinear",
+			pts:   [][2]float64{{20, 10}, {20, 0}, {0, 10}},
+			order: CounterClockwise,
+		},
+		{
 			pts:   [][2]float64{{0, 0}, {10, 0}, {0, 10}},
 			order: Clockwise,
 		},
@@ -203,7 +209,7 @@ func TestOfPoints(t *testing.T) {
 				{853.491, 1424.329},
 				{852.395, 1424.635},
 			},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			Desc: "edge_test initial good",

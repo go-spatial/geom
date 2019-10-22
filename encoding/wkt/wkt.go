@@ -23,6 +23,8 @@ func EncodeString(geo geom.Geometry) (string, error) {
 	return string(byt), err
 }
 
+// MustEncode will use the default encoder to encode the provided Geometry
+// if there is an error encoding the geometry, the function will panic.
 func MustEncode(geo geom.Geometry) string {
 	str, err := EncodeString(geo)
 	if err != nil {

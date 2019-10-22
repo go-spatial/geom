@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
@@ -13,14 +14,14 @@ import (
 // Encoder holds the necessary configurations and state for
 // a WKT Encoder
 type Encoder struct {
-	w io.Writer
-	fbuf []byte
-	strict bool
+	w         io.Writer
+	fbuf      []byte
+	strict    bool
 	precision int
-	fmt byte
+	fmt       byte
 }
 
-// NewEncoder creates a new encoder that writes to w using the
+// NewDefaultEncoder creates a new encoder that writes to w using the
 // defaults of strict = false, precision = 5, and fmt = 'g'.
 func NewDefaultEncoder(w io.Writer) Encoder {
 	return NewEncoder(w, false, 5, 'g')
@@ -46,11 +47,11 @@ func NewEncoder(w io.Writer, strict bool, precision int, fmt byte) Encoder {
 	// ddd.ddd with Precision+1 number of d's => Precision + 1 + 1
 	// d.ddde+xx with Precision+1 number of d's => Precision + 1 + 5
 	return Encoder{
-		w: w,
-		fbuf: make([]byte, 0, precision + 6),
-		strict: strict,
+		w:         w,
+		fbuf:      make([]byte, 0, precision+6),
+		strict:    strict,
 		precision: precision,
-		fmt: fmt,
+		fmt:       fmt,
 	}
 }
 
@@ -64,7 +65,6 @@ func (enc Encoder) string(s string) error {
 	_, err := enc.w.Write([]byte(s))
 	return err
 }
-
 
 func (enc Encoder) formatFloat(f float64) error {
 	buf := strconv.AppendFloat(enc.fbuf[:0], f, enc.fmt, enc.precision, 64)
@@ -141,14 +141,12 @@ func lastNonEmptyIdxPolys(polys [][][][2]float64) (last int) {
 	return -1
 }
 
-
 func (enc Encoder) encodePoints(mp [][2]float64, last int, gType byte) (err error) {
 
 	// the last encode point
 	var firstEnc *[2]float64
 	var lastEnc *[2]float64
 	var count int
-
 
 	for i, v := range mp[:last+1] {
 		// if the last point is the same as this point and
@@ -173,7 +171,7 @@ func (enc Encoder) encodePoints(mp [][2]float64, last int, gType byte) (err erro
 				case mPolyType:
 					return errors.New("cannot have empty points in strict MULTIPOLYGON")
 				default:
-					panic("unrechable")
+					panic("unreachable")
 				}
 			} else {
 				// multipoints can have empty points
@@ -217,10 +215,9 @@ func (enc Encoder) encodePoints(mp [][2]float64, last int, gType byte) (err erro
 
 	if (gType == polyType || gType == mPolyType) && count < 3 {
 		return fmt.Errorf("not enough points for linear ring of POLYGON %v", mp)
-	} else if (gType == lsType || gType == mlType) && count < 2{
+	} else if (gType == lsType || gType == mlType) && count < 2 {
 		return fmt.Errorf("not enough points for LINESTRING %v", mp)
 	}
-
 
 	// if we need to close the polygon/multipolygon
 	// and the value we encoded last isn't (already) the last
@@ -260,7 +257,7 @@ func (enc Encoder) encodeLines(lines [][][2]float64, last int, gType byte) error
 				// empty linestrings are allowed in multilines
 				break
 			default:
-				panic("unrechable")
+				panic("unreachable")
 			}
 		} else {
 			last = idx
@@ -284,13 +281,13 @@ func (enc Encoder) encodeLines(lines [][][2]float64, last int, gType byte) error
 				case polyType:
 					return errors.New("cannot have empty linear ring in strict POLYGON")
 				case mPolyType:
-					return errors.New("cannot have emtpy linear ring in strict MULTIPOLYGON")
+					return errors.New("cannot have empty linear ring in strict MULTIPOLYGON")
 				case mlType:
 					// empty linestrings are allowed in
 					// encodePoints writes EMPTY
 					break
 				default:
-					panic("unrechable")
+					panic("unreachable")
 				}
 			} else {
 				// empty linestrings are allowed in
@@ -301,7 +298,7 @@ func (enc Encoder) encodeLines(lines [][][2]float64, last int, gType byte) error
 			}
 		}
 
-		err := enc.encodePoints(v, len(v) - 1, gType)
+		err := enc.encodePoints(v, len(v)-1, gType)
 		if err != nil {
 			return err
 		}
@@ -312,7 +309,7 @@ func (enc Encoder) encodeLines(lines [][][2]float64, last int, gType byte) error
 		}
 	}
 
-	err = enc.encodePoints(lines[last], len(lines[last]) - 1, gType)
+	err = enc.encodePoints(lines[last], len(lines[last])-1, gType)
 	if err != nil {
 		return err
 	}
@@ -331,7 +328,7 @@ func (enc Encoder) encodePolys(polys [][][][2]float64, last int) error {
 	}
 
 	for _, v := range polys[:last] {
-		err = enc.encodeLines(v, len(v) - 1, mPolyType)
+		err = enc.encodeLines(v, len(v)-1, mPolyType)
 		if err != nil {
 			return err
 		}
@@ -342,7 +339,7 @@ func (enc Encoder) encodePolys(polys [][][][2]float64, last int) error {
 		}
 	}
 
-	err = enc.encodeLines(polys[last], len(polys[last]) - 1, mPolyType)
+	err = enc.encodeLines(polys[last], len(polys[last])-1, mPolyType)
 	if err != nil {
 		return err
 	}
@@ -383,7 +380,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return err
 		}
 
-		return enc.encodePoints(g.Points(), len(g) - 1, mpType)
+		return enc.encodePoints(g.Points(), len(g)-1, mpType)
 
 	case *geom.MultiPoint:
 		err := enc.string("MULTIPOINT ")
@@ -395,7 +392,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return enc.string("EMPTY")
 		}
 
-		return enc.encodePoints(g.Points(), len(*g) - 1, mpType)
+		return enc.encodePoints(g.Points(), len(*g)-1, mpType)
 
 	case geom.LineString:
 		err := enc.string("LINESTRING ")
@@ -403,7 +400,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return err
 		}
 
-		return enc.encodePoints(g, len(g) - 1, lsType)
+		return enc.encodePoints(g, len(g)-1, lsType)
 
 	case *geom.LineString:
 		err := enc.string("LINESTRING ")
@@ -415,7 +412,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return enc.string("EMPTY")
 		}
 
-		return enc.encodePoints(g.Verticies(), len(*g) - 1, lsType)
+		return enc.encodePoints(g.Verticies(), len(*g)-1, lsType)
 
 	case geom.MultiLineString:
 		err := enc.string("MULTILINESTRING ")
@@ -423,7 +420,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return err
 		}
 
-		return enc.encodeLines(g.LineStrings(), len(g) - 1, mlType)
+		return enc.encodeLines(g.LineStrings(), len(g)-1, mlType)
 
 	case *geom.MultiLineString:
 		err := enc.string("MULTILINESTRING ")
@@ -435,7 +432,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return enc.string("EMPTY")
 		}
 
-		return enc.encodeLines(g.LineStrings(), len(*g) - 1, mlType)
+		return enc.encodeLines(g.LineStrings(), len(*g)-1, mlType)
 
 	case geom.Polygon:
 		err := enc.string("POLYGON ")
@@ -443,7 +440,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return err
 		}
 
-		return enc.encodeLines(g.LinearRings(), len(g) - 1, polyType)
+		return enc.encodeLines(g.LinearRings(), len(g)-1, polyType)
 
 	case *geom.Polygon:
 		err := enc.string("POLYGON ")
@@ -455,7 +452,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return enc.string("EMPTY")
 		}
 
-		return enc.encodeLines(g.LinearRings(), len(*g) - 1, polyType)
+		return enc.encodeLines(g.LinearRings(), len(*g)-1, polyType)
 
 	case geom.MultiPolygon:
 		err := enc.string("MULTIPOLYGON ")
@@ -463,7 +460,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return err
 		}
 
-		return enc.encodePolys(g, len(g) - 1)
+		return enc.encodePolys(g, len(g)-1)
 
 	case *geom.MultiPolygon:
 		err := enc.string("MULTIPOLYGON ")
@@ -475,7 +472,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return enc.string("EMPTY")
 		}
 
-		return enc.encodePolys(g.Polygons(), len(*g) - 1)
+		return enc.encodePolys(g.Polygons(), len(*g)-1)
 
 	case geom.Collection:
 		if len(g) == 0 {
@@ -575,4 +572,30 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 // encoder's io.Writer and returns the first error it may have gotten.
 func (enc Encoder) Encode(geo geom.Geometry) error {
 	return enc.encode(geo)
+}
+
+// NewEncoder will clone the attributes of the current Encoder and swap out the writer
+func (enc Encoder) NewEncoder(w io.Writer) Encoder {
+	enc.w = w
+	return enc
+}
+
+// EncodeString is like Encode except it will return a string instead of encode to the internal io.Writer
+func (enc Encoder) EncodeString(geo geom.Geometry) (string, error) {
+	var str strings.Builder
+	if err := enc.NewEncoder(&str).encode(geo); err != nil {
+		return "", err
+	}
+	return str.String(), nil
+}
+
+// MustEncode is like Encode except it will panic if there is an error
+func (enc Encoder) MustEncode(geo geom.Geometry) string {
+	var str strings.Builder
+	e := enc.NewEncoder(&str)
+	err := e.encode(geo)
+	if err != nil {
+		panic(err)
+	}
+	return str.String()
 }

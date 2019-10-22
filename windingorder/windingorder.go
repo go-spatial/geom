@@ -3,8 +3,9 @@
 package windingorder
 
 import (
-	"github.com/go-spatial/geom"
 	"log"
+
+	"github.com/go-spatial/geom"
 )
 
 // WindingOrder is the clockwise direction of a set of points.
@@ -13,9 +14,9 @@ type WindingOrder uint8
 const (
 
 	// Clockwise indicates that the winding order is in the clockwise direction
-	Clockwise        WindingOrder = 0
+	Clockwise WindingOrder = 0
 	// Colinear indicates that the points are colinear to each other
-	Colinear         WindingOrder = 1
+	Colinear WindingOrder = 1
 	// CounterClockwise indicates that the winding order is in the counter clockwise direction
 	CounterClockwise WindingOrder = 2
 
@@ -65,16 +66,25 @@ func (w WindingOrder) Not() WindingOrder {
 // the y axis. If the y axis increase as you go up on the graph then clockwise will
 // be -1, otherwise it will be 1; vice versa for counter-clockwise.
 func Orient(pts ...[2]float64) int8 {
-	sum := 0.0
-	li := len(pts) - 1
 	if len(pts) < 3 {
 		return 0
 	}
-	for i := range pts[:li] {
-		sum += (pts[i][0] * pts[i+1][1]) - (pts[i+1][0] * pts[i][1])
-	}
+	var (
+		sum = 0.0
+		dop = 0.0
+		li  = len(pts) - 1
+	)
+
 	if debug {
-		log.Printf("sum: %v", sum)
+		log.Printf("pts: %v", pts)
+	}
+	for i := range pts {
+		dop = (pts[li][0] * pts[i][1]) - (pts[i][0] * pts[li][1])
+		sum += dop
+		if debug {
+			log.Printf("sum(%v,%v): %g  -- %g", li, i, sum, dop)
+		}
+		li = i
 	}
 	switch {
 	case sum == 0:
