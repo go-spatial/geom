@@ -316,13 +316,13 @@ func IsEmpty(geo Geometry) bool {
 
 // RoundToPrec will round the given value to the precision value.
 // The precision value should be a power of 10.
-func RoundToPrec(v float64, prec uint) float64 {
+func RoundToPrec(v float64, prec int) float64 {
 	if v == -0.0 {
 		return 0.0
 	}
 	if prec == 0 {
 		return math.Round(v)
 	}
-	RoundingFactor := math.Pow10(int(prec))
+	RoundingFactor := math.Pow10(prec)
 	return math.Round(v*RoundingFactor) / RoundingFactor
 }

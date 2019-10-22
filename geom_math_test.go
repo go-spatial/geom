@@ -12,7 +12,7 @@ func TestRoundToPrec(t *testing.T) {
 
 	type tcase struct {
 		Value    float64
-		Prec     uint
+		Prec     int
 		Expected float64
 	}
 	fn := func(tc tcase) func(*testing.T) {
