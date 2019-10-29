@@ -184,14 +184,23 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 		return nil, nil
 	}
 	if debug {
-		log.Printf("Step   2 : Convert segments to linestrings to use in triangleuation.")
+		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
 	}
 
 	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
 	if err != nil {
 		return nil, err
 	}
-	triangles, err := InsideTrianglesForGeometry(ctx, multipolygon, hm)
+	mlSegs, err := segs.AsSegments()
+	if err != nil {
+		return nil, err
+	}
+	lSegs := []geom.Line{}
+	for i := range mlSegs {
+		lSegs = append(lSegs, mlSegs[i]...)
+	}
+
+	triangles, err := InsideTrianglesForGeometry(ctx, lSegs, hm)
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}
