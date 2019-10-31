@@ -12,6 +12,7 @@ import (
 	pkgcmp "github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/intersect"
+	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 	"github.com/go-spatial/geom/planar/makevalid/walker"
 )
 
@@ -185,13 +186,11 @@ func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent,
 		log.Printf("Step   2a: %v", wkt.MustEncode(segs))
 	}
 
-	/*
-		hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
-		if err != nil {
-			return nil, err
-		}
-	*/
-	triangles, err := InsideTrianglesForSegments(ctx, segs, mv.Hitmap)
+	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
+	if err != nil {
+		return nil, err
+	}
+	triangles, err := InsideTrianglesForSegments(ctx, segs, hm)
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}
@@ -232,7 +231,7 @@ func (mv *Makevalid) Makevalid(ctx context.Context, geo geom.Geometry, clipbox *
 		return vmp, true, nil
 	case geom.MultiPolygoner:
 		if debug {
-			log.Printf("Working on MultiPolygoner: %v", geo)
+			log.Printf("Working on MultiPolygoner: \n%v", wkt.MustEncode(geo))
 		}
 		mp := geom.MultiPolygon(g.Polygons())
 		vmp, err := mv.makevalidPolygon(ctx, clipbox, &mp)

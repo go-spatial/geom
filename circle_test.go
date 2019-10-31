@@ -4,44 +4,50 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
-)
 
-const tolerance = geom.Tolerance
-const bitTolerance = geom.BitTolerance
+	cmppkg "github.com/go-spatial/geom/cmp"
+)
 
 func TestCircleFromPoints(t *testing.T) {
 	type tcase struct {
 		p      [3][2]float64
 		circle geom.Circle
 		err    error
+		cmp    *cmppkg.Compare
 	}
-	fn := func(t *testing.T, tc tcase) {
-		circle, err := geom.CircleFromPoints(tc.p[0], tc.p[1], tc.p[2])
-		if (tc.err != nil && err == nil) || (tc.err == nil && err != nil) {
-			t.Errorf("error, expected %v got %v", tc.err, err)
-			return
+	fn := func(tc tcase) func(*testing.T) {
+		cmp := cmppkg.DefaultCompare()
+		if tc.cmp != nil {
+			cmp = *tc.cmp
 		}
-		if tc.err != nil {
-			if tc.err != err {
+		return func(t *testing.T) {
+
+			circle, err := geom.CircleFromPoints(tc.p[0], tc.p[1], tc.p[2])
+			if (tc.err != nil && err == nil) || (tc.err == nil && err != nil) {
 				t.Errorf("error, expected %v got %v", tc.err, err)
+				return
 			}
-			return
-		}
+			if tc.err != nil {
+				if tc.err != err {
+					t.Errorf("error, expected %v got %v", tc.err, err)
+				}
+				return
+			}
 
-		if !cmp.Float64(circle.Radius, tc.circle.Radius, tolerance, bitTolerance) {
-			t.Errorf("circle radius, expected %v got %v", tc.circle, circle)
-			return
-		}
+			if !cmp.Float(circle.Radius, tc.circle.Radius) {
+				t.Errorf("circle radius, expected %v got %v", tc.circle, circle)
+				return
+			}
 
-		if !cmp.Float64(circle.Center[0], tc.circle.Center[0], tolerance, bitTolerance) {
-			t.Errorf("circle x, expected %v got %v", tc.circle, circle)
-			return
-		}
+			if !cmp.Float(circle.Center[0], tc.circle.Center[0]) {
+				t.Errorf("circle x, expected %v got %v", tc.circle, circle)
+				return
+			}
 
-		if !cmp.Float64(circle.Center[1], tc.circle.Center[1], tolerance, bitTolerance) {
-			t.Errorf("circle y, expected %v got %v", tc.circle, circle)
-			return
+			if !cmp.Float(circle.Center[1], tc.circle.Center[1]) {
+				t.Errorf("circle y, expected %v got %v", tc.circle, circle)
+				return
+			}
 		}
 	}
 
@@ -72,7 +78,6 @@ func TestCircleFromPoints(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

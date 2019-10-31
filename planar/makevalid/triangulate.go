@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-spatial/geom/encoding/wkt"
 
-	qetriangulate "github.com/go-spatial/geom/planar/triangulate/gdey/quadedge"
+	"github.com/go-spatial/geom/planar/triangulate/delaunay"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
@@ -16,7 +16,7 @@ func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar
 	if debug {
 		log.Printf("Step   3 : generate triangles")
 	}
-	triangulator := qetriangulate.GeomConstrained{
+	triangulator := delaunay.GeomConstrained{
 		Constraints: segs,
 	}
 	allTriangles, err := triangulator.Triangles(ctx, false)
