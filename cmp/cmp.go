@@ -24,10 +24,10 @@ func BitToleranceFor(tol float64) int64 {
 // These are here for compability reasons
 
 // Tolerance is only here for compability reasons
-var Tolerance = compare.Tolerance
+var Tolerance = DefaultCompare().Tolerance
 
 // BitTolerance is only here for compability reasons
-var BitTolerance = compare.BitTolerance
+var BitTolerance = DefaultCompare().BitTolerance
 
 // Float64Slice compares two sets of float64 slices within the given tolerance.
 func Float64Slice(f1, f2 []float64, tolerance float64, bitTolerance int64) bool {

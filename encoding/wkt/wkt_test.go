@@ -12,10 +12,10 @@ import (
 
 func TestEncode(t *testing.T) {
 	type tcase struct {
-		Geom geom.Geometry
+		Geom   geom.Geometry
 		Strict bool
-		Rep  string
-		Err  error
+		Rep    string
+		Err    error
 	}
 	fn := func(tc tcase) (string, func(*testing.T)) {
 		return tc.Rep, func(t *testing.T) {
@@ -107,14 +107,14 @@ func TestEncode(t *testing.T) {
 				Err:  errors.New("not enough points for LINESTRING [[0 0] [NaN NaN]]"),
 			},
 			{
-				Geom: geom.LineString{{0, 0}, {10 , 10}, {math.NaN(), math.NaN()}},
+				Geom:   geom.LineString{{0, 0}, {10, 10}, {math.NaN(), math.NaN()}},
 				Strict: true,
-				Err:  errors.New("cannot have empty points in strict LINESTRING"),
+				Err:    errors.New("cannot have empty points in strict LINESTRING"),
 			},
 			{
-				Geom: geom.LineString{{0, 0}, {10 , 10}, {math.NaN(), math.NaN()}},
+				Geom:   geom.LineString{{0, 0}, {10, 10}, {math.NaN(), math.NaN()}},
 				Strict: false,
-				Rep: "LINESTRING (0 0,10 10)",
+				Rep:    "LINESTRING (0 0,10 10)",
 			},
 			{
 				Geom: geom.LineString{{10, 10}, {0, 0}},
@@ -143,17 +143,17 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTILINESTRING (EMPTY,EMPTY)",
 			},
 			{
-				Geom: geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {}},
+				Geom:   geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {}},
 				Strict: true,
-				Err:  errors.New("cannot have empty points in strict MULTILINESTRING"),
+				Err:    errors.New("cannot have empty points in strict MULTILINESTRING"),
 			},
 			{
 				Geom: geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {}},
-				Rep: "MULTILINESTRING ((0 0,1 1),EMPTY)",
+				Rep:  "MULTILINESTRING ((0 0,1 1),EMPTY)",
 			},
 			{
 				Geom: geom.MultiLineString{{{0, 0}, {1, 1}, {math.NaN(), math.NaN()}}, {{math.NaN(), math.NaN()}}},
-				Rep: "MULTILINESTRING ((0 0,1 1),EMPTY)",
+				Rep:  "MULTILINESTRING ((0 0,1 1),EMPTY)",
 			},
 			{
 				Geom: geom.MultiLineString{{{10, 10}}},
@@ -206,27 +206,27 @@ func TestEncode(t *testing.T) {
 				Rep:  "POLYGON EMPTY",
 			},
 			{
-				Geom: geom.Polygon{{}},
+				Geom:   geom.Polygon{{}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict POLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{}},
 				Rep:  "POLYGON EMPTY",
 			},
 			{
-				Geom: geom.Polygon{{}, {}},
+				Geom:   geom.Polygon{{}, {}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict POLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{}, {}},
-				Rep: "POLYGON EMPTY",
+				Rep:  "POLYGON EMPTY",
 			},
 			{
-				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
+				Geom:   geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict POLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {}},
@@ -245,44 +245,44 @@ func TestEncode(t *testing.T) {
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 			{
-				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
+				Geom:   geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict POLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}, {}},
-				Rep: "POLYGON ((10 10,11 11,12 12,10 10))",
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
+			},
+			{
+				Geom:   geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}},
+				Strict: true,
+				Err:    errors.New("cannot have empty points in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}},
-				Strict: true,
-				Err:  errors.New("cannot have empty points in strict POLYGON"),
-			},
-			{
-				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}, {math.NaN(), math.NaN()}}},
-				Rep: "POLYGON ((10 10,11 11,12 12,10 10))",
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {22, 22}}},
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10),(20 20,21 21,22 22,20 20))",
 			},
 			{
-				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {math.NaN(), math.NaN()}, {22, 22}}},
+				Geom:   geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {math.NaN(), math.NaN()}, {22, 22}}},
 				Strict: true,
-				Err:  errors.New("cannot have empty points in strict POLYGON"),
+				Err:    errors.New("cannot have empty points in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{{10, 10}, {11, 11}, {12, 12}}, {{20, 20}, {21, 21}, {math.NaN(), math.NaN()}, {22, 22}}},
 				Rep:  "POLYGON ((10 10,11 11,12 12,10 10),(20 20,21 21,22 22,20 20))",
 			},
 			{
-				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
+				Geom:   geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict POLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict POLYGON"),
 			},
 			{
 				Geom: geom.Polygon{{}, {{10, 10}, {11, 11}, {12, 12}}},
-				Rep: "POLYGON ((10 10,11 11,12 12,10 10))",
+				Rep:  "POLYGON ((10 10,11 11,12 12,10 10))",
 			},
 		},
 		"MultiPolygon": {
@@ -299,40 +299,40 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTIPOLYGON (EMPTY)",
 			},
 			{
-				Geom: &geom.MultiPolygon{{{}}},
+				Geom:   &geom.MultiPolygon{{{}}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
 			},
 			{
 				Geom: &geom.MultiPolygon{{{}}},
-				Rep: "MULTIPOLYGON (EMPTY)",
+				Rep:  "MULTIPOLYGON (EMPTY)",
 			},
 			{
 				Geom: &geom.MultiPolygon{{}, {}},
 				Rep:  "MULTIPOLYGON (EMPTY,EMPTY)",
 			},
 			{
-				Geom: &geom.MultiPolygon{{{}}, {}},
+				Geom:   &geom.MultiPolygon{{{}}, {}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
 			},
 			{
 				Geom: &geom.MultiPolygon{{{}}, {}},
-				Rep: "MULTIPOLYGON (EMPTY,EMPTY)",
+				Rep:  "MULTIPOLYGON (EMPTY,EMPTY)",
+			},
+			{
+				Geom:   &geom.MultiPolygon{{}, {{}}},
+				Strict: true,
+				Err:    errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
 			},
 			{
 				Geom: &geom.MultiPolygon{{}, {{}}},
-				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
+				Rep:  "MULTIPOLYGON (EMPTY,EMPTY)",
 			},
 			{
-				Geom: &geom.MultiPolygon{{}, {{}}},
-				Rep: "MULTIPOLYGON (EMPTY,EMPTY)",
-			},
-			{
-				Geom: &geom.MultiPolygon{{{}}, {{}}},
+				Geom:   &geom.MultiPolygon{{{}}, {{}}},
 				Strict: true,
-				Err: errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
+				Err:    errors.New("cannot have empty linear ring in strict MULTIPOLYGON"),
 			},
 			{
 				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {12, 12}}}},
@@ -351,9 +351,9 @@ func TestEncode(t *testing.T) {
 				Rep:  "MULTIPOLYGON (((10 10,11 11,12 12,10 10)))",
 			},
 			{
-				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {math.NaN(), math.NaN()}, {12, 12}}}},
+				Geom:   &geom.MultiPolygon{{{{10, 10}, {11, 11}, {math.NaN(), math.NaN()}, {12, 12}}}},
 				Strict: true,
-				Err:  errors.New("cannot have empty points in strict MULTIPOLYGON"),
+				Err:    errors.New("cannot have empty points in strict MULTIPOLYGON"),
 			},
 			{
 				Geom: &geom.MultiPolygon{{{{10, 10}, {11, 11}, {math.NaN(), math.NaN()}, {12, 12}}}},
@@ -447,6 +447,18 @@ func TestEncode(t *testing.T) {
 					geom.LineString{{11, 11}, {22, 22}},
 				},
 				Rep: "GEOMETRYCOLLECTION (POINT (10 10),LINESTRING (11 11,22 22))",
+			},
+		},
+		"MultiLine": {
+			{
+				Geom: []geom.Line{
+					{{0, 20}, {10, 0}},
+					{{0, 10}, {0, 20}},
+					{{0, 10}, {10, 0}},
+					{{10, 0}, {0, 0}},
+					{{0, 0}, {0, 10}},
+				},
+				Rep: "MULTILINESTRING ((0 20,10 0),(0 10,0 20),(0 10,10 0),(10 0,0 0),(0 0,0 10))",
 			},
 		},
 	}

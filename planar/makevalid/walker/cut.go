@@ -2,20 +2,21 @@ package walker
 
 import "fmt"
 
-func removeBridge(rng [][2]float64)  [][2]float64 {
-	nrng := make([][2]float64,0,len(rng))
+// removeBridge is a quick hack to remove bridges that are getting left over
+func removeBridge(rng [][2]float64) [][2]float64 {
+	nrng := make([][2]float64, 0, len(rng))
 	addLst := true
-	for li,i := len(rng)-1,0; i < len(rng)-1;  {
+	for li, i := len(rng)-1, 0; i < len(rng)-1; {
 		if rng[li] == rng[i+1] {
 			li, i = i+1, i+2
 			addLst = i != len(rng)
 			continue
 		}
-		nrng = append(nrng,rng[i])
+		nrng = append(nrng, rng[i])
 		li, i = i, i+1
 	}
 	if addLst {
-		nrng = append(nrng,rng[len(rng)-1])
+		nrng = append(nrng, rng[len(rng)-1])
 	}
 	return nrng
 }

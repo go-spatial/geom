@@ -1,7 +1,10 @@
 // Package geom describes geometry interfaces.
 package geom
 
-import "math"
+import (
+	"math"
+	"reflect"
+)
 
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
@@ -271,9 +274,16 @@ func ExtractLines(g Geometry) (lines []Line, err error) {
 	return lines, err
 }
 
+// helper function to check it the given interface is nil, or the
+// value store in it is nil
+func isNil(a interface{}) bool {
+	defer func() { recover() }()
+	return a == nil || reflect.ValueOf(a).IsNil()
+}
+
 // IsEmpty returns if the geometry represents an empty geometry
 func IsEmpty(geo Geometry) bool {
-	if geo == nil {
+	if isNil(geo) {
 		return true
 	}
 	switch g := geo.(type) {

@@ -24,7 +24,7 @@ func (d *Decoder) peekByte() (byte, error) {
 func (d *Decoder) readByte() (byte, error) {
 	b, err := d.src.ReadByte()
 	if err == io.EOF {
-		return b, d.syntaxErr("unexpected eof")
+		return b, d.syntaxErr("UNEXPECTED", "eof")
 	}
 
 	d.lastCol = d.col
@@ -73,18 +73,21 @@ func (d *Decoder) expected(chars string) error {
 		return err
 	}
 
-	return fmt.Errorf("syntax error (%d:%d): expected one of %q got %q",
-		d.row+1,
-		d.col+1,
+	return d.syntaxErr(
+		"expected",
+		"one of `%q` got %q",
 		chars,
-		b)
+		b,
+	)
 }
 
-func (d *Decoder) syntaxErr(format string, v ...interface{}) error {
-
-	err := fmt.Errorf("syntax error (%d:%d): "+format,
-		append([]interface{}{d.row + 1, d.col + 1}, v...)...)
-	return err
+func (d *Decoder) syntaxErr(errType string, format string, v ...interface{}) error {
+	return ErrSyntax{
+		Line:  d.row,
+		Char:  d.col,
+		Type:  errType,
+		Issue: fmt.Sprintf(format, v...),
+	}
 }
 
 func (d *Decoder) readFloat() (float64, error) {
@@ -114,7 +117,7 @@ func (d *Decoder) readFloat() (float64, error) {
 
 	ret, err := strconv.ParseFloat(string(token), 64)
 	if err != nil {
-		return 0, d.syntaxErr("cannot parse float %q", token)
+		return 0, d.syntaxErr("float", "cannot parse %q", token)
 	}
 	return ret, nil
 }
@@ -133,7 +136,7 @@ func (d *Decoder) readPoint() (pt [2]float64, err error) {
 		return pt, err
 	}
 	if !didRead {
-		return pt, d.expected("WHIESPACE")
+		return pt, d.expected("WHITESPACE")
 	}
 
 	pt[1], err = d.readFloat()
@@ -205,6 +208,12 @@ func (d *Decoder) readTag() (string, error) {
 
 	var err error
 	var b byte
+
+	_, err = d.readWhitespace()
+	if err != nil {
+		return "", err
+	}
+
 	for b, err = d.readByte(); isAlpha(b) && err == nil; b, err = d.readByte() {
 		// to lower
 		if b < 'a' {
@@ -360,11 +369,11 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 
 		switch len(pts) {
 		case 0:
-			return nil, d.syntaxErr("POINT cannot be empty")
+			return nil, d.syntaxErr("POINT", "cannot be empty")
 		case 1:
 			return geom.Point(pts[0]), nil
 		default:
-			return nil, d.syntaxErr("too many points in POINT, %d", len(pts))
+			return nil, d.syntaxErr("POINT", "too many points %d", len(pts))
 		}
 
 	case "multipoint":
@@ -382,7 +391,7 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		}
 
 		if len(pts) < 2 {
-			return nil, d.syntaxErr("not enough points in LINESTRING, %d", len(pts))
+			return nil, d.syntaxErr("LINESTRING", "not enough points %d", len(pts))
 		}
 
 		return geom.LineString(pts), nil
@@ -394,12 +403,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		}
 
 		if len(lines) < 1 {
-			return nil, d.syntaxErr("not enough lines in MULTILINESTRING, %d", len(lines))
+			return nil, d.syntaxErr("MULTILINESTRING", "not enough lines %d", len(lines))
 		}
 
 		for i, v := range lines {
 			if len(v) < 2 {
-				return nil, d.syntaxErr("not enough points in MULTILINESTRING[%d], %d", i, len(v))
+				return nil, d.syntaxErr("MULTILINESTRING", "not enough points in LINESTRING[%d], %d", i, len(v))
 			}
 		}
 
@@ -412,17 +421,17 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		}
 
 		if len(lines) < 1 {
-			return nil, d.syntaxErr("not enough lines in POLYGON, %d", len(lines))
+			return nil, d.syntaxErr("POLYGON", "not enough lines %d", len(lines))
 		}
 
 		for i, v := range lines {
 			if len(v) < 4 {
-				return nil, d.syntaxErr("not enough points in POLYGON[%d], %d", i, len(v))
+				return nil, d.syntaxErr("POLYGON", "not enough points in linear-ring[%d], %d", i, len(v))
 			}
 
 			// part of the spec
 			if !cmp.PointEqual(v[0], v[len(v)-1]) {
-				return nil, d.syntaxErr("first and last point of POLYGON[%d] not equal", i)
+				return nil, d.syntaxErr("POLYGON", "linear-ring[%d] not closed", i)
 			}
 
 			// part of go-spatial/geom convention
@@ -438,18 +447,18 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		}
 
 		if len(polys) < 1 {
-			return nil, d.syntaxErr("not enough polys in MULTIPOLYGON, %d", len(polys))
+			return nil, d.syntaxErr("MULTIPOLYGON", "not enough polygons %d", len(polys))
 		}
 
 		for ii, vv := range polys {
 			for i, v := range vv {
 				if len(v) < 4 {
-					return nil, d.syntaxErr("not enough points in MULTIPOLYGON[%d][%d], %d", ii, i, len(v))
+					return nil, d.syntaxErr("MULTIPOLYGON", "not enough points in polygon[%d] linear-ring[%d], %d", ii, i, len(v))
 				}
 
 				// part of the spec
 				if !cmp.PointEqual(v[0], v[len(v)-1]) {
-					return nil, d.syntaxErr("first and last point of POLYGON[%d] not equal", i)
+					return nil, d.syntaxErr("MULTIPOLYGON", "polygon[%d] linear-ring[%v] not closed", i, ii)
 				}
 
 				// part of go-spatial/geom convention
@@ -512,7 +521,7 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		}
 
 		if len(geoms) < 1 {
-			return nil, d.syntaxErr("not enough geoms in GEOMETRYCOLLECTION, %d", len(geoms))
+			return nil, d.syntaxErr("GEOMETRYCOLLECTION", "not enough geometries %d", len(geoms))
 		}
 
 		if b != ')' {
@@ -522,7 +531,7 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		return geoms, nil
 
 	default:
-		return nil, d.syntaxErr("unknown geometry type %q", tag)
+		return nil, d.syntaxErr("GEOMETRY", "unknown type %q", tag)
 	}
 }
 

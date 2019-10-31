@@ -22,9 +22,9 @@ type Encoder struct {
 }
 
 // NewDefaultEncoder creates a new encoder that writes to w using the
-// defaults of strict = false, precision = 5, and fmt = 'g'.
+// defaults of strict = false, precision = 10, and fmt = 'g'.
 func NewDefaultEncoder(w io.Writer) Encoder {
-	return NewEncoder(w, false, 5, 'g')
+	return NewEncoder(w, false, 10, 'g')
 }
 
 // NewEncoder creates a new encoder that writes to w
@@ -536,8 +536,8 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 
 	case []geom.Line:
 		lines := make(geom.MultiLineString, len(g))
-		for i, v := range g {
-			lines[i] = [][2]float64(v[:])
+		for i := range g {
+			lines[i] = [][2]float64(g[i][:])
 		}
 
 		return enc.encode(lines)
@@ -552,6 +552,14 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 
 	case geom.Triangle:
 		return enc.encode(geom.Polygon{g[:]})
+
+	case []geom.Triangle:
+		mp := make([][][][2]float64, len(g))
+		for i := range g {
+			mp[i] = [][][2]float64{g[i][:]}
+		}
+
+		return enc.encode(geom.MultiPolygon(mp))
 
 	case geom.Extent:
 		return enc.encode(g.AsPolygon())

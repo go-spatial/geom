@@ -54,7 +54,9 @@ func lineString(ctx context.Context, ls [][2]float64, clipbox *geom.Extent) (mls
 	}
 
 	if len(ls) == 1 {
-		log.Println("got an invalid linestring")
+		if debug {
+			log.Println("got an invalid linestring")
+		}
 		return geom.MultiLineString{}, geom.ErrInvalidLineString
 	}
 

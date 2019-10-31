@@ -63,7 +63,9 @@ func NewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, 
 		}
 		for j := range plys[i][1:] {
 			if len(plys[i][j+1]) == 0 {
-				log.Println("got an invalid linestring")
+				if debug {
+					log.Println("got an invalid linestring")
+				}
 				return nil, geom.ErrInvalidLineString
 			}
 			// plys we assume the first ring is inside, and all other rings are outside.

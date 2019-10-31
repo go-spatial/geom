@@ -143,8 +143,8 @@ func TestNewFromPolygon(t *testing.T) {
 	tests := map[string]tcase{
 		"Nil Polygon":                 {polygon: nil},
 		"Basic Polygon":               {polygon: geom.Polygon{}},
-		"With one nil":                {polygon: geom.Polygon{nil}, err: geom.ErrInvalidLineString},
-		"With one empty line":         {polygon: geom.Polygon{[][2]float64{}}, err: geom.ErrInvalidLineString},
+		"With one nil":                {polygon: geom.Polygon{nil}},
+		"With one empty line":         {polygon: geom.Polygon{[][2]float64{}}},
 		"With one one non-empty line": {polygon: geom.Polygon{[][2]float64{{10, 10}, {20, 10}, {20, 20}, {10, 20}}}},
 	}
 	for name, tc := range tests {

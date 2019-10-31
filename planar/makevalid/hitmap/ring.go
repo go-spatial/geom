@@ -10,7 +10,9 @@ import (
 
 func createSegments(ls [][2]float64, isClosed bool) (segs [][2][2]float64, err error) {
 	if len(ls) <= 1 {
-		log.Println("got an invalid linestring for hitmap: %v -- %v", ls, isClosed)
+		if debug {
+			log.Printf("got an invalid linestring for hitmap: %v -- %v", ls, isClosed)
+		}
 		return nil, geom.ErrInvalidLineString
 	}
 	i := 0
