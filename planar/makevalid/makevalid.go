@@ -163,40 +163,22 @@ func unique(segs []geom.Line) {
 }
 
 func (mv *Makevalid) makevalidPolygon(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon) (*geom.MultiPolygon, error) {
-	if debug {
-		log.Printf("*Step  1 : Destructure the geometry into segments w/ the clipbox applied.")
-	}
-	segs, err := Destructure(ctx, cmp, clipbox, multipolygon)
-	if err != nil {
-		if debug {
-			log.Printf("Destructure returned err %v", err)
-		}
-		return nil, err
-	}
-	if len(segs) == 0 {
-		if debug {
-			log.Printf("Step   1a: Segments are zero.")
-			log.Printf("\t multiPolygon: %+v", multipolygon)
-			log.Printf("\n clipbox:      %+v", clipbox)
-		}
-		return nil, nil
-	}
-	if debug {
-		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
-		log.Printf("Step   2a: %v", wkt.MustEncode(segs))
-	}
-
 	hm, err := hitmap.NewFromPolygons(nil, (*multipolygon)...)
 	if err != nil {
 		return nil, err
 	}
-	triangles, err := InsideTrianglesForSegments(ctx, segs, hm)
+
+	triangles, err := InsideTrianglesForMultiPolygon(ctx, clipbox, multipolygon, hm)
+	if err != nil {
+		return nil, err
+	}
 	if debug {
 		log.Printf("Step   5 : generate multipolygon from triangles")
 	}
 	if len(triangles) == 0 {
 		return nil, nil
 	}
+
 	triWalker := walker.New(triangles)
 	mplygs := triWalker.MultiPolygon(ctx)
 
