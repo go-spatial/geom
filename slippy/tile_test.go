@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/go-spatial/proj"
+
 	"github.com/go-spatial/geom/spherical"
 
 	"reflect"
@@ -73,7 +75,7 @@ func TestNewTile(t *testing.T) {
 			x:      1,
 			y:      1,
 			buffer: 64,
-			srid:   3857,
+			srid:   proj.WebMercator,
 			eExtent: &geom.Extent{
 				-10018754.17, 0,
 				0, 10018754.17,
@@ -92,7 +94,7 @@ func TestNewTile(t *testing.T) {
 			x:      11436,
 			y:      26461,
 			buffer: 64,
-			srid:   3857,
+			srid:   proj.WebMercator,
 			eExtent: &geom.Extent{
 				-13044437.497219238996, 3856095.202393799,
 				-13043826.000993041, 3856706.6986199953,
@@ -210,6 +212,7 @@ func TestRangeFamilyAt(t *testing.T) {
 
 	type tcase struct {
 		tile     *slippy.Tile
+		tileSRID uint
 		zoomAt   uint
 		expected []coord
 	}
@@ -228,7 +231,7 @@ func TestRangeFamilyAt(t *testing.T) {
 		return func(t *testing.T) {
 
 			coordList := make([]coord, 0, len(tc.expected))
-			tc.tile.RangeFamilyAt(tc.zoomAt, func(tile *slippy.Tile) error {
+			tc.tile.RangeFamilyAt(tc.zoomAt, tc.tileSRID, func(tile *slippy.Tile, srid uint) error {
 				z, x, y := tile.ZXY()
 				c := coord{z, x, y}
 
@@ -253,8 +256,9 @@ func TestRangeFamilyAt(t *testing.T) {
 
 	testcases := map[string]tcase{
 		"children 1": {
-			tile:   slippy.NewTile(0, 0, 0),
-			zoomAt: 1,
+			tile:     slippy.NewTile(0, 0, 0),
+			tileSRID: proj.WebMercator,
+			zoomAt:   1,
 			expected: []coord{
 				{1, 0, 0},
 				{1, 0, 1},
@@ -263,8 +267,9 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"children 2": {
-			tile:   slippy.NewTile(8, 3, 5),
-			zoomAt: 10,
+			tile:     slippy.NewTile(8, 3, 5),
+			tileSRID: proj.WebMercator,
+			zoomAt:   10,
 			expected: []coord{
 				{10, 12, 20},
 				{10, 12, 21},
@@ -288,17 +293,46 @@ func TestRangeFamilyAt(t *testing.T) {
 			},
 		},
 		"parent 1": {
-			tile:   slippy.NewTile(1, 0, 0),
-			zoomAt: 0,
+			tile:     slippy.NewTile(1, 0, 0),
+			tileSRID: proj.WebMercator,
+			zoomAt:   0,
 			expected: []coord{
 				{0, 0, 0},
 			},
 		},
 		"parent 2": {
-			tile:   slippy.NewTile(3, 3, 5),
-			zoomAt: 1,
+			tile:     slippy.NewTile(3, 3, 5),
+			tileSRID: proj.WebMercator,
+			zoomAt:   1,
 			expected: []coord{
 				{1, 0, 1},
+			},
+		},
+		"parent 4326 1": {
+			tile:     slippy.NewTile(1, 3, 0),
+			tileSRID: 4326,
+			zoomAt:   0,
+			expected: []coord{
+				{0, 1, 0},
+			},
+		},
+		"parent 4326 2": {
+			tile:     slippy.NewTile(4, 31, 15),
+			tileSRID: 4326,
+			zoomAt:   1,
+			expected: []coord{
+				{1, 3, 1},
+			},
+		},
+		"children 4326": {
+			tile:     slippy.NewTile(2, 7, 3),
+			tileSRID: 4326,
+			zoomAt:   3,
+			expected: []coord{
+				{3, 14, 6},
+				{3, 15, 6},
+				{3, 14, 7},
+				{3, 15, 7},
 			},
 		},
 	}
@@ -310,14 +344,15 @@ func TestRangeFamilyAt(t *testing.T) {
 
 func TestNewTileMinMaxer(t *testing.T) {
 	type tcase struct {
-		mm   geom.MinMaxer
-		tile *slippy.Tile
+		mm       geom.MinMaxer
+		tile     *slippy.Tile
+		tileSRID uint
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 
-			tile := slippy.NewTileMinMaxer(tc.mm)
+			tile := slippy.NewTileMinMaxer(tc.mm, tc.tileSRID)
 			if !reflect.DeepEqual(tile, tc.tile) {
 				t.Errorf("tile, expected %v, got %v", tc.tile, tile)
 			}
@@ -330,11 +365,13 @@ func TestNewTileMinMaxer(t *testing.T) {
 			mm: spherical.Hull(
 				[2]float64{-179.0, 85.0},
 				[2]float64{179.0, -85.0}),
-			tile: slippy.NewTile(0, 0, 0),
+			tile:     slippy.NewTile(0, 0, 0),
+			tileSRID: proj.WebMercator,
 		},
 		"2": {
-			mm:   slippy.NewTile(15, 2, 98).Extent4326(3857),
-			tile: slippy.NewTile(15, 2, 98),
+			mm:       slippy.NewTile(15, 2, 98).Extent4326(3857),
+			tile:     slippy.NewTile(15, 2, 98),
+			tileSRID: proj.WebMercator,
 		},
 	}
 

@@ -1,12 +1,11 @@
 package slippy
 
 import (
+	"errors"
 	"fmt"
 	"math"
 
 	"github.com/go-spatial/proj"
-
-	"errors"
 
 	"github.com/go-spatial/geom"
 )
@@ -37,16 +36,14 @@ type Tile struct {
 // geom.MinMaxer. Note: it assumes the values of ext are
 // EPSG:4326 (lng/lat)
 //TODO (meilinger): we need this anymore?
-func NewTileMinMaxer(ext geom.MinMaxer) *Tile {
-	// Assumes tile srid of 3857
-	var tileSRID uint = 3857
+func NewTileMinMaxer(ext geom.MinMaxer, tileSRID uint) *Tile {
 	upperLeft := NewTileLatLon(MaxZoom, ext.MaxY(), ext.MinX(), tileSRID)
 	point := &geom.Point{ext.MaxX(), ext.MinY()}
 
 	var ret *Tile
 
 	for z := uint(MaxZoom); int(z) >= 0 && ret == nil; z-- {
-		upperLeft.RangeFamilyAt(z, func(tile *Tile) error {
+		upperLeft.RangeFamilyAt(z, tileSRID, func(tile *Tile, srid uint) error {
 			if tile.Extent4326(tileSRID).Contains(point) {
 				ret = tile
 				return errors.New("stop iter")
@@ -155,12 +152,13 @@ func (t Tile) Extent4326(tileSRID uint) *geom.Extent {
 
 // RangeFamilyAt calls f on every tile vertically related to t at the specified zoom
 // TODO (ear7h): sibling support
-func (t Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
+//TODO (meilinger): should this be part of TileGrid?
+func (t Tile) RangeFamilyAt(zoom, srid uint, f func(tile *Tile, srid uint) error) error {
 	// handle ancestors and self
 	if zoom <= t.Z {
 		mag := t.Z - zoom
 		arg := NewTile(zoom, t.X>>mag, t.Y>>mag)
-		return f(arg)
+		return f(arg, srid)
 	}
 
 	// handle descendants
@@ -172,7 +170,7 @@ func (t Tile) RangeFamilyAt(zoom uint, f func(*Tile) error) error {
 
 	for x := leastX; x < leastX+delta; x++ {
 		for y := leastY; y < leastY+delta; y++ {
-			err := f(NewTile(zoom, x, y))
+			err := f(NewTile(zoom, x, y), srid)
 			if err != nil {
 				return err
 			}
