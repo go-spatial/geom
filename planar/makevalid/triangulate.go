@@ -12,6 +12,7 @@ import (
 	"github.com/go-spatial/geom/planar"
 )
 
+// InsideTrianglesForSegments returns triangles that are painted as as inside triangles
 func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar.HitMapper) ([]geom.Triangle, error) {
 	if debug {
 		log.Printf("Step   3 : generate triangles")
@@ -49,4 +50,35 @@ func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar
 	}
 	return triangles, nil
 
+}
+
+// InsideTrianglesForMultiPolygon returns triangles that are painted as as inside triangles for the multipolygon
+func InsideTrianglesForMultiPolygon(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon, hm planar.HitMapper) ([]geom.Triangle, error) {
+	segs, err := Destructure(ctx, cmp, clipbox, multipolygon)
+	if err != nil {
+		if debug {
+			log.Printf("Destructure returned err %v", err)
+		}
+		return nil, err
+	}
+	if len(segs) == 0 {
+		if debug {
+			log.Printf("Step   1a: Segments are zero.")
+			log.Printf("\t multiPolygon: %+v", multipolygon)
+			log.Printf("\n clipbox:      %+v", clipbox)
+		}
+		return nil, nil
+	}
+	if debug {
+		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
+		log.Printf("Step   2a: %v", wkt.MustEncode(segs))
+	}
+	triangles, err := InsideTrianglesForSegments(ctx, segs, hm)
+	if err != nil {
+		return nil, err
+	}
+	if len(triangles) == 0 {
+		return nil, nil
+	}
+	return triangles, nil
 }

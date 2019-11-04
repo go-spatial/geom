@@ -45,3 +45,10 @@ func DecodeBytes(b []byte) (geo geom.Geometry, err error) {
 func DecodeString(s string) (geo geom.Geometry, err error) {
 	return Decode(strings.NewReader(s))
 }
+
+func MustDecode(geo geom.Geometry, err error) geom.Geometry {
+	if err != nil {
+		panic(err)
+	}
+	return geo
+}
