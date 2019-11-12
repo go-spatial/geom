@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-spatial/proj"
+
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/slippy"
 
@@ -132,7 +134,7 @@ func checkMakeValid(tb testing.TB) {
 			didClip: true,
 		},
 		"issue#70_full": {
-			ClipBox: slippy.NewTile(13, 8054, 2677).Extent3857().ExpandBy(64.0),
+			ClipBox: slippy.NewTile(13, 8054, 2677).Extent3857(proj.WebMercator).ExpandBy(64.0),
 			MultiPolygon: func() *geom.MultiPolygon {
 				b, err := ioutil.ReadFile(`testdata/issue70.polygon`)
 				if err != nil {
