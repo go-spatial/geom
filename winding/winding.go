@@ -96,7 +96,7 @@ func Orient(pts ...[2]float64) int8 {
 	}
 }
 
-// Orientation returns the clockwise orientation of the set of the points given the
+// Orientation returns the orientation of the set of the points given the
 // direction of the positive values of the y axis
 func Orientation(yPositiveDown bool, pts ...[2]float64) Winding {
 	mul := int8(1)
@@ -113,7 +113,7 @@ func Orientation(yPositiveDown bool, pts ...[2]float64) Winding {
 	}
 }
 
-// Order allows one to get the winding order of a set of points with or with an axis flip
+// Order configures how the orientation of a set of points is determined
 type Order struct {
 	YPositiveDown bool
 }
