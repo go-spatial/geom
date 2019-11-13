@@ -13,6 +13,7 @@ import (
 	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision/pseudopolygon"
+	"github.com/go-spatial/geom/winding"
 )
 
 func roundGeomPoint(pt geom.Point) geom.Point {
@@ -137,6 +138,7 @@ testcase:
 	pppc := PseudoPolygonPointCollector{
 		Start: start,
 		End:   end,
+		Order: sd.Order,
 	}
 
 	for i, e := range removalList {
@@ -283,7 +285,7 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 		return ErrInvalidEndVertex
 	}
 
-	newEdge := quadedge.Connect(from.ONext().Sym(), to)
+	newEdge := quadedge.Connect(from.ONext().Sym(), to, sd.Order)
 
 	if debug {
 		log.Printf("Connected : %v -> %v", from.ONext().Sym().AsLine(), to.AsLine())
@@ -300,6 +302,7 @@ type PseudoPolygonPointCollector struct {
 	seen        map[geom.Point]bool
 	Start       geom.Point
 	End         geom.Point
+	Order       winding.Order
 }
 
 // AddEdge will attempt to add the origin and dest points of the edge to the lower
@@ -394,7 +397,7 @@ func (pppc *PseudoPolygonPointCollector) Edges(upper bool) ([]geom.Line, error) 
 		return []geom.Line{pppc.SharedLine()}, nil
 	}
 
-	return pseudopolygon.Triangulate(pts)
+	return pseudopolygon.Triangulate(pts, pppc.Order)
 }
 
 func (pppc *PseudoPolygonPointCollector) debugRecord(ctx context.Context) {

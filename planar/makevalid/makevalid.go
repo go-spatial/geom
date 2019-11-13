@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/winding"
 
 	"github.com/go-spatial/geom"
 	pkgcmp "github.com/go-spatial/geom/cmp"
@@ -23,6 +24,7 @@ type Makevalid struct {
 	// Used to clip geometries that are not Polygon and MultiPolygons
 	Clipper planar.Clipper
 	CMP     pkgcmp.Compare
+	Order   winding.Order
 }
 
 // asSegments calls the AsSegments functions and flattens the array of segments that are returned.

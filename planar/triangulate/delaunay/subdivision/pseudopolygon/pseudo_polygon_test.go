@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-spatial/geom/winding"
+
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
 
 	"github.com/go-spatial/geom"
@@ -29,10 +31,13 @@ func TestTriangulate(t *testing.T) {
 		edges []geom.Line
 		err   error
 	}
+	order := winding.Order{
+		YPositiveDown: true,
+	}
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
 
-			edges, err := Triangulate(tc.points)
+			edges, err := Triangulate(tc.points, order)
 
 			if tc.err != nil {
 				if tc.err != err {
@@ -321,11 +326,14 @@ func TestTriangulateSubRings(t *testing.T) {
 		edges   []geom.Line
 		err     error
 	}
+	order := winding.Order{
+		YPositiveDown: true,
+	}
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 
-			points, edges, err := triangulateSubRings(tc.opoints)
+			points, edges, err := triangulateSubRings(tc.opoints, order)
 			if tc.err != err {
 				t.Errorf("error, expected %v got %v", tc.err, err)
 				return

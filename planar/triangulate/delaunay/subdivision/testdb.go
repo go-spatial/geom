@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/go-spatial/geom/winding"
+
 	"github.com/go-spatial/geom/planar"
 
 	"github.com/gdey/errors"
@@ -429,9 +431,17 @@ func (db *TestDB) Get(id int64) (*Subdivision, error) {
 	if err != nil {
 		return nil, err
 	}
+	order, err := db.Order(id)
+	if err != nil {
+		return nil, err
+	}
 
-	sd := NewSubdivisionFromGeomLines(lines)
+	sd := NewSubdivisionFromGeomLines(lines, order)
 	return sd, nil
+}
+
+func (db *TestDB) Order(_ int64) (winding.Order, error) {
+	return winding.Order{}, nil
 }
 
 // SubdivisionFrom will create a new subdivsion that is a subsection of

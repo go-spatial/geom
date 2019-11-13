@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/winding"
 )
 
 func TestFindONextDest(t *testing.T) {
@@ -101,11 +102,14 @@ func TestValidate(t *testing.T) {
 		edge *Edge
 		err  ErrInvalid
 	}
+	order := winding.Order{
+		YPositiveDown: true,
+	}
 	//const debug = true
 
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
-			e := Validate(tc.edge)
+			e := Validate(tc.edge, order)
 			err, _ := e.(ErrInvalid)
 			if len(err) != len(tc.err) {
 				t.Errorf("len(error), expected %v got %v", len(tc.err), len(err))
@@ -291,7 +295,6 @@ func TestValidate(t *testing.T) {
 				geom.Point{368, 117},
 			),
 			err: ErrInvalid{
-				"expected all points to be counter-clockwise: MULTIPOINT (384 112,384 112,372 114,376 119,368 117)",
 				"found self interstion for vertics POINT (376 119) and POINT (384 112)",
 			},
 		},

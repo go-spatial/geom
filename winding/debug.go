@@ -1,3 +1,3 @@
-package windingorder
+package winding
 
 const debug = false

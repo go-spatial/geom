@@ -10,10 +10,10 @@ import (
 
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/slippy"
+	"github.com/go-spatial/geom/winding"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
-	"github.com/go-spatial/geom/windingorder"
 )
 
 var runAll bool
@@ -47,6 +47,8 @@ func checkMakeValid(tb testing.TB) {
 		didClip              bool
 		skip                 string
 	}
+
+	order := winding.Order{}
 
 	fn := func(tc tcase) func(testing.TB) {
 		return func(t testing.TB) {
@@ -89,14 +91,14 @@ func checkMakeValid(tb testing.TB) {
 				if !geom.IsEmpty(tc.ExpectedMultiPolygon) {
 					for p, ply := range tc.ExpectedMultiPolygon.Polygons() {
 						for l, ln := range ply {
-							t.Logf("expected windorder %v:%v: %v", p, l, windingorder.OfPoints(ln...))
+							t.Logf("expected windorder %v:%v: %v", p, l, order.OfPoints(ln...))
 						}
 					}
 				}
 				if !geom.IsEmpty(mp) {
 					for p, ply := range mp.Polygons() {
 						for l, ln := range ply {
-							t.Logf("got      windorder %v:%v: %v", p, l, windingorder.OfPoints(ln...))
+							t.Logf("got      windorder %v:%v: %v", p, l, order.OfPoints(ln...))
 						}
 					}
 				}

@@ -8,6 +8,7 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
+	"github.com/go-spatial/geom/winding"
 )
 
 // AsGeom returns a geom based Triangle
@@ -22,7 +23,7 @@ func (t Triangle) AsGeom() (tri geom.Triangle) {
 // NewSubdivisionFromGeomLines returns a new subdivision made up of the given geom lines.
 // it is assume that all line are connected. If lines are disjointed that it is undefined
 // which disjointed subdivision will be returned
-func NewSubdivisionFromGeomLines(lines []geom.Line) *Subdivision {
+func NewSubdivisionFromGeomLines(lines []geom.Line, order winding.Order) *Subdivision {
 	lines = planar.NormalizeUniqueLines(lines)
 
 	var (
@@ -71,7 +72,7 @@ func NewSubdivisionFromGeomLines(lines []geom.Line) *Subdivision {
 
 		switch {
 		case oe != nil && de != nil:
-			eq = quadedge.Connect(oe.Sym(), de)
+			eq = quadedge.Connect(oe.Sym(), de, order)
 
 		case oe != nil && de == nil:
 			quadedge.Splice(oe, eq)

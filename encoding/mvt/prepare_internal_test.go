@@ -10,8 +10,8 @@ import (
 func TestPrepareLinestring(t *testing.T) {
 
 	type tcase struct {
-		in geom.LineString
-		out geom.LineString
+		in   geom.LineString
+		out  geom.LineString
 		tile geom.Extent
 	}
 
@@ -33,28 +33,38 @@ func TestPrepareLinestring(t *testing.T) {
 
 	tests := map[string]tcase{
 		"duplicate pt simple line": {
-			in: geom.LineString{{9.0, 4090.0}, {9.0, 4090.0}},
-			out: geom.LineString{{9.0, 6.0}, {9.0, 6.0}},
+			in:   geom.LineString{{9.0, 4090.0}, {9.0, 4090.0}},
+			out:  geom.LineString{},
+			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
+		},
+		"triplicate pt simple line": {
+			in:   geom.LineString{{9.0, 4090.0}, {9.0, 4090.0}, {9.0, 4090.0}},
+			out:  geom.LineString{},
+			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
+		},
+		"triplicate pt simple line1": {
+			in:   geom.LineString{{9.0, 4090.0}, {9.0, 4090.0}, {9.0, 4090.0}, {11.0, 4091.0}},
+			out:  geom.LineString{{9.0, 6.0}, {11.0, 5.0}},
 			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
 		},
 		"simple line": {
-			in: geom.LineString{{9.0, 4090.0}, {11.0, 4091.0}},
-			out: geom.LineString{{9.0, 6.0}, {11.0, 5.0}},
+			in:   geom.LineString{{9.0, 4090.0}, {11.0, 4091.0}},
+			out:  geom.LineString{{9.0, 6.0}, {11.0, 5.0}},
 			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
 		},
 		"edge line": {
-			in: geom.LineString{{0.0, 0.0}, {4096.0, 20.0}},
-			out: geom.LineString{{0.0, 4096.0}, {4096.0, 4076.0}},
+			in:   geom.LineString{{0.0, 0.0}, {4096.0, 20.0}},
+			out:  geom.LineString{{0.0, 4096.0}, {4096.0, 4076.0}},
 			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
 		},
 		"simple line 3pt": {
-			in: geom.LineString{{9.0, 4090.0}, {11.0, 4090.0}, {11.0, 4076.0}},
-			out: geom.LineString{{9.0, 6.0}, {11.0, 6.0}, {11.0, 20.0}},
+			in:   geom.LineString{{9.0, 4090.0}, {11.0, 4090.0}, {11.0, 4076.0}},
+			out:  geom.LineString{{9.0, 6.0}, {11.0, 6.0}, {11.0, 20.0}},
 			tile: geom.Extent{0.0, 0.0, 4096.0, 4096.0},
 		},
-		"scale" : {
-			in: geom.LineString{{100.0, 100.0}, {300.0, 300.0}},
-			out: geom.LineString{{1024.0, 3072.0}, {3072.0, 1024.0}},
+		"scale": {
+			in:   geom.LineString{{100.0, 100.0}, {300.0, 300.0}},
+			out:  geom.LineString{{1024.0, 3072.0}, {3072.0, 1024.0}},
 			tile: geom.Extent{0.0, 0.0, 400.0, 400.0},
 		},
 	}

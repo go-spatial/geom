@@ -3,6 +3,8 @@ package quadedge
 import (
 	"log"
 
+	"github.com/go-spatial/geom/winding"
+
 	"github.com/go-spatial/geom/planar"
 
 	"github.com/go-spatial/geom"
@@ -38,7 +40,7 @@ func Splice(a, b *Edge) {
 // origin of b, in such a way that all three have the same
 // left face after the connection is complete.
 // Additionally, the data pointers of the new edge are set.
-func Connect(a, b *Edge) *Edge {
+func Connect(a, b *Edge, order winding.Order) *Edge {
 	//const debug = true
 	if debug {
 		log.Printf("\n\n\tConnect\n\n")
@@ -60,7 +62,7 @@ func Connect(a, b *Edge) *Edge {
 	Splice(e.Sym(), bb)
 	if debug {
 		log.Printf("\n\n\tvalidate e:\n%v\n", e.DumpAllEdges())
-		if err := Validate(e); err != nil {
+		if err := Validate(e, order); err != nil {
 			if err1, ok := err.(ErrInvalid); ok {
 				for i, estr := range err1 {
 					log.Printf("err: %03v : %v", i, estr)
@@ -69,7 +71,7 @@ func Connect(a, b *Edge) *Edge {
 			log.Printf("Vertex Edges: %v", e.DumpAllEdges())
 		}
 		log.Printf("\n\n\tvalidate a:\n%v\n", a.DumpAllEdges())
-		if err := Validate(a); err != nil {
+		if err := Validate(a, order); err != nil {
 			if err1, ok := err.(ErrInvalid); ok {
 				for i, estr := range err1 {
 					log.Printf("err: %03v : %v", i, estr)
@@ -78,7 +80,7 @@ func Connect(a, b *Edge) *Edge {
 			log.Printf("Vertex Edges: %v", e.DumpAllEdges())
 		}
 		log.Printf("\n\n\tvalidate b:\n%v\n", b.DumpAllEdges())
-		if err := Validate(b); err != nil {
+		if err := Validate(b, order); err != nil {
 			if err1, ok := err.(ErrInvalid); ok {
 				for i, estr := range err1 {
 					log.Printf("err: %03v : %v", i, estr)

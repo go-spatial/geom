@@ -1,15 +1,40 @@
-package windingorder
+package winding
 
 import (
 	"testing"
 
+	"github.com/go-spatial/geom/cmp"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/testing/must"
 )
+
+func TestHelperMethods(t *testing.T) {
+	order := Order{}
+	val := order.Clockwise()
+	if val != Clockwise {
+		t.Errorf("clockwise, expected clockwise got %v", val)
+	}
+	val = order.CounterClockwise()
+	if val != CounterClockwise {
+		t.Errorf("counter clockwise, expected counter clockwise got %v", val)
+	}
+
+	val = order.Colinear()
+	if val != Colinear {
+		t.Errorf("colinear, expected colinear got %v", val)
+	}
+	val = order.Collinear()
+	if val != Colinear {
+		t.Errorf("collinear, expected colinear got %v", val)
+	}
+
+}
 
 func TestAttributeMethods(t *testing.T) {
 
-	fn := func(val WindingOrder) func(*testing.T) {
+	fn := func(val Winding) func(*testing.T) {
 		return func(t *testing.T) {
 
 			var (
@@ -66,7 +91,7 @@ func TestAttributeMethods(t *testing.T) {
 			}
 		}
 	}
-	tests := []WindingOrder{Clockwise, CounterClockwise, Colinear, 3}
+	tests := []Winding{Clockwise, CounterClockwise, Colinear, 3}
 	for i := range tests {
 		t.Run(tests[i].String(), fn(tests[i]))
 	}
@@ -76,12 +101,28 @@ func TestOfPoints(t *testing.T) {
 	type tcase struct {
 		Desc  string
 		pts   [][2]float64
-		order WindingOrder
+		order Winding
+	}
+	order := Order{
+		YPositiveDown: false,
 	}
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 
-			got := OfPoints(tc.pts...)
+			got := order.OfPoints(tc.pts...)
+			if got != tc.order {
+				t.Errorf("order.OfPoints, expected %v got %v", tc.order, got)
+				for i := range tc.pts {
+					str, err := wkt.EncodeString(geom.Point(tc.pts[i]))
+					if err != nil {
+						panic(err)
+					}
+					t.Logf("%03v:%v", i, str)
+				}
+				return
+			}
+
+			got = OfPoints(tc.pts...)
 			if got != tc.order {
 				t.Errorf("OfPoints, expected %v got %v", tc.order, got)
 				for i := range tc.pts {
@@ -99,13 +140,18 @@ func TestOfPoints(t *testing.T) {
 				points[i] = geom.Point(tc.pts[i])
 			}
 
+			got = order.OfGeomPoints(points...)
+			if got != tc.order {
+				t.Errorf("order.OfGeomPoints, expected %v got %v", tc.order, got)
+			}
+
 			got = OfGeomPoints(points...)
 			if got != tc.order {
 				t.Errorf("OfGeomPoints, expected %v got %v", tc.order, got)
 			}
 
 			// Test with yPostiveDown set to false
-			got = Orientation(false, tc.pts...)
+			got = Orientation(!order.YPositiveDown, tc.pts...)
 			if got != tc.order.Not() {
 				t.Errorf("Orientation y-false, expected %v got %v", tc.order.Not(), got)
 			}
@@ -233,5 +279,34 @@ func TestOfPoints(t *testing.T) {
 	}
 	for i := range tests {
 		t.Run(tests[i].Desc, fn(tests[i]))
+	}
+}
+
+func TestRectifyPolygon(t *testing.T) {
+	type tcase struct {
+		Polygon  geom.Polygon
+		Expected geom.Polygon
+	}
+	var order Order
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			got := order.RectifyPolygon([][][2]float64(tc.Polygon))
+			if !cmp.PolygonEqual(got, [][][2]float64(tc.Expected)) {
+				t.Errorf("polygon, expected: %v got %v", wkt.MustEncode(tc.Expected), wkt.MustEncode(geom.Polygon(got)))
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"#1": {
+			Polygon:  must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((0 0,0 10,10 0,0 0),(1 1,2 1,1 2,1 1),(1 1,1 2,1 3,1 1))`))),
+			Expected: must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((0 0,10 0,0 10,0 0),(1 1,1 2,2 1,1 1))`))),
+		},
+		"#2": {
+			Polygon: must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((1 1,1 2,1 3,1 1))`))),
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
 	}
 }
