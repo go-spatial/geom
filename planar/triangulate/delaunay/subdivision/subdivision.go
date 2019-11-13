@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/go-spatial/geom/planar/intersect"
+	"github.com/go-spatial/geom/winding"
 
 	"github.com/gdey/errors"
 
@@ -28,6 +29,7 @@ type Subdivision struct {
 
 	vertexIndexLock  sync.RWMutex
 	vertexIndexCache VertexIndex
+	Order            winding.Order
 }
 
 // New initialize a subdivision to the triangle defined by the points a,b,c.
@@ -235,7 +237,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		)
 	}
 
-	base = quadedge.Connect(e, base.Sym())
+	base = quadedge.Connect(e, base.Sym(), sd.Order)
 	// reset e
 	e = base.OPrev()
 	if debug {
@@ -255,7 +257,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 				wkt.MustEncode(base.Sym().AsLine()),
 			)
 		}
-		base = quadedge.Connect(e, base.Sym())
+		base = quadedge.Connect(e, base.Sym(), sd.Order)
 		e = base.OPrev()
 		if debug {
 			count++
@@ -379,7 +381,7 @@ func (sd *Subdivision) Validate(ctx context.Context) error {
 
 	if err := sd.WalkAllEdges(func(e *quadedge.Edge) error {
 		l := e.AsLine()
-		if err := quadedge.Validate(e); err != nil {
+		if err := quadedge.Validate(e, sd.Order); err != nil {
 			if verr, ok := err.(quadedge.ErrInvalid); ok {
 				wktStr, wktErr := wkt.EncodeString(l)
 				if wktErr != nil {

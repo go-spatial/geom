@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/go-spatial/geom/windingorder"
+	"github.com/go-spatial/geom/winding"
 
 	"github.com/go-spatial/geom/encoding/wkt"
 
@@ -58,6 +58,7 @@ func New(triangles []geom.Triangle) *Walker {
 type Walker struct {
 	Triangles []geom.Triangle
 	edgeMap   map[[2][2]float64][]int
+	Order     winding.Order
 }
 
 // EdgeMap returns a copy of the edgemap
@@ -107,39 +108,7 @@ func (w *Walker) MultiPolygon(ctx context.Context) (mplyg geom.MultiPolygon) {
 func (w *Walker) PolygonForTriangle(ctx context.Context, idx int, seen map[int]bool) (plyg [][][2]float64) {
 	// Get the external ring for the given triangle.
 	plyg4r := PolygonForRing(ctx, w.RingForTriangle(ctx, idx, seen))
-
-	reverse := func(idx int) {
-		for i := len(plyg[idx])/2 - 1; i >= 0; i-- {
-			opp := len(plyg[idx]) - 1 - i
-			plyg[idx][i], plyg[idx][opp] = plyg[idx][opp], plyg[idx][i]
-		}
-	}
-
-	plyg = make([][][2]float64, 0, len(plyg4r))
-	// Let's make sure each of the rings have the correct windingorder.
-
-	for i := range plyg4r {
-
-		wo := windingorder.OfPoints(plyg4r[i]...)
-
-		// Drop collinear rings
-		if wo == windingorder.Colinear {
-			if i == 0 {
-				return nil
-			}
-			continue
-		}
-
-		plyg = append(plyg, plyg4r[i])
-
-		if (i == 0 && wo != windingorder.Clockwise) || (i != 0 && wo != windingorder.CounterClockwise) {
-			// 0 ring should be clockwise.
-			// all others should be conterclockwise
-			// reverse the ring.
-			reverse(len(plyg) - 1)
-		}
-	}
-	return plyg
+	return w.Order.RectifyPolygon(plyg4r)
 }
 
 // RingForTriangle will walk the set of triangles starting at the given triangle index. As it walks the triangles it will

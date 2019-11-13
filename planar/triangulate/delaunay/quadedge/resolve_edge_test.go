@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/winding"
 )
 
 func findEdgeWithDest(e *Edge, dest geom.Point) *Edge {
@@ -29,6 +30,9 @@ func TestResolveEdge(t *testing.T) {
 		err          error
 		noValidation bool
 	}
+	order := winding.Order{
+		YPositiveDown: true,
+	}
 
 	fn := func(tc tcase) func(*testing.T) {
 
@@ -39,7 +43,7 @@ func TestResolveEdge(t *testing.T) {
 			)
 			// Validate our test case
 			if !tc.noValidation {
-				if err := Validate(edge); err != nil {
+				if err := Validate(edge, order); err != nil {
 					if e, ok := err.(ErrInvalid); ok {
 						for i, estr := range e {
 							t.Logf("err %03v: %v", i, estr)

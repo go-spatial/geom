@@ -7,10 +7,10 @@ import (
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar"
-	"github.com/go-spatial/geom/windingorder"
+	"github.com/go-spatial/geom/winding"
 )
 
-func triangulateSubRings(oPoints []geom.Point) (points []geom.Point, edges []geom.Line, err error) {
+func triangulateSubRings(oPoints []geom.Point, order winding.Order) (points []geom.Point, edges []geom.Line, err error) {
 
 	if debug {
 		log.Printf("Step-1: starting points(%v): %v", len(oPoints), wkt.MustEncode(oPoints))
@@ -46,7 +46,7 @@ func triangulateSubRings(oPoints []geom.Point) (points []geom.Point, edges []geo
 			// , but logically we should drop them. To drop them, uncomment the guard
 			// and modify test `multiple duplicated points`
 			//if len(npts) > 2 {
-			newEdges, err := Triangulate(npts)
+			newEdges, err := Triangulate(npts, order)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -72,14 +72,14 @@ func triangulateSubRings(oPoints []geom.Point) (points []geom.Point, edges []geo
 
 // Triangulate will return triangulated edges for the given polygon. The edges are not
 // guaranteed to be unique or normalized.
-func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
+func Triangulate(oPoints []geom.Point, order winding.Order) (edges []geom.Line, err error) {
 
 	if debug {
 		log.Printf("opoints:\n%v", wkt.MustEncode(oPoints))
 	}
 	var points []geom.Point
 
-	points, edges, err = triangulateSubRings(oPoints)
+	points, edges, err = triangulateSubRings(oPoints, order)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 		}, nil
 	}
 
-	if windingorder.OfGeomPoints(points...).IsColinear() {
+	if order.OfGeomPoints(points...).IsColinear() {
 		if debug {
 			log.Printf("Step 0: colinear starting points(%v): %v", len(points), wkt.MustEncode(points))
 		}
@@ -133,7 +133,7 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 
 	for i, candidate := range points[1:pe] {
 		d := planar.PointDistance(cpoint, candidate)
-		cln := windingorder.OfGeomPoints(points[ps], points[i+1], points[pe])
+		cln := order.OfGeomPoints(points[ps], points[i+1], points[pe])
 		if debug {
 			log.Printf("colin: %v -- %v %v %v", cln, points[ps], points[i+1], points[pe])
 			log.Printf("%v distance: %v < %v : %v / %v", i+1, d, dist, d < dist, cln)
@@ -193,7 +193,7 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 		log.Printf("p2: %v, len(points):%v", p2, len(points))
 	}
 
-	p2IsCol := windingorder.OfGeomPoints(points[ps], points[p2], points[pe]).IsColinear()
+	p2IsCol := order.OfGeomPoints(points[ps], points[p2], points[pe]).IsColinear()
 	if !p2IsCol && circle.ContainsPoint(points[p2]) {
 		// we need to "flip" our edge from p1 to p2.
 		//                a ← pe
@@ -300,7 +300,7 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 		}
 	}
 	// We now need to triangulate the pseudo-polygon
-	newEdges, err := Triangulate(ply)
+	newEdges, err := Triangulate(ply, order)
 	if err != nil {
 		log.Printf("Called Self(%v) with\n%v\n", len(ply), wkt.MustEncode(ply))
 		return nil, err
@@ -325,7 +325,7 @@ func Triangulate(oPoints []geom.Point) (edges []geom.Line, err error) {
 		}
 	}
 	// We now need to triangulate the pseudo-polygon
-	newEdges, err = Triangulate(ply)
+	newEdges, err = Triangulate(ply, order)
 	if err != nil {
 		if debug {
 			log.Printf("Called Self(%v) with\n%v\n", len(ply), wkt.MustEncode(ply))

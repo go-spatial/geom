@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
+	"github.com/go-spatial/geom/winding"
 )
 
 func TestNewSubdivisionFromGeomLines(t *testing.T) {
@@ -15,6 +16,10 @@ func TestNewSubdivisionFromGeomLines(t *testing.T) {
 		Skip  string
 	}
 
+	order := winding.Order{
+		YPositiveDown: true,
+	}
+
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 
@@ -22,7 +27,7 @@ func TestNewSubdivisionFromGeomLines(t *testing.T) {
 				t.Skip(tc.Skip)
 				return
 			}
-			sd := NewSubdivisionFromGeomLines(tc.Lines)
+			sd := NewSubdivisionFromGeomLines(tc.Lines, order)
 			if sd == nil {
 				t.Errorf("subdivision, expected not nil, got nil")
 				return

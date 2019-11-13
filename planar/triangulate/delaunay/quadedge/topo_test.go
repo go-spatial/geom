@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/winding"
 )
 
 func TestSplice(t *testing.T) {
@@ -13,10 +14,13 @@ func TestSplice(t *testing.T) {
 		b    *Edge
 		err  ErrInvalid
 	}
+	order := winding.Order{
+		YPositiveDown: true,
+	}
 	fn := func(tc tcase) (string, func(*testing.T)) {
 		return tc.Desc, func(t *testing.T) {
 			var err error
-			if err = Validate(tc.a); err != nil {
+			if err = Validate(tc.a, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -25,7 +29,7 @@ func TestSplice(t *testing.T) {
 				t.Errorf("validate on a: expected nil got %v", err)
 				return
 			}
-			if err = Validate(tc.b); err != nil {
+			if err = Validate(tc.b, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -41,7 +45,7 @@ func TestSplice(t *testing.T) {
 
 			Splice(tc.a.Sym(), tc.b)
 
-			if err := Validate(tc.a); err != nil {
+			if err := Validate(tc.a, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -50,7 +54,7 @@ func TestSplice(t *testing.T) {
 				}
 				t.Errorf("after splice validate on a: expected nil got %v", err)
 			}
-			if err := Validate(tc.b); err != nil {
+			if err := Validate(tc.b, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -96,10 +100,14 @@ func TestConnect(t *testing.T) {
 		err  ErrInvalid
 	}
 
+	order := winding.Order{
+		YPositiveDown: true,
+	}
+
 	fn := func(tc tcase) (string, func(*testing.T)) {
 		return tc.Name, func(t *testing.T) {
 			var err error
-			if err = Validate(tc.a); err != nil {
+			if err = Validate(tc.a, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -108,7 +116,7 @@ func TestConnect(t *testing.T) {
 				t.Errorf("validate on a: expected nil got %v", err)
 				return
 			}
-			if err = Validate(tc.b); err != nil {
+			if err = Validate(tc.b, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -122,9 +130,9 @@ func TestConnect(t *testing.T) {
 			tc.b, _ = ResolveEdge(tc.b, *tc.a.Orig())
 			t.Logf("Connecting a:%v to b: %v", wkt.MustEncode(tc.a.AsLine()), wkt.MustEncode(tc.b.AsLine()))
 
-			e := Connect(tc.a, tc.b)
+			e := Connect(tc.a, tc.b, order)
 
-			if err = Validate(tc.a); err != nil {
+			if err = Validate(tc.a, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -133,7 +141,7 @@ func TestConnect(t *testing.T) {
 				t.Errorf("validate on a: expected nil got %v", err)
 				return
 			}
-			if err = Validate(tc.b); err != nil {
+			if err = Validate(tc.b, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -142,7 +150,7 @@ func TestConnect(t *testing.T) {
 				t.Errorf("validate on b: expected nil got %v", err)
 				return
 			}
-			if err = Validate(e); err != nil {
+			if err = Validate(e, order); err != nil {
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)

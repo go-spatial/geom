@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar/intersect"
-	"github.com/go-spatial/geom/windingorder"
+	"github.com/go-spatial/geom/winding"
 )
 
 const (
@@ -245,7 +245,7 @@ func (e *Edge) IsEqual(e1 *Edge) bool {
 
 // Validate check to se if the edges in the edges are correctly
 // oriented
-func Validate(e *Edge) (err1 error) {
+func Validate(e *Edge, order winding.Order) (err1 error) {
 
 	const radius = 10
 	var err ErrInvalid
@@ -342,7 +342,7 @@ func Validate(e *Edge) (err1 error) {
 			// All points are colinear to each other.
 			// Need to check winding order with original point
 			// not enough information just using the outer points, we need to include the origin
-			if !windingorder.OfGeomPoints(append(points, orig)...).IsCounterClockwise() {
+			if !order.OfGeomPoints(append(points, orig)...).IsCounterClockwise() {
 				err = append(err,
 					fmt.Sprintf("1. expected all points to be counter-clockwise: %v:%v\n%v",
 						wkt.MustEncode(orig),
