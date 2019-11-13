@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sort"
 
+	"github.com/go-spatial/geom/encoding/wkt"
+
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar"
 )
@@ -39,10 +41,11 @@ func NewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, 
 		for i := range plys {
 			log.Printf("[% 3v] Polygons Rings:[% 3v]", i, len(plys[i]))
 			for j := range plys[i] {
-				log.Printf("\t[%v]Ring: %v", j, plys[i][j])
+				log.Printf("\t[%v]Ring: %v", j, wkt.MustEncode(geom.LineString(plys[i][j])))
 			}
 		}
 	}
+
 	for i := range plys {
 		if len(plys[i]) == 0 {
 			continue
@@ -63,10 +66,8 @@ func NewFromPolygons(clipbox *geom.Extent, plys ...[][][2]float64) (*PolygonHM, 
 		}
 		for j := range plys[i][1:] {
 			if len(plys[i][j+1]) == 0 {
-				if debug {
-					log.Println("got an invalid linestring")
-				}
-				return nil, geom.ErrInvalidLineString
+				// Empty cutout skip
+				continue
 			}
 			// plys we assume the first ring is inside, and all other rings are outside.
 			ring := NewRing(plys[i][j+1], planar.Outside)

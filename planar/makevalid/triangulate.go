@@ -70,7 +70,7 @@ func InsideTrianglesForMultiPolygon(ctx context.Context, clipbox *geom.Extent, m
 		return nil, nil
 	}
 	if debug {
-		log.Printf("Step   2 : Convert segments to linestrings to use in triangulation.")
+		log.Printf("Step   2 : Convert segments(%v) to linestrings to use in triangulation.", len(segs))
 		log.Printf("Step   2a: %v", wkt.MustEncode(segs))
 	}
 	triangles, err := InsideTrianglesForSegments(ctx, segs, hm)
