@@ -250,14 +250,14 @@ func (c *cursor) encodePolygon(geo geom.Polygon) []uint32 {
 	)
 	lines := geo.LinearRings()
 	for i := range lines {
-		// bail if number of points is less then two
+		// bail if number of points is less then or equal two
 		if len(lines[i]) <= 2 {
 			if i != 0 {
 				continue
 			}
 			return g
 		}
-		// when we flip the y our rotation get's inverted
+		// when we flip the y our rotation gets inverted
 		wo := winding.CounterClockwise
 		if i == 0 {
 			wo = winding.Clockwise

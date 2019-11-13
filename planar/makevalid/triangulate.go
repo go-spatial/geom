@@ -52,7 +52,7 @@ func InsideTrianglesForSegments(ctx context.Context, segs []geom.Line, hm planar
 
 }
 
-// InsideTrianglesForMultiPolygon returns triangles that are painted as as inside triangles for the multipolygon
+// InsideTrianglesForMultiPolygon returns triangles that are painted as inside triangles for the multipolygon
 func InsideTrianglesForMultiPolygon(ctx context.Context, clipbox *geom.Extent, multipolygon *geom.MultiPolygon, hm planar.HitMapper) ([]geom.Triangle, error) {
 	segs, err := Destructure(ctx, cmp, clipbox, multipolygon)
 	if err != nil {

@@ -55,6 +55,7 @@ func TestEncodePolygon(t *testing.T) {
 				return
 			}
 			for i := range tc.g {
+				// calculate the amount of padding needed to format the numbers
 				gl := int(math.Log10(float64(g[i]))) + 1
 				tcl := int(math.Log10(float64(tc.g[i]))) + 1
 				if gl < tcl {
