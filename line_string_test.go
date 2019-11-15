@@ -16,7 +16,7 @@ func TestLineStringSetter(t *testing.T) {
 		err      error
 	}
 	fn := func(t *testing.T, tc tcase) {
-		err := tc.setter.SetVerticies(tc.points)
+		err := tc.setter.SetVertices(tc.points)
 		if tc.err == nil && err != nil {
 			t.Errorf("error, expected nil got %v", err)
 			return
@@ -31,9 +31,9 @@ func TestLineStringSetter(t *testing.T) {
 		if !reflect.DeepEqual(tc.expected, tc.setter) {
 			t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
 		}
-		ls := tc.setter.Verticies()
+		ls := tc.setter.Vertices()
 		if !reflect.DeepEqual(tc.points, ls) {
-			t.Errorf("Verticies, expected %v got %v", tc.points, ls)
+			t.Errorf("Vertices, expected %v got %v", tc.points, ls)
 		}
 	}
 	tests := []tcase{

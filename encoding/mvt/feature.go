@@ -301,7 +301,7 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 		return g, vectorTile.Tile_POINT, nil
 
 	case geom.LineString:
-		points := t.Verticies()
+		points := t.Vertices()
 		g = append(g, c.MoveTo(points[0])...)
 		g = append(g, c.LineTo(points[1:]...)...)
 		return g, vectorTile.Tile_LINESTRING, nil
@@ -309,7 +309,7 @@ func encodeGeometry(ctx context.Context, geometry geom.Geometry) (g []uint32, vt
 	case geom.MultiLineString:
 		lines := t.LineStrings()
 		for _, l := range lines {
-			points := geom.LineString(l).Verticies()
+			points := geom.LineString(l).Vertices()
 			g = append(g, c.MoveTo(points[0])...)
 			g = append(g, c.LineTo(points[1:]...)...)
 		}

@@ -75,7 +75,7 @@ func Simplify(ctx context.Context, simplifer Simplifer, geometry geom.Geometry) 
 
 	case geom.LineStringer:
 
-		ls, err := simplifer.Simplify(ctx, gg.Verticies(), false)
+		ls, err := simplifer.Simplify(ctx, gg.Vertices(), false)
 		if err != nil {
 			return nil, err
 		}

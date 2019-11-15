@@ -69,13 +69,13 @@ func IsEmptyGeo(geo geom.Geometry) (isEmpty bool, err error) {
 		return IsEmptyPoints(g.Points()), nil
 
 	case geom.LineString:
-		return IsEmptyPoints(g.Verticies()), nil
+		return IsEmptyPoints(g.Vertices()), nil
 
 	case *geom.LineString:
 		if g == nil {
 			return true, nil
 		}
-		return IsEmptyPoints(g.Verticies()), nil
+		return IsEmptyPoints(g.Vertices()), nil
 
 	case geom.MultiLineString:
 		return IsEmptyLines(g.LineStrings()), nil

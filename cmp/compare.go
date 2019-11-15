@@ -223,7 +223,7 @@ func (cmp Compare) LineStringerEqual(geo1, geo2 geom.LineStringer) bool {
 	if geo1Nil, geo2Nil := geo1 == NilLineString, geo2 == NilLineString; geo1Nil || geo2Nil {
 		return geo1Nil && geo2Nil
 	}
-	return cmp.LineStringEqual(geo1.Verticies(), geo2.Verticies())
+	return cmp.LineStringEqual(geo1.Vertices(), geo2.Vertices())
 }
 
 // MultiLineStringerEqual will check to see if the 2 MultiLineStrings pass to it
