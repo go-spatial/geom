@@ -412,7 +412,7 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 			return enc.string("EMPTY")
 		}
 
-		return enc.encodePoints(g.Verticies(), len(*g)-1, lsType)
+		return enc.encodePoints(g.Vertices(), len(*g)-1, lsType)
 
 	case geom.MultiLineString:
 		err := enc.string("MULTILINESTRING ")

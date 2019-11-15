@@ -39,7 +39,7 @@ func uniqueSegmentIntersectPoints(clipbox *geom.Extent, ln geom.Line) [][2]float
 
 // LineString will clip the give linestring to the the given clipbox, breaking it up into multiple linestring as needed.
 func LineStringer(ctx context.Context, linestringer geom.LineStringer, clipbox *geom.Extent) (mls geom.MultiLineString, err error) {
-	return lineString(ctx, linestringer.Verticies(), clipbox)
+	return lineString(ctx, linestringer.Vertices(), clipbox)
 }
 
 func lineString(ctx context.Context, ls [][2]float64, clipbox *geom.Extent) (mls geom.MultiLineString, err error) {

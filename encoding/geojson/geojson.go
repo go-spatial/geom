@@ -51,7 +51,7 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 	case geom.LineStringer:
 		return json.Marshal(coordinates{
 			Type:   LineStringType,
-			Coords: g.Verticies(),
+			Coords: g.Vertices(),
 		})
 
 	case geom.MultiLineStringer:

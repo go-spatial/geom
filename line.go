@@ -25,7 +25,7 @@ func (l Line) Point1() *Point { return (*Point)(&l[0]) }
 // Point2 returns a new copy of the second point in the line.
 func (l Line) Point2() *Point { return (*Point)(&l[1]) }
 
-func (l Line) Verticies() [][2]float64 { return l[:] }
+func (l Line) Vertices() [][2]float64 { return l[:] }
 
 // ContainsPoint checks to see if the given pont lines on the linesegment. (Incliding the end points.)
 func (l Line) ContainsPoint(pt [2]float64) bool {

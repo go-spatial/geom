@@ -25,7 +25,7 @@ type MultiPointer interface {
 // LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
-	Verticies() [][2]float64
+	Vertices() [][2]float64
 }
 
 // MultiLineStringer is a geometry with multiple LineStrings.
@@ -79,7 +79,7 @@ func getCoordinates(g Geometry, pts *[]Point) error {
 
 	case LineStringer:
 
-		mpts := gg.Verticies()
+		mpts := gg.Vertices()
 		for i := range mpts {
 			*pts = append(*pts, Point(mpts[i]))
 		}
@@ -152,7 +152,7 @@ func getExtent(g Geometry, e *Extent) error {
 		return nil
 
 	case LineStringer:
-		e.AddPoints(gg.Verticies()...)
+		e.AddPoints(gg.Vertices()...)
 		return nil
 
 	case MultiLineStringer:
@@ -213,7 +213,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 
 	case LineStringer:
 
-		v := gg.Verticies()
+		v := gg.Vertices()
 		for i := 0; i < len(v)-1; i++ {
 			*lines = append(*lines, Line{v[i], v[i+1]})
 		}
@@ -235,7 +235,7 @@ func extractLines(g Geometry, lines *[]Line) error {
 			if err := extractLines(lr, lines); err != nil {
 				return err
 			}
-			v := lr.Verticies()
+			v := lr.Vertices()
 			if len(v) > 2 && lr.IsRing() == false {
 				// create a connection from last -> first if it doesn't exist
 				*lines = append(*lines, Line{v[len(v)-1], v[0]})
@@ -295,7 +295,7 @@ func IsEmpty(geo Geometry) bool {
 	case LineString:
 		return len(g) == 0
 	case LineStringer:
-		return len(g.Verticies()) == 0
+		return len(g.Vertices()) == 0
 	case Polygon:
 		return len(g) == 0
 	case Polygoner:
