@@ -103,7 +103,7 @@ func TestValidate(t *testing.T) {
 		err  ErrInvalid
 	}
 	order := winding.Order{
-		YPositiveDown: true,
+		YPositiveDown: false,
 	}
 	//const debug = true
 
@@ -289,10 +289,10 @@ func TestValidate(t *testing.T) {
 			desc: "initial bad four point ",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
-				geom.Point{384, 112},
-				geom.Point{372, 114},
-				geom.Point{376, 119},
 				geom.Point{368, 117},
+				geom.Point{376, 119},
+				geom.Point{372, 114},
+				geom.Point{384, 112},
 			),
 			err: ErrInvalid{
 				"found self interstion for vertics POINT (376 119) and POINT (384 112)",

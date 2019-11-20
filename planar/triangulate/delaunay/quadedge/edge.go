@@ -317,8 +317,8 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 
 		if !winding.IsCounterClockwise() {
 			err = append(err, fmt.Sprintf("1. (%v) expected all points to be counter-clockwise(%v):\n%v:%v\n%v",
-				winding.String(),
-				order.CounterClockwise().String(),
+				winding.ShortString(),
+				order.CounterClockwise().ShortString(),
 				wkt.MustEncode(orig),
 				wkt.MustEncode(points),
 				e.DumpAllEdges(),
