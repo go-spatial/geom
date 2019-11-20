@@ -15,12 +15,13 @@ func TestSplice(t *testing.T) {
 		err  ErrInvalid
 	}
 	order := winding.Order{
-		YPositiveDown: true,
+		YPositiveDown: false,
 	}
 	fn := func(tc tcase) (string, func(*testing.T)) {
 		return tc.Desc, func(t *testing.T) {
 			var err error
 			if err = Validate(tc.a, order); err != nil {
+				t.Logf("Invalid tc.a")
 				if verr, ok := err.(ErrInvalid); ok {
 					for i, estr := range verr {
 						t.Logf("%03v: %v", i, estr)
@@ -101,7 +102,7 @@ func TestConnect(t *testing.T) {
 	}
 
 	order := winding.Order{
-		YPositiveDown: true,
+		YPositiveDown: false,
 	}
 
 	fn := func(tc tcase) (string, func(*testing.T)) {
