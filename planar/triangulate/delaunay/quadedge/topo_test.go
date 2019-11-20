@@ -75,15 +75,15 @@ func TestSplice(t *testing.T) {
 			a: BuildEdgeGraphAroundPoint(
 				geom.Point{0, 0},
 				geom.Point{0, -1},
-				geom.Point{-1, 0},
-				geom.Point{0, 1},
 				geom.Point{2, 0},
+				geom.Point{0, 1},
+				geom.Point{-1, 0},
 			),
 			b: BuildEdgeGraphAroundPoint(
 				geom.Point{2, 0},
 				geom.Point{2, -1},
-				geom.Point{2, 1},
 				geom.Point{3, 0},
+				geom.Point{2, 1},
 			),
 		},
 	}
@@ -172,14 +172,14 @@ func TestConnect(t *testing.T) {
 			Name: "Simple",
 			a: BuildEdgeGraphAroundPoint(
 				geom.Point{0, 0},
-				geom.Point{0, -1},
-				geom.Point{-1, 0},
 				geom.Point{0, 1},
+				geom.Point{-1, 0},
+				geom.Point{0, -1},
 			),
 			b: BuildEdgeGraphAroundPoint(
 				geom.Point{2, 0},
-				geom.Point{2, -1},
 				geom.Point{2, 1},
+				geom.Point{2, -1},
 				geom.Point{3, 0},
 			),
 		},

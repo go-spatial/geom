@@ -269,6 +269,7 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 	seen := make(map[geom.Point]bool)
 
 	points := []geom.Point{}
+	segs := []geom.Line{}
 	e.WalkAllONext(func(ee *Edge) bool {
 		dest := ee.Dest()
 		if dest == nil {
@@ -297,6 +298,7 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 				),
 			)
 		}
+		segs = append(segs, e.AsLine())
 		return true
 	})
 	if len(err) != 0 {
@@ -324,10 +326,6 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 
 		}
 
-		segs := make([]geom.Line, len(points))
-		for j, i := len(points)-1, 0; i < len(points); j, i = i, i+1 {
-			segs[i] = geom.Line{points[j], points[i]}
-		}
 		// New we need to check that there are no self intersecting lines.
 		eq := intersect.NewEventQueue(segs)
 		eq.CMP = cmp
@@ -337,16 +335,17 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 			func(src, dest int, pt [2]float64) error {
 				// make sure the point is not an end point
 				gpt := geom.Point(pt)
-				if (cmp.GeomPointEqual(gpt, *segs[src].Point1()) || cmp.GeomPointEqual(gpt, *segs[src].Point2())) &&
+				if (cmp.GeomPointEqual(gpt, *segs[src].Point1()) || cmp.GeomPointEqual(gpt, *segs[src].Point2())) ||
 					(cmp.GeomPointEqual(gpt, *segs[dest].Point1()) || cmp.GeomPointEqual(gpt, *segs[dest].Point2())) {
 					return nil
 				}
 				// the second point in each segment should be the vertex we care about.
 				// this is because of the way we build up the segments above.
 				err = append(err,
-					fmt.Sprintf("found self interstion for vertices %v and %v",
-						wkt.MustEncode(*segs[src].Point2()),
-						wkt.MustEncode(*segs[dest].Point2()),
+					fmt.Sprintf("found self interstion for vertices %v and %v at %v",
+						wkt.MustEncode(segs[src]),
+						wkt.MustEncode(segs[dest]),
+						pt,
 					),
 				)
 				return err
