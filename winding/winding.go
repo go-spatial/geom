@@ -3,22 +3,23 @@
 package winding
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/go-spatial/geom"
 )
 
 // Winding is the clockwise direction of a set of points.
-type Winding uint8
+type Winding int8
 
 const (
 
 	// Clockwise indicates that the winding order is in the clockwise direction
-	Clockwise Winding = 0
+	Clockwise Winding = -1
 	// Colinear indicates that the points are colinear to each other
-	Colinear Winding = 1
+	Colinear Winding = 0
 	// CounterClockwise indicates that the winding order is in the counter clockwise direction
-	CounterClockwise Winding = 2
+	CounterClockwise Winding = 1
 
 	// Collinear alternative spelling of Colinear
 	Collinear = Colinear
@@ -34,7 +35,20 @@ func (w Winding) String() string {
 	case CounterClockwise:
 		return "counter clockwise"
 	default:
-		return "unknown"
+		return fmt.Sprintf("unknown(%v)", int8(w))
+	}
+}
+
+func (w Winding) ShortString() string {
+	switch w {
+	case Clockwise:
+		return "⟳"
+	case Colinear:
+		return "O"
+	case CounterClockwise:
+		return "⟲"
+	default:
+		return fmt.Sprintf("{%v}", int8(w))
 	}
 }
 
@@ -50,14 +64,7 @@ func (w Winding) IsColinear() bool { return w == Colinear }
 // Not returns the inverse of the winding, clockwise <-> counter-clockwise, colinear is it's own
 // inverse
 func (w Winding) Not() Winding {
-	switch w {
-	case Clockwise:
-		return CounterClockwise
-	case CounterClockwise:
-		return Clockwise
-	default:
-		return w
-	}
+	return Winding(-1 * int8(w))
 }
 
 // Orient will take the points and calculate the Orientation of the points. by
@@ -99,18 +106,22 @@ func Orient(pts ...[2]float64) int8 {
 // Orientation returns the orientation of the set of the points given the
 // direction of the positive values of the y axis
 func Orientation(yPositiveDown bool, pts ...[2]float64) Winding {
+
+	if len(pts) < 3 {
+		return Colinear
+	}
+
 	mul := int8(1)
 	if yPositiveDown {
 		mul = -1
 	}
-	switch mul * Orient(pts...) {
-	case 0:
-		return Colinear
-	case 1:
-		return Clockwise
-	default: // -1
-		return CounterClockwise
+
+	adjusted := make([][2]float64, len(pts))
+	for i := range pts {
+		adjusted[i] = [2]float64{pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]}
 	}
+
+	return Winding(mul * Orient(pts...))
 }
 
 // Order configures how the orientation of a set of points is determined

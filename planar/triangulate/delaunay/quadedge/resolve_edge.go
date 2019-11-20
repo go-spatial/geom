@@ -21,7 +21,6 @@ const (
 )
 
 func xprd(ao, bo [2]float64) float64 {
-	// deal with yaxis downward positive
 	return (ao[0] * bo[1]) - (ao[1] * bo[0])
 }
 
@@ -43,6 +42,171 @@ func toOrtStr(s float64) string {
 		return "⟲"
 	}
 	return "⟳"
+}
+
+type rEdge struct {
+	orig  geom.Point
+	dest  geom.Point
+	yDown int
+
+	e          *Edge
+	ab, da, db float64
+
+	err       error
+	candidate *Edge
+}
+
+func (re *rEdge) CCWAB() bool { return re.ab > 0 }
+func (re *rEdge) CWAB() bool  { return re.ab < 0 }
+func (re *rEdge) ZAB() bool   { return re.ab == 0 }
+
+func (re *rEdge) CCWDA() bool { return re.da > 0 }
+func (re *rEdge) CWDA() bool  { return re.da < 0 }
+func (re *rEdge) ZDA() bool   { return re.da == 0 }
+
+func (re *rEdge) CCWDB() bool { return re.db > 0 }
+func (re *rEdge) CWDB() bool  { return re.db < 0 }
+func (re *rEdge) ZDB() bool   { return re.db == 0 }
+
+func (re *rEdge) Next() {
+	re.candidate = nil
+	re.err = nil
+	if debug {
+		log.Printf("next: %v %v %v", wkt.MustEncode(re.e.AsLine()), wkt.MustEncode(re.e.ONext().AsLine()), wkt.MustEncode(re.dest))
+	}
+}
+func (re *rEdge) A() {
+	re.candidate = re.e
+	if debug {
+		log.Printf("a: %v %v %v", wkt.MustEncode(re.e.AsLine()), wkt.MustEncode(re.e.ONext().AsLine()), wkt.MustEncode(re.dest))
+	}
+}
+func (re *rEdge) ErrA() {
+	re.candidate = re.e
+	re.err = geom.ErrPointsAreCoLinear
+	if debug {
+		log.Printf("erra: [%v] %v %v", wkt.MustEncode(re.e.AsLine()), wkt.MustEncode(re.e.ONext().AsLine()), wkt.MustEncode(re.dest))
+	}
+}
+func (re *rEdge) ErrB() {
+	re.candidate = re.e.ONext()
+	re.err = geom.ErrPointsAreCoLinear
+	if debug {
+		log.Printf("errb: %v [%v] %v", wkt.MustEncode(re.e.AsLine()), wkt.MustEncode(re.e.ONext().AsLine()), wkt.MustEncode(re.dest))
+	}
+}
+func (re *rEdge) ErrEdge() {
+	re.candidate = re.e
+	re.err = ErrCoincidentalEdges
+	if debug {
+		log.Printf("ConincidentalEdges: [%v] %v %v", wkt.MustEncode(re.e.AsLine()), wkt.MustEncode(re.e.ONext().AsLine()), wkt.MustEncode(re.dest))
+	}
+}
+
+func resolveEdge(yDown bool, gse *Edge, odest geom.Point, table func(*rEdge)) (*Edge, error) {
+	multi := 1.0
+	if yDown {
+		multi = -1.0
+	}
+
+	orig := *gse.Orig()
+	if cmp.GeomPointEqual(orig, odest) {
+		return nil, ErrInvalidEndVertex
+
+	}
+	dest := geom.Point{odest[0] - orig[0], odest[1] - orig[1]}
+
+	var re rEdge
+
+	gse.WalkAllONext(func(e *Edge) bool {
+		apt := *e.Dest()
+		bpt := *e.ONext().Dest()
+		re.err = nil
+		re.candidate = nil
+
+		ao := [2]float64{apt[0] - orig[0], apt[1] - orig[1]}
+		bo := [2]float64{bpt[0] - orig[0], bpt[1] - orig[1]}
+		// calculate the cross product of the the dest line each of the edges
+		//                                                     +---
+		// ccw == 0,1 ->  1,0 == ( 0 * 0 ) - ( 1 * 1 ) == -1   |⟳
+		//                                                     +--
+		// cw  == 1,0 ->  0,1 == ( 1 * 1 ) - ( 0 * 0 ) ==  1   |⟲
+		//                                                     +---
+		// cl  == 1,0 -> -1,0 == ( 1 * 0 ) - (-1 * 0 ) ==  0   |——
+		//                                                     +---
+		re.ab, re.da, re.db = xprd(ao, bo)*multi, xprd(dest, ao)*multi, xprd(dest, bo)*multi
+		re.e = e
+
+		if debug {
+			log.Printf("a: %v", wkt.MustEncode(re.e.AsLine()))
+			log.Printf("b: %v", wkt.MustEncode(re.e.ONext().AsLine()))
+			log.Printf("d: %v", wkt.MustEncode(odest))
+			log.Printf("ab: %v %v da: %v %v db: %v %v", re.ab, toOrtStr(re.ab), re.da, toOrtStr(re.da), re.db, toOrtStr(re.db))
+		}
+
+		table(&re)
+
+		// continue if we don't have an error and no candidate
+		return re.candidate == nil && re.err == nil
+	})
+
+	return re.candidate, re.err
+}
+
+func resolveEdgeYUp(gse *Edge, odest geom.Point) (*Edge, error) {
+	return resolveEdge(false, gse, odest, func(re *rEdge) {
+
+		switch {
+		case re.CCWAB():
+			switch {
+			case re.CCWDA():
+				re.Next()
+			case re.CWDA() && re.CCWDB():
+				re.A()
+			case re.CWDA() && re.CWDB():
+				re.Next()
+			case re.CWDA() && re.ZDB():
+				re.ErrB()
+			case re.ZDA() && re.CCWDB():
+				re.ErrA()
+			case re.ZDA() && re.CWDB():
+				re.Next()
+			case re.ZDA() && re.ZDB():
+				re.ErrEdge()
+			}
+		case re.CWAB():
+			switch {
+			case re.CWDA():
+				re.A()
+			case re.CCWDA() && re.CCWDB():
+				re.A()
+			case re.CCWDA() && re.CWDB():
+				re.Next()
+			case re.CCWDA() && re.ZDB():
+				re.ErrB()
+			case re.ZDA() && re.CCWDB():
+				re.A()
+			case re.ZDA() && re.CWDB():
+				re.ErrA()
+			case re.ZDA() && re.ZDB():
+				re.ErrEdge()
+			}
+		case re.ZAB():
+			switch {
+			case re.CCWDA() && re.CWDB():
+				re.Next()
+			case re.CWDA() && re.CCWDB():
+				re.A()
+			case (re.CWDA() && re.CWDB()) || (re.CCWDA() && re.CCWDB()):
+				re.A()
+			case re.ZDA() && re.ZDB():
+				re.ErrEdge()
+			}
+		default:
+			re.ErrEdge()
+		}
+
+	})
 }
 
 // ResolveEdge will find the edge such that dest lies between it and it's next edge.
@@ -89,6 +253,9 @@ func toOrtStr(s float64) string {
 //  * ErrInvalidateEndVertex
 //  * ErrConcidentalEdges
 //  * geom.ErrColinearPoints
+func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) { return resolveEdgeYUp(gse, odest) }
+
+/*
 func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 
 	var (
@@ -151,17 +318,17 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 		bo := [2]float64{bpt[0] - orig[0], bpt[1] - orig[1]}
 
 		// calculate the cross product of the the dest line each of the edges
-		//
-		// ccw == 0,1 ->  1,0 == ( 0 * 0 ) - ( 1 * 1 ) == -1   +--
-		//                                                     |⟲
-		// cw  == 1,0 ->  0,1 == ( 1 * 1 ) - ( 0 * 0 ) ==  1   +--
-		//                                                     |⟳
-		// cl  == 1,0 -> -1,0 == ( 1 * 0 ) - (-1 * 0 ) ==  0 --+--
-		//                                                      O
+		//                                                     +---
+		// ccw == 0,1 ->  1,0 == ( 0 * 0 ) - ( 1 * 1 ) == -1   |⟳
+		//                                                     +--
+		// cw  == 1,0 ->  0,1 == ( 1 * 1 ) - ( 0 * 0 ) ==  1   |⟲
+		//                                                     +---
+		// cl  == 1,0 -> -1,0 == ( 1 * 0 ) - (-1 * 0 ) ==  0   |——
+		//                                                     +---
 		ab, da, db := xprd(ao, bo), xprd(dest, ao), xprd(dest, bo)
-		ccwab, cwab, zab := ab < 0, ab > 0, ab == 0
-		ccwda, cwda, zda := da < 0, da > 0, da == 0
-		ccwdb, cwdb, zdb := db < 0, db > 0, db == 0
+		ccwab, cwab, zab := ab > 0, ab < 0, ab == 0
+		ccwda, cwda, zda := da > 0, da < 0, da == 0
+		ccwdb, cwdb, zdb := db > 0, db < 0, db == 0
 
 		if debug {
 			log.Printf("a: %v", wkt.MustEncode(e.AsLine()))
@@ -233,3 +400,4 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 	return candidate, err
 
 }
+*/
