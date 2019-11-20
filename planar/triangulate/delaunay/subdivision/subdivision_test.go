@@ -2,7 +2,7 @@ package subdivision
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"testing"
 
 	"github.com/go-spatial/geom/encoding/wkt"
@@ -24,6 +24,10 @@ func TestNewForPoints(t *testing.T) {
 	fn := func(tc tcase) func(*testing.T) {
 		return func(t *testing.T) {
 
+			//if debug {
+			log.Printf("Running test %v", t.Name())
+			log.Printf("initial points\n%v", wkt.MustEncode(geom.MultiPoint(tc.Points)))
+			//}
 			sd, err := NewForPoints(context.Background(), tc.Points)
 			if err != nil {
 				t.Errorf("err, expected nil got %v", err)
@@ -34,6 +38,7 @@ func TestNewForPoints(t *testing.T) {
 					}
 				}
 			}
+
 			err = sd.Validate(context.Background())
 			if err != nil {
 				t.Logf("points: %v", wkt.MustEncode(geom.MultiPoint(tc.Points)))
@@ -46,32 +51,46 @@ func TestNewForPoints(t *testing.T) {
 				t.Errorf(err.Error())
 				return
 			}
-			idx := -1
+			var allLines []geom.Line
 			err = sd.WalkAllEdges(func(e *quadedge.Edge) error {
-				idx++
-				eln := e.AsLine()
-				if idx >= len(tc.Lines) {
-					return nil
-				}
-
-				t.Logf("line %v: \n\texp %v\n\tgot %v", idx, wkt.MustEncode(tc.Lines[idx]), wkt.MustEncode(eln))
-				if !cmp.LineStringEqual(eln[:], tc.Lines[idx][:]) {
-					t.Logf("points: %v", wkt.MustEncode(geom.MultiPoint(tc.Points)))
-					t.Errorf("line %v, expected %v got %v", idx, wkt.MustEncode(tc.Lines[idx]), wkt.MustEncode(eln))
-					dumpSD(t, sd)
-					t.Logf("tc.Lines: %v", tc.Lines)
-					return fmt.Errorf("failed")
-				}
+				allLines = append(allLines, e.AsLine())
 				return nil
 			})
-			if idx+1 != len(tc.Lines) {
-
+			if len(tc.Lines) != len(allLines) {
 				dumpSD(t, sd)
-				if err != nil {
-					t.Logf(err.Error())
-				}
-				t.Errorf("lines, expected %v got %v", len(tc.Lines), idx)
+				t.Errorf("lines, expected %v got %v", len(tc.Lines), len(allLines))
 				return
+			}
+			//allLines = must.ParseMultilines([]byte(wkt.MustEncode(allLines)))
+			seen := map[int]bool{}
+			var didNotFind []int
+		TESTCASE_LINES:
+			for i, ln := range tc.Lines {
+				for j, aln := range allLines {
+					if seen[j] {
+						continue
+					}
+					if cmp.PointEqual(ln[0], aln[0]) && cmp.PointEqual(ln[1], aln[1]) || // compare the start:start and end:end
+						cmp.PointEqual(ln[0], aln[1]) && cmp.PointEqual(ln[1], aln[0]) { // compare the start:end and end:start
+						seen[j] = true
+						continue TESTCASE_LINES
+					}
+				}
+				didNotFind = append(didNotFind, i)
+			}
+			if len(didNotFind) > 0 {
+				t.Errorf("did not find lines, expected 0 got %v", len(didNotFind))
+				for _, i := range didNotFind {
+					t.Logf("Did not find: %v", wkt.MustEncode(tc.Lines[i]))
+				}
+				t.Logf("Got:\n%v", wkt.MustEncode(allLines))
+			}
+			for i := range allLines {
+				if seen[i] {
+					continue
+				}
+				t.Logf("Did not find: %v", wkt.MustEncode(allLines[i]))
+
 			}
 		}
 	}
@@ -177,22 +196,101 @@ func TestNewForPoints(t *testing.T) {
 			Points: must.ReadPoints("testdata/intersecting_lines_1.points"),
 			Lines:  must.ReadMultilines("testdata/intersecting_lines_1_expected.lines"),
 		},
-		/*
-			{
-				Desc:   "counter clockwise error east of china",
-				Points: must.ReadPoints("testdata/east_of_china.points"),
-			},
-		*/
+		{
+			Desc:   "counter clockwise error east of china",
+			Points: must.ReadPoints("testdata/east_of_china.points"),
+		},
 		{
 			Desc:   "error failed to insert point 8",
 			Points: [][2]float64{[2]float64{-1.3625395451e+07, 4.551405984e+06}, [2]float64{-1.3625385953e+07, 4.551392498e+06}, [2]float64{-1.3625144745e+07, 4.551583426e+06}, [2]float64{-1.3625317363e+07, 4.55141451e+06}, [2]float64{-1.3625204228e+07, 4.551495519e+06}, [2]float64{-1.3625225288e+07, 4.551499794e+06}, [2]float64{-1.3625218504e+07, 4.55149004e+06}, [2]float64{-1.3625167969e+07, 4.551553549e+06}, [2]float64{-1.3625206458e+07, 4.551498625e+06}, [2]float64{-1.3625137934e+07, 4.551573731e+06}},
+			//Points: must.ReadPoints("testdata/failed_to_insert_point_8_points.wkt"),
+			Lines: must.ReadMultilines("testdata/failed_to_insert_point_8_lines.wkt"),
+		},
+		{
+			Desc:   "issue 96 1",
+			Points: must.ReadPoints("testdata/issue/96/points_1.wkt"),
+			Lines:  must.ReadMultilines("testdata/issue/96/lines_1.wkt"),
+		},
+		{
+			Desc:   "issue 96 2",
+			Points: must.ReadPoints("testdata/issue/96/points_2.wkt"),
+			//			Lines:  must.ReadMultilines("testdata/issue/96/lines_1.wkt"),
+		},
+		{
+			Desc:   "issue 96 simplified",
+			Points: must.ReadPoints("testdata/issue/96/points_simplified.wkt"),
+			//			Lines:  must.ReadMultilines("testdata/issue/96/lines_1.wkt"),
 		},
 	}
 
-	t.Skip("TestForNewPoints disabled")
-	return
+	//t.Skip("TestForNewPoints disabled")
+	//return
 
 	for _, tc := range tests {
 		t.Run(tc.Desc, fn(tc))
+	}
+}
+
+func TestNewSubdivision(t *testing.T) {
+	// This is not going to be a table driven test. It going to test
+	// one thing, that is a geom.Triangle{0 0,10 0,5 10} to make sure
+	// that a subdivision can be make from such a triangle.
+	tri := geom.Triangle{{0, 0}, {10, 0}, {5, 10}}
+
+	sd := New(geom.Point(tri[0]), geom.Point(tri[1]), geom.Point(tri[2]))
+	if sd.ptcount != 3 {
+		t.Errorf("ptcount, expected 3, got %v", sd.ptcount)
+	}
+
+	if !cmp.GeomPointEqual(sd.frame[0], geom.Point(tri[0])) {
+		t.Errorf("frame point 0, expected %v, got %v", geom.Point(tri[0]), sd.frame[0])
+	}
+	if !cmp.GeomPointEqual(sd.frame[1], geom.Point(tri[1])) {
+		t.Errorf("frame point 0, expected %v, got %v", geom.Point(tri[1]), sd.frame[1])
+	}
+	if !cmp.GeomPointEqual(sd.frame[2], geom.Point(tri[2])) {
+		t.Errorf("frame point 0, expected %v, got %v", geom.Point(tri[2]), sd.frame[2])
+	}
+
+	if sd.startingEdge == nil {
+		t.Errorf("starting edge, expected non-nil, got nil")
+	}
+	seln := sd.startingEdge.AsLine()
+	exln := geom.Line{{0, 0}, {10, 0}}
+	if !cmp.LineEqual(seln, exln) {
+		t.Errorf("starting edge, expected %v got %v ", exln, seln)
+	}
+
+	// Need to validate each edge
+	// Let's see if we can find all the edges
+	edges := make([]geom.Line, 0, 3)
+	sd.WalkAllEdges(func(e *quadedge.Edge) error {
+		edges = append(edges, e.AsLine())
+		return nil
+	})
+	if len(edges) != 3 {
+		t.Errorf("number of edges, expected 3 got %v", len(edges))
+		for i := range edges {
+			t.Logf("\tEdge[%v]: %v", i, wkt.MustEncode(edges[i]))
+		}
+	}
+	expectedEdges := []geom.Line{
+		{{0, 0}, {10, 0}},
+		{{10, 0}, {5, 10}},
+		{{5, 10}, {0, 0}},
+	}
+
+	for i := range edges {
+		if !cmp.LineEqual(edges[i], expectedEdges[i]) {
+			t.Errorf("edge %v, expected %v got %v", i, wkt.MustEncode(expectedEdges[i]), wkt.MustEncode(edges[i]))
+		}
+	}
+	if err := sd.Validate(context.Background()); err != nil {
+		t.Errorf("validate, expected nil , got %v", err)
+		if err1, ok := err.(quadedge.ErrInvalid); ok {
+			for i := range err1 {
+				t.Logf("err[%v]: %v", i, err1[i])
+			}
+		}
 	}
 }
