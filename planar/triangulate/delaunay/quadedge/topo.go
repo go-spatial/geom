@@ -36,26 +36,48 @@ func Splice(a, b *Edge) {
 	beta.next = t4
 }
 
-// Connect Add a new edge e connection the destination of a to the
+// Connect Adds a new edge (e) connecting the destination of a to the
 // origin of b, in such a way that all three have the same
 // left face after the connection is complete.
 // Additionally, the data pointers of the new edge are set.
 func Connect(a, b *Edge, order winding.Order) *Edge {
-	//const debug = true
+	if debug {
+		log.Printf("\n\n\tvalidate a:\n%v\n", a.DumpAllEdges())
+		if err := Validate(a, order); err != nil {
+			if err1, ok := err.(ErrInvalid); ok {
+				for i, estr := range err1 {
+					log.Printf("err: %03v : %v", i, estr)
+				}
+			}
+		}
+		log.Printf("\n\n\tvalidate b:\n%v\n", b.DumpAllEdges())
+		if err := Validate(b, order); err != nil {
+			if err1, ok := err.(ErrInvalid); ok {
+				for i, estr := range err1 {
+					log.Printf("err: %03v : %v", i, estr)
+				}
+			}
+		}
+		log.Printf("-------------------------\n")
+	}
 	if debug {
 		log.Printf("\n\n\tConnect\n\n")
+		log.Printf("Connecting %v to %v:", wkt.MustEncode(*a.Dest()), wkt.MustEncode(*b.Orig()))
 	}
-	e := NewWithEndPoints(a.Dest(), b.Orig())
+	bb, err := ResolveEdge(b, *a.Dest())
+	if debug {
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("splice e.Sym, bb: bb: %v", wkt.MustEncode(bb.AsLine()))
+	}
+	e := NewWithEndPoints(a.Dest(), bb.Orig())
 	if debug {
 		log.Printf("a: %v", wkt.MustEncode(a.AsLine()))
 		log.Printf("a:LNext(): %v", wkt.MustEncode(a.LNext().AsLine()))
 		log.Printf("a:LPrev(): %v", wkt.MustEncode(a.LPrev().AsLine()))
 		log.Printf("splice e, a:LNext(): e: %v", wkt.MustEncode(e.AsLine()))
 		log.Printf("splice e.Sym, b: b: %v", wkt.MustEncode(b.AsLine()))
-	}
-	bb, _ := ResolveEdge(b, *a.Dest())
-	if debug {
-		log.Printf("splice e.Sym, bb: bb: %v", wkt.MustEncode(bb.AsLine()))
 	}
 
 	Splice(e, a.LNext())
@@ -87,6 +109,7 @@ func Connect(a, b *Edge, order winding.Order) *Edge {
 				}
 			}
 			log.Printf("Vertex Edges: %v", e.DumpAllEdges())
+			panic("invalid edge b")
 		}
 		log.Printf("-------------------------\n")
 	}

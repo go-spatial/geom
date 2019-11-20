@@ -1,12 +1,17 @@
 package subdivision
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"sync"
 
+	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar/intersect"
 	"github.com/go-spatial/geom/winding"
 
@@ -15,7 +20,6 @@ import (
 	"github.com/go-spatial/geom/planar"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 )
 
@@ -34,18 +38,31 @@ type Subdivision struct {
 
 // New initialize a subdivision to the triangle defined by the points a,b,c.
 func New(a, b, c geom.Point) *Subdivision {
+
 	ea := quadedge.New()
 	ea.EndPoints(&a, &b)
+	log.Printf("ea: %v", wkt.MustEncode(ea.AsLine()))
+
 	eb := quadedge.New()
 	quadedge.Splice(ea.Sym(), eb)
 	eb.EndPoints(&b, &c)
+	log.Printf("eb: %v", wkt.MustEncode(eb.AsLine()))
 
 	ec := quadedge.New()
 	ec.EndPoints(&c, &a)
+	log.Printf("ec: %v", wkt.MustEncode(ec.AsLine()))
 	quadedge.Splice(eb.Sym(), ec)
 	quadedge.Splice(ec.Sym(), ea)
+
+	tri := geom.Triangle{[2]float64(a), [2]float64(b), [2]float64(c)}
+	se, err := quadedge.ResolveEdge(ea, geom.Point(tri.Center()))
+	if err != nil {
+		// should never happen
+		panic(err)
+	}
+
 	return &Subdivision{
-		startingEdge: ea,
+		startingEdge: se,
 		ptcount:      3,
 		frame:        [3]geom.Point{a, b, c},
 	}
@@ -68,6 +85,15 @@ Desc: %v,
 		fmt.Fprintf(&strBuf, "edges: %v", sd.startingEdge.DumpAllEdges())
 	}
 	log.Printf(strBuf.String())
+}
+
+type SubdivisionInsertionDump struct {
+	Point [2]float64
+	SD    *Subdivision
+}
+
+func (sdid *SubdivisionInsertionDump) DumpAllEdges() string {
+	return sdid.SD.startingEdge.DumpAllEdges()
 }
 
 // NewForPoints creates a new subdivision for the given points, the points are
@@ -102,7 +128,10 @@ func NewForPoints(ctx context.Context, points [][2]float64) (sd *Subdivision, er
 
 			return sd, err
 		} else {
-			log.Printf("After new good")
+			log.Printf("After new good\n%v\n%v",
+				sd.startingEdge.DumpAllEdges(),
+				wkt.MustEncode(sd.startingEdge.AsLine()),
+			)
 		}
 	}
 
@@ -128,6 +157,16 @@ func NewForPoints(ctx context.Context, points [][2]float64) (sd *Subdivision, er
 
 		if !sd.InsertSite(pt) {
 			log.Printf("Failed to insert point(%v) %v", i, wkt.MustEncode(pt))
+			if debug {
+				var dump bytes.Buffer
+				enc := gob.NewEncoder(&dump)
+				if err := enc.Encode(SubdivisionInsertionDump{Point: pt, SD: sd}); err != nil {
+					log.Printf("was not able to dump subdivision")
+				} else {
+					ioutil.WriteFile("subdivisionInsertionDump.bin", dump.Bytes(), os.ModePerm)
+				}
+				log.Printf("dumping sd to:subdivisionInsertionDump.bin")
+			}
 			return nil, errors.String("Failed to insert point")
 		}
 	}
@@ -311,9 +350,20 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 				log.Printf("%v right of %v", wkt.MustEncode(*t.Dest()), wkt.MustEncode(e.AsLine()))
 				log.Printf("Swapping e: %v", wkt.MustEncode(e.AsLine()))
 			}
+
+			if cmp.GeomPointEqual(*(e.OPrev().Dest()), *(e.Sym().OPrev().Dest())) {
+				log.Printf("Weird edge: %v", wkt.MustEncode(e.AsLine()))
+				log.Printf("Edge OPrev(): %v", wkt.MustEncode(e.OPrev().AsLine()))
+				log.Printf("Edge Sym:OPrev: %v", wkt.MustEncode(e.Sym().OPrev().AsLine()))
+
+				log.Printf("%v", e.DumpAllEdges())
+				DumpSubdivision(sd)
+				panic("Weird edge, where the OPrev and Sym:OPrev are the same")
+			}
 			quadedge.Swap(e)
 			if debug {
-				log.Printf("e: %v", wkt.MustEncode(e.AsLine()))
+				log.Printf("e: %v", e.AsLine())
+				log.Printf("e(wkt): %v", wkt.MustEncode(e.AsLine()))
 				log.Printf("e.OPrev: %v", wkt.MustEncode(e.OPrev().AsLine()))
 			}
 			e = e.OPrev()
