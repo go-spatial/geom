@@ -1,6 +1,7 @@
 package winding
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-spatial/geom/cmp"
@@ -42,8 +43,9 @@ func TestAttributeMethods(t *testing.T) {
 				isClockwise        = false
 				isCounterClockwise = false
 				isColinear         = false
-				notDir             = val
-				str                = "unknown"
+				notDir             = -1 * val
+				str                = fmt.Sprintf("unknown(%v)", int8(val))
+				sstr               = fmt.Sprintf("{%v}", int8(val))
 			)
 
 			switch val {
@@ -53,6 +55,7 @@ func TestAttributeMethods(t *testing.T) {
 				isColinear = false
 				notDir = CounterClockwise
 				str = "clockwise"
+				sstr = "⟳"
 
 			case CounterClockwise:
 				isClockwise = false
@@ -60,6 +63,7 @@ func TestAttributeMethods(t *testing.T) {
 				isColinear = false
 				notDir = Clockwise
 				str = "counter clockwise"
+				sstr = "⟲"
 
 			case Colinear:
 				isClockwise = false
@@ -67,6 +71,7 @@ func TestAttributeMethods(t *testing.T) {
 				isColinear = true
 				notDir = Colinear
 				str = "colinear"
+				sstr = "O"
 
 			}
 
@@ -89,19 +94,28 @@ func TestAttributeMethods(t *testing.T) {
 			if val.String() != str {
 				t.Errorf("string, expected %v got %v", val.String(), str)
 			}
+			if val.ShortString() != sstr {
+				t.Errorf("string, expected %v got %v", val.ShortString(), sstr)
+			}
 		}
 	}
 	tests := []Winding{Clockwise, CounterClockwise, Colinear, 3}
 	for i := range tests {
 		t.Run(tests[i].String(), fn(tests[i]))
 	}
+	t.Run("fewer then 3 points", func(t *testing.T) {
+		if val := Orient([][2]float64{{0, 0}, {1, 0}}...); val != 0 {
+			t.Errorf("less then three point, expected %v got %v", 0, val)
+		}
+	})
 }
 
 func TestOfPoints(t *testing.T) {
 	type tcase struct {
-		Desc  string
-		pts   [][2]float64
-		order Winding
+		Desc         string
+		pts          [][2]float64
+		order        Winding
+		int64NotSame bool
 	}
 	order := Order{
 		YPositiveDown: false,
@@ -120,6 +134,24 @@ func TestOfPoints(t *testing.T) {
 					t.Logf("%03v:%v", i, str)
 				}
 				return
+			}
+			if !tc.int64NotSame {
+				int64pts := make([][2]int64, len(tc.pts))
+				for i := range tc.pts {
+					int64pts[i][0], int64pts[i][1] = int64(tc.pts[i][0]), int64(tc.pts[i][1])
+				}
+				got = order.OfInt64Points(int64pts...)
+				if got != tc.order {
+					t.Errorf("OfInt64Points, expected %v got %v", tc.order, got)
+					for i := range int64pts {
+						str, err := wkt.EncodeString(geom.Point{float64(int64pts[i][0]), float64(int64pts[i][1])})
+						if err != nil {
+							panic(err)
+						}
+						t.Logf("%03v:%v", i, str)
+					}
+					return
+				}
 			}
 
 			got = OfPoints(tc.pts...)
@@ -162,41 +194,41 @@ func TestOfPoints(t *testing.T) {
 		{
 			Desc:  "simple points",
 			pts:   [][2]float64{{0, 0}, {10, 0}, {10, 10}, {0, 10}},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			Desc:  "counter simple points",
 			pts:   [][2]float64{{0, 10}, {10, 10}, {10, 0}, {0, 0}},
-			order: CounterClockwise,
+			order: Clockwise,
 		},
 		{
 			Desc:  "not colinear",
 			pts:   [][2]float64{{20, 10}, {20, 0}, {0, 10}},
-			order: CounterClockwise,
+			order: Clockwise,
 		},
 		{
 			pts:   [][2]float64{{0, 0}, {10, 0}, {0, 10}},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			pts:   [][2]float64{{0, 0}, {1, 0}, {0, 1}},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			pts:   [][2]float64{{0, 0}, {0, 10}, {10, 0}},
-			order: CounterClockwise,
-		},
-		{
-			pts:   [][2]float64{{0, 0}, {0, 1}, {1, 0}},
-			order: CounterClockwise,
-		},
-		{
-			pts:   [][2]float64{{10, 0}, {10, 10}, {0, 10}},
 			order: Clockwise,
 		},
 		{
-			pts:   [][2]float64{{0, 10}, {10, 10}, {10, 0}},
+			pts:   [][2]float64{{0, 0}, {0, 1}, {1, 0}},
+			order: Clockwise,
+		},
+		{
+			pts:   [][2]float64{{10, 0}, {10, 10}, {0, 10}},
 			order: CounterClockwise,
+		},
+		{
+			pts:   [][2]float64{{0, 10}, {10, 10}, {10, 0}},
+			order: Clockwise,
 		},
 		{
 			Desc:  "colinear",
@@ -230,23 +262,23 @@ func TestOfPoints(t *testing.T) {
 		{
 			Desc:  "3-false",
 			pts:   [][2]float64{{0, 0}, {0, 1}, {1, 2}},
-			order: CounterClockwise,
+			order: Clockwise,
 		},
 		{
 			pts:   [][2]float64{{0, 0}, {1, 0}, {1, 1}},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			pts:   [][2]float64{{204, 694}, {-2511, -3640}, {3462, -3660}},
-			order: Clockwise,
+			order: CounterClockwise,
 		},
 		{
 			pts:   [][2]float64{{-2511, -3640}, {204, 694}, {3462, -3660}},
-			order: CounterClockwise,
+			order: Clockwise,
 		},
 		{
 			pts:   [][2]float64{{204, 694}, {3462, -3660}, {-2511, -3640}},
-			order: CounterClockwise,
+			order: Clockwise,
 		},
 		{
 			Desc: "from n america",
@@ -255,7 +287,8 @@ func TestOfPoints(t *testing.T) {
 				{853.491, 1424.329},
 				{852.395, 1424.635},
 			},
-			order: CounterClockwise,
+			order:        Clockwise,
+			int64NotSame: true,
 		},
 		{
 			Desc: "edge_test initial good",
@@ -265,7 +298,7 @@ func TestOfPoints(t *testing.T) {
 				{368, 117},
 				{384, 112},
 			},
-			order: CounterClockwise,
+			order: Clockwise,
 		},
 		{
 			Desc: "edge_test initial good",
@@ -274,7 +307,27 @@ func TestOfPoints(t *testing.T) {
 				{366.318, 117.961},
 				{384.939, 111.896},
 			},
+			order: Clockwise,
+		},
+		{
+			Desc: "test_rectify_polygon #1_polygon_ring_0",
+			pts: [][2]float64{
+				{0, 0},
+				{10, 0},
+				{0, 10},
+				{0, 0},
+			},
 			order: CounterClockwise,
+		},
+		{
+			Desc: "test_rectify_polygon #1_polygon_ring_1",
+			pts: [][2]float64{
+				{1, 1},
+				{1, 2},
+				{2, 1},
+				{1, 1},
+			},
+			order: Clockwise,
 		},
 	}
 	for i := range tests {
@@ -299,8 +352,8 @@ func TestRectifyPolygon(t *testing.T) {
 
 	tests := map[string]tcase{
 		"#1": {
-			Polygon:  must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((0 0,0 10,10 0,0 0),(1 1,2 1,1 2,1 1),(1 1,1 2,1 3,1 1))`))),
-			Expected: must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((0 0,10 0,0 10,0 0),(1 1,1 2,2 1,1 1))`))),
+			Polygon:  must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((0 0,10 0,0 10,0 0),(1 1,2 1,1 2,1 1),(1 1,1 2,1 3,1 1))`))),
+			Expected: must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((0 0,0 10,10 0,0 0),(1 1,2 1,1 2,1 1))`))),
 		},
 		"#2": {
 			Polygon: must.AsPolygon(must.Decode(wkt.DecodeString(`POLYGON((1 1,1 2,1 3,1 1))`))),
