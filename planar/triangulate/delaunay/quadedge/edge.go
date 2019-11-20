@@ -3,7 +3,6 @@ package quadedge
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar/intersect"
@@ -14,12 +13,15 @@ const (
 	precision = 6
 )
 
+var glbIdx uint64
+
 // Edge describes a directional edge in a quadedge
 type Edge struct {
-	num  int
-	next *Edge
-	qe   *QuadEdge
-	v    *geom.Point
+	glbIdx uint64
+	num    int
+	next   *Edge
+	qe     *QuadEdge
+	v      *geom.Point
 }
 
 // New will return a new edge that is part of an QuadEdge
@@ -193,14 +195,13 @@ func (e *Edge) DumpAllEdges() string {
 }
 
 func (e *Edge) WalkAllOPrev(fn func(*Edge) (loop bool)) {
-	if !fn(e) {
-		return
-	}
-	cwe := e.OPrev()
-	for cwe != e {
+	var seen = map[uint64]bool{}
+	cwe := e
+	for cwe != nil && !seen[cwe.glbIdx] {
 		if !fn(cwe) {
 			return
 		}
+		seen[cwe.glbIdx] = true
 		cwe = cwe.OPrev()
 	}
 
@@ -208,25 +209,14 @@ func (e *Edge) WalkAllOPrev(fn func(*Edge) (loop bool)) {
 
 }
 func (e *Edge) WalkAllONext(fn func(*Edge) (loop bool)) {
-	if !fn(e) {
-		return
-	}
-	ccwe := e.ONext()
-	count := 0
-	for ccwe != e {
+	var seen = map[uint64]bool{}
+	ccwe := e
+	for ccwe != nil && !seen[ccwe.glbIdx] {
 		if !fn(ccwe) {
 			return
 		}
+		seen[ccwe.glbIdx] = true
 		ccwe = ccwe.ONext()
-		count++
-		if count == 100 {
-			if debug {
-				panic("inifite loop")
-			} else {
-				log.Printf("infinite loop in WalkAllONext")
-				break
-			}
-		}
 	}
 }
 
