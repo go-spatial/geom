@@ -216,8 +216,16 @@ func (cmp Compare) MultiPointerEqual(geo1, geo2 geom.MultiPointer) bool {
 	return cmp.MultiPointEqual(geo1.Points(), geo2.Points())
 }
 
-// LineStringerEqual will check to see if the two linestrings passed to it are equal, if
-// there lengths are both the same, and the sequence of points are in the same order.
+// LineEqual will check to see if the two lines passed to it are equal:
+// 1. start points are equal
+// 2. end points are equal
+func (cmp Compare) LineEqual(ln1, ln2 geom.Line) bool {
+	return cmp.PointEqual(ln1[0], ln2[0]) && cmp.PointEqual(ln1[1], ln2[1])
+}
+
+// LineStringerEqual will check to see if the two linestrings passed to it are equal:
+// 1. lengths of both the same
+// 2. the sequence of points are in the same order.
 // The points don't have to be in the same index point in both line strings.
 func (cmp Compare) LineStringerEqual(geo1, geo2 geom.LineStringer) bool {
 	if geo1Nil, geo2Nil := geo1 == NilLineString, geo2 == NilLineString; geo1Nil || geo2Nil {
