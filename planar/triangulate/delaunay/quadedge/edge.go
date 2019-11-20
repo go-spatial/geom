@@ -204,9 +204,6 @@ func (e *Edge) WalkAllOPrev(fn func(*Edge) (loop bool)) {
 		seen[cwe.glbIdx] = true
 		cwe = cwe.OPrev()
 	}
-
-	// for cwe := e.OPrev(); cwe != e && fn(cwe) ; cwe = e.OPrev(){}
-
 }
 func (e *Edge) WalkAllONext(fn func(*Edge) (loop bool)) {
 	var seen = map[uint64]bool{}
@@ -270,6 +267,7 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 
 	orig := *e.Orig()
 	seen := make(map[geom.Point]bool)
+
 	points := []geom.Point{}
 	e.WalkAllONext(func(ee *Edge) bool {
 		dest := ee.Dest()
@@ -307,51 +305,29 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 
 	if len(points) > 2 {
 
-		npoints := make([]geom.Point, len(points))
-		// First we need to turn all the points into segments
-		segs := make([]geom.Line, len(points))
-		xprdSum := 0.0
-
-		for j, i := len(points)-1, 0; i < len(points); j, i = i, i+1 {
-			segs[i] = geom.Line{points[j], points[i]}
-			lpt := [2]float64{
-				points[j][0] - orig[0],
-				points[j][1] - orig[1],
-			}
-			pt := [2]float64{
-				points[i][0] - orig[0],
-				points[i][1] - orig[1],
-			}
-
-			npoints[i] = geom.Point(pt)
-			xprdSum += sign(xprd(lpt, pt))
-		}
-
-		switch sign(xprdSum) {
-		case 0:
-			// All points are colinear to each other.
+		winding := order.OfGeomPoints(points...)
+		if winding.IsColinear() {
+			// All points are colinear to each other,
 			// Need to check winding order with original point
 			// not enough information just using the outer points, we need to include the origin
-			if !order.OfGeomPoints(append(points, orig)...).IsCounterClockwise() {
-				err = append(err,
-					fmt.Sprintf("1. expected all points to be counter-clockwise: %v:%v\n%v",
-						wkt.MustEncode(orig),
-						wkt.MustEncode(points),
-						wkt.MustEncode(segs),
-					))
-			}
-		case -1: //counter-clockwise
+			winding = order.OfGeomPoints(append(points, orig)...)
+		}
 
-		case 1: // clockwise
-			err = append(err, fmt.Sprintf("2. expected all points to be counter-clockwise: %v:%v\n%v\n%v",
+		if !winding.IsCounterClockwise() {
+			err = append(err, fmt.Sprintf("1. (%v) expected all points to be counter-clockwise(%v):\n%v:%v\n%v",
+				winding.String(),
+				order.CounterClockwise().String(),
 				wkt.MustEncode(orig),
 				wkt.MustEncode(points),
-				wkt.MustEncode(segs),
 				e.DumpAllEdges(),
 			))
 
 		}
 
+		segs := make([]geom.Line, len(points))
+		for j, i := len(points)-1, 0; i < len(points); j, i = i, i+1 {
+			segs[i] = geom.Line{points[j], points[i]}
+		}
 		// New we need to check that there are no self intersecting lines.
 		eq := intersect.NewEventQueue(segs)
 		eq.CMP = cmp
