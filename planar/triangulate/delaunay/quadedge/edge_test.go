@@ -194,29 +194,29 @@ func TestValidate(t *testing.T) {
 			desc: "colinear counterclockwise",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{0, 0},
-				geom.Point{-2, -1},
-				geom.Point{-2, 0},
 				geom.Point{-2, 1},
+				geom.Point{-2, 0},
+				geom.Point{-2, -1},
 			),
 		},
 		{
 			desc: "colinear clockwise",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{0, 0},
-				geom.Point{-2, 1},
-				geom.Point{-2, 0},
 				geom.Point{-2, -1},
+				geom.Point{-2, 0},
+				geom.Point{-2, 1},
 			),
 			err: ErrInvalid{
-				"expected all points to be counter-clockwise: MULTIPOINT (-2 1,-2 0,-2 -1)",
+				"expected all points to be counter-clockwise: MULTIPOINT (-2 -1,-2 0,-2 1)",
 			},
 		},
 		{
 			desc: "initial good",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
-				geom.Point{384, 112},
 				geom.Point{372, 114},
+				geom.Point{384, 112},
 				geom.Point{368, 117},
 			),
 		},
@@ -224,9 +224,9 @@ func TestValidate(t *testing.T) {
 			desc: "initial good, rotate 1",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
-				geom.Point{372, 114},
-				geom.Point{368, 117},
 				geom.Point{384, 112},
+				geom.Point{368, 117},
+				geom.Point{372, 114},
 			),
 		},
 		{
@@ -234,16 +234,16 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
 				geom.Point{368, 117},
-				geom.Point{384, 112},
 				geom.Point{372, 114},
+				geom.Point{384, 112},
 			),
 		},
 		{
 			desc: "initial bad",
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{375, 113},
-				geom.Point{368, 117},
 				geom.Point{372, 114},
+				geom.Point{368, 117},
 				geom.Point{384, 112},
 			),
 			err: ErrInvalid{
@@ -267,9 +267,9 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{0, 0},
 				geom.Point{-1, 0},
-				geom.Point{0, 1},
-				geom.Point{1, 0},
 				geom.Point{0, -1},
+				geom.Point{1, 0},
+				geom.Point{0, 1},
 			),
 		},
 		{
@@ -277,9 +277,9 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{0, 0},
 				geom.Point{-1, 0},
-				geom.Point{0, -1},
-				geom.Point{1, 0},
 				geom.Point{0, 1},
+				geom.Point{1, 0},
+				geom.Point{0, -1},
 			),
 			err: ErrInvalid{
 				"expected all points to be counter-clockwise: MULTIPOINT (-1 0,-1 0,0 -1,1 0,0 1)",
@@ -303,10 +303,10 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{204, 694},
 				geom.Point{-2511, -3640},
-				geom.Point{475.500, 8853},
-				geom.Point{369, 793},
-				geom.Point{426, 539},
 				geom.Point{273, 525},
+				geom.Point{426, 539},
+				geom.Point{369, 793},
+				geom.Point{475.500, 8853},
 			),
 		},
 		{
@@ -314,10 +314,10 @@ func TestValidate(t *testing.T) {
 			edge: BuildEdgeGraphAroundPoint(
 				geom.Point{204, 694},
 				geom.Point{-2511, -3640},
-				geom.Point{273, 525},
-				geom.Point{426, 539},
-				geom.Point{369, 793},
 				geom.Point{475.500, 8853},
+				geom.Point{369, 793},
+				geom.Point{426, 539},
+				geom.Point{273, 525},
 			),
 			err: ErrInvalid{
 				"expected all points to be counter-clockwise: MULTIPOINT (-2511 -3640,-2511 -3640,273 525,426 539,369 793,475.500 8853)",
