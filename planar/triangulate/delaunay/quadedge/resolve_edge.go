@@ -2,10 +2,10 @@ package quadedge
 
 import (
 	"log"
-	"math"
 
 	"github.com/gdey/errors"
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/winding"
 )
 
 const (
@@ -19,20 +19,6 @@ const (
 	// ErrCoincidentalEdges is returned when two edges are conincidental and not expected to be
 	ErrCoincidentalEdges = errors.String("coincident edges")
 )
-
-func xprd(ao, bo [2]float64) float64 {
-	return (ao[0] * bo[1]) - (ao[1] * bo[0])
-}
-
-func sign(f float64) float64 {
-	if cmp.Float(f, 0.0) {
-		return 0.0
-	}
-	if math.Signbit(f) {
-		return -1.0
-	}
-	return 1.0
-}
 
 func toOrtStr(s float64) string {
 	if s == 0 {
@@ -103,10 +89,14 @@ func (re *rEdge) ErrEdge() {
 	}
 }
 
-func resolveEdge(yDown bool, gse *Edge, odest geom.Point, table func(*rEdge)) (*Edge, error) {
-	multi := 1.0
-	if yDown {
-		multi = -1.0
+// ContainsDest returns weather the edge constains the original dest
+func (re *rEdge) ContainsDest() bool {
+	return re.e.AsLine().ContainsPoint([2]float64(re.dest))
+}
+
+func resolveEdge(order winding.Order, gse *Edge, odest geom.Point, table func(*rEdge)) (*Edge, error) {
+	if debug {
+		log.Printf("resolved edge y-down %v ", order.YPositiveDown)
 	}
 
 	orig := *gse.Orig()
@@ -116,7 +106,10 @@ func resolveEdge(yDown bool, gse *Edge, odest geom.Point, table func(*rEdge)) (*
 	}
 	dest := geom.Point{odest[0] - orig[0], odest[1] - orig[1]}
 
-	var re rEdge
+	var re = rEdge{
+		orig: orig,
+		dest: odest,
+	}
 
 	gse.WalkAllONext(func(e *Edge) bool {
 		apt := *e.Dest()
@@ -134,7 +127,8 @@ func resolveEdge(yDown bool, gse *Edge, odest geom.Point, table func(*rEdge)) (*
 		//                                                     +---
 		// cl  == 1,0 -> -1,0 == ( 1 * 0 ) - (-1 * 0 ) ==  0   |——
 		//                                                     +---
-		re.ab, re.da, re.db = xprd(ao, bo)*multi, xprd(dest, ao)*multi, xprd(dest, bo)*multi
+		oo := [2]float64{0, 0}
+		re.ab, re.da, re.db = float64(order.OfPoints(ao, bo, oo)), float64(order.OfPoints(dest, ao, oo)), float64(order.OfPoints(dest, bo, oo))
 		re.e = e
 
 		if debug {
@@ -142,6 +136,7 @@ func resolveEdge(yDown bool, gse *Edge, odest geom.Point, table func(*rEdge)) (*
 			log.Printf("b: %v", wkt.MustEncode(re.e.ONext().AsLine()))
 			log.Printf("d: %v", wkt.MustEncode(odest))
 			log.Printf("ab: %v %v da: %v %v db: %v %v", re.ab, toOrtStr(re.ab), re.da, toOrtStr(re.da), re.db, toOrtStr(re.db))
+			log.Printf("ao: %v bo: %v dest: %v", ao, bo, dest)
 		}
 
 		table(&re)
@@ -153,60 +148,115 @@ func resolveEdge(yDown bool, gse *Edge, odest geom.Point, table func(*rEdge)) (*
 	return re.candidate, re.err
 }
 
-func resolveEdgeYUp(gse *Edge, odest geom.Point) (*Edge, error) {
-	return resolveEdge(false, gse, odest, func(re *rEdge) {
-
+func resolveEdgeYUp(re *rEdge) {
+	switch {
+	case re.CCWAB():
 		switch {
-		case re.CCWAB():
-			switch {
-			case re.CCWDA():
-				re.Next()
-			case re.CWDA() && re.CCWDB():
-				re.A()
-			case re.CWDA() && re.CWDB():
-				re.Next()
-			case re.CWDA() && re.ZDB():
-				re.ErrB()
-			case re.ZDA() && re.CCWDB():
-				re.ErrA()
-			case re.ZDA() && re.CWDB():
-				re.Next()
-			case re.ZDA() && re.ZDB():
-				re.ErrEdge()
-			}
-		case re.CWAB():
-			switch {
-			case re.CWDA():
-				re.A()
-			case re.CCWDA() && re.CCWDB():
-				re.A()
-			case re.CCWDA() && re.CWDB():
-				re.Next()
-			case re.CCWDA() && re.ZDB():
-				re.ErrB()
-			case re.ZDA() && re.CCWDB():
-				re.A()
-			case re.ZDA() && re.CWDB():
-				re.ErrA()
-			case re.ZDA() && re.ZDB():
-				re.ErrEdge()
-			}
-		case re.ZAB():
-			switch {
-			case re.CCWDA() && re.CWDB():
-				re.Next()
-			case re.CWDA() && re.CCWDB():
-				re.A()
-			case (re.CWDA() && re.CWDB()) || (re.CCWDA() && re.CCWDB()):
-				re.A()
-			case re.ZDA() && re.ZDB():
-				re.ErrEdge()
-			}
-		default:
+		case re.CCWDA():
+			re.Next()
+		case re.CWDA() && re.CCWDB():
+			re.A()
+		case re.CWDA() && re.CWDB():
+			re.Next()
+		case re.CWDA() && re.ZDB():
+			re.ErrB()
+		case re.ZDA() && re.CCWDB():
+			re.ErrA()
+		case re.ZDA() && re.CWDB():
+			re.Next()
+		case re.ZDA() && re.ZDB():
 			re.ErrEdge()
 		}
+	case re.CWAB():
+		switch {
+		case re.CWDA():
+			re.A()
+		case re.CCWDA() && re.CCWDB():
+			re.A()
+		case re.CCWDA() && re.CWDB():
+			re.Next()
+		case re.CCWDA() && re.ZDB():
+			re.ErrB()
+		case re.ZDA() && re.CCWDB():
+			re.A()
+		case re.ZDA() && re.CWDB():
+			re.ErrA()
+		case re.ZDA() && re.ZDB():
+			re.ErrEdge()
+		}
+	case re.ZAB():
+		switch {
+		case re.CCWDA() && re.CWDB():
+			re.Next()
+		case re.CWDA() && re.CCWDB():
+			re.A()
+		case (re.CWDA() && re.CWDB()) || (re.CCWDA() && re.CCWDB()):
+			re.A()
+		case re.ZDA() && re.ZDB():
+			if re.ContainsDest() {
+				re.ErrA()
+			} else {
+				re.ErrB()
+			}
+		}
+	default:
+		re.ErrEdge()
+	}
+}
+func resolveEdgeYDown(re *rEdge) {
+	switch {
+	// CCWAB
+	case re.CCWAB() && re.CCWDA():
+		re.Next()
 
-	})
+	case re.CCWAB() && re.CWDA() && re.CWDB():
+		re.Next()
+	case re.CCWAB() && re.CWDA() && re.CCWDB():
+		re.A()
+	case re.CCWAB() && re.CWDA() && re.ZDB():
+		re.ErrB()
+
+	case re.CCWAB() && re.ZDA() && re.CCWDB():
+		re.ErrA()
+	case re.CCWAB() && re.ZDA() && re.CWDB():
+		re.Next()
+
+	// CWAB
+	case re.CWAB() && re.CCWDA() && re.CCWDB():
+		re.A()
+	case re.CWAB() && re.CCWDA() && re.CWDB():
+		re.Next()
+	case re.CWAB() && re.CCWDA() && re.ZDB():
+		re.ErrB()
+
+	case re.CWAB() && re.CWDA():
+		re.A()
+
+	case re.CWAB() && re.ZDA() && re.CCWDB():
+		re.A()
+	case re.CWAB() && re.ZDA() && re.CWDB():
+		re.ErrA()
+
+	// ZAB
+	case re.ZAB() && re.CCWDA() && re.CWDB():
+		re.Next()
+	case re.ZAB() && re.CCWDA() && re.CCWDB():
+		re.A()
+	case re.ZAB() && re.ZDA() && re.ZDB():
+		if re.ContainsDest() {
+			re.ErrA()
+		} else {
+			re.ErrB()
+		}
+
+	case re.ZAB() && re.CCWDA() && re.CCWDB():
+		re.ErrEdge()
+	case re.ZAB() && re.CWDA() && re.CWDB():
+		re.ErrEdge()
+
+	default:
+		re.Next()
+	}
 }
 
 // ResolveEdge will find the edge such that dest lies between it and it's next edge.
@@ -253,7 +303,12 @@ func resolveEdgeYUp(gse *Edge, odest geom.Point) (*Edge, error) {
 //  * ErrInvalidateEndVertex
 //  * ErrConcidentalEdges
 //  * geom.ErrColinearPoints
-func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) { return resolveEdgeYUp(gse, odest) }
+func ResolveEdge(order winding.Order, gse *Edge, odest geom.Point) (*Edge, error) {
+	if order.YPositiveDown {
+		return resolveEdge(order, gse, odest, resolveEdgeYDown)
+	}
+	return resolveEdge(order, gse, odest, resolveEdgeYUp)
+}
 
 /*
 func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
@@ -344,12 +399,14 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 			return next(e)
 		case ccwab && ccwda && zdb: // case 3
 			return next(e)
+
 		case ccwab && cwda && ccwdb: // case 4
 			return a(e)
 		case ccwab && cwda && cwdb: // case 5
 			return next(e)
 		case ccwab && cwda && zdb: // case 6
 			return errB(e)
+
 		case ccwab && zda && ccwdb: // case 7
 			return errA(e)
 		case ccwab && zda && cwdb: // case 8
@@ -363,12 +420,14 @@ func ResolveEdge(gse *Edge, odest geom.Point) (*Edge, error) {
 			return next(e)
 		case cwab && ccwda && zdb: // case 11
 			return errB(e)
+
 		case cwab && cwda && ccwdb: // case 12
 			return a(e)
 		case cwab && cwda && cwdb: // case 13
 			return a(e)
 		case cwab && cwda && zdb: // case 14
 			return a(e)
+
 		case cwab && zda && ccwdb: // case 15
 			return a(e)
 		case cwab && zda && cwdb: // case 16
