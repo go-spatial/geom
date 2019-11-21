@@ -33,7 +33,7 @@ func TestConstraint(t *testing.T) {
 			var sd *subdivision.Subdivision
 
 			ctx := context.Background()
-			sd, err = subdivision.NewForPoints(ctx, pts)
+			sd, err = subdivision.NewForPoints(ctx, tc.Order, pts)
 			if err != nil {
 				t.Errorf("error, expected nil, got %v", err)
 				return
@@ -52,7 +52,7 @@ func TestConstraint(t *testing.T) {
 
 			for i, ct := range tc.Constraints {
 				start, end := geom.Point(ct[0]), geom.Point(ct[1])
-				if _, _, exists, _ := subdivision.ResolveStartingEndingEdges(vxidx, start, end); exists {
+				if _, _, exists, _ := subdivision.ResolveStartingEndingEdges(sd.Order, vxidx, start, end); exists {
 					// Nothing to do, edge already in the subdivision.
 					continue
 				}

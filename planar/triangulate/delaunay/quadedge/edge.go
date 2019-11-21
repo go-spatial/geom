@@ -323,7 +323,6 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 				wkt.MustEncode(points),
 				e.DumpAllEdges(),
 			))
-
 		}
 
 		// New we need to check that there are no self intersecting lines.

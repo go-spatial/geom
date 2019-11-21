@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/winding"
 
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
@@ -17,6 +18,7 @@ func TestNewForPoints(t *testing.T) {
 	type tcase struct {
 		Name   string
 		Desc   string
+		Order  winding.Order
 		Points [][2]float64
 		Lines  []geom.Line
 	}
@@ -28,7 +30,7 @@ func TestNewForPoints(t *testing.T) {
 			log.Printf("Running test %v", t.Name())
 			log.Printf("initial points\n%v", wkt.MustEncode(geom.MultiPoint(tc.Points)))
 			//}
-			sd, err := NewForPoints(context.Background(), tc.Points)
+			sd, err := NewForPoints(context.Background(), tc.Order, tc.Points)
 			if err != nil {
 				t.Errorf("err, expected nil got %v", err)
 				t.Logf("points: %v", wkt.MustEncode(geom.MultiPoint(tc.Points)))
@@ -236,8 +238,9 @@ func TestNewSubdivision(t *testing.T) {
 	// one thing, that is a geom.Triangle{0 0,10 0,5 10} to make sure
 	// that a subdivision can be make from such a triangle.
 	tri := geom.Triangle{{0, 0}, {10, 0}, {5, 10}}
+	var order winding.Order
 
-	sd := New(geom.Point(tri[0]), geom.Point(tri[1]), geom.Point(tri[2]))
+	sd := New(order, geom.Point(tri[0]), geom.Point(tri[1]), geom.Point(tri[2]))
 	if sd.ptcount != 3 {
 		t.Errorf("ptcount, expected 3, got %v", sd.ptcount)
 	}

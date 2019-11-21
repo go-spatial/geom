@@ -24,7 +24,7 @@ func roundGeomPoint(pt geom.Point) geom.Point {
 
 }
 
-func ResolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) (startingEdge, endingEdge *quadedge.Edge, exists bool, err error) {
+func ResolveStartingEndingEdges(order winding.Order, vertexIndex VertexIndex, start, end geom.Point) (startingEdge, endingEdge *quadedge.Edge, exists bool, err error) {
 	var (
 		ok         bool
 		eerr, serr error
@@ -50,8 +50,8 @@ func ResolveStartingEndingEdges(vertexIndex VertexIndex, start, end geom.Point) 
 		return nil, nil, false, ErrInvalidEndVertex
 	}
 
-	startingEdge, serr = quadedge.ResolveEdge(startingEdge, end)
-	endingEdge, eerr = quadedge.ResolveEdge(endingEdge, start)
+	startingEdge, serr = quadedge.ResolveEdge(order, startingEdge, end)
+	endingEdge, eerr = quadedge.ResolveEdge(order, endingEdge, start)
 
 	if debug {
 		log.Printf("startingEdge: %v, err: %v", wkt.MustEncode(startingEdge.AsLine()), serr)
@@ -85,7 +85,7 @@ func (sd *Subdivision) InsertConstraint(ctx context.Context, vertexIndex VertexI
 		vertexIndex = sd.VertexIndex()
 	}
 
-	startingEdge, endingEdge, exist, err := ResolveStartingEndingEdges(vertexIndex, start, end)
+	startingEdge, endingEdge, exist, err := ResolveStartingEndingEdges(sd.Order, vertexIndex, start, end)
 	if err != nil {
 		var dumpStr strings.Builder
 
@@ -98,7 +98,7 @@ func (sd *Subdivision) InsertConstraint(ctx context.Context, vertexIndex VertexI
 		return nil
 	}
 
-	removalList, err := FindIntersectingEdges(startingEdge, endingEdge)
+	removalList, err := FindIntersectingEdges(sd.Order, startingEdge, endingEdge)
 	if err != nil {
 
 		if debug {
@@ -237,7 +237,7 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 		return nil
 	}
 
-	from, err := quadedge.ResolveEdge(tempEdge, end)
+	from, err := quadedge.ResolveEdge(sd.Order, tempEdge, end)
 	// There are two errors we care about
 	switch err {
 	case nil:
@@ -265,7 +265,7 @@ func (sd *Subdivision) insertEdge(vertexIndex VertexIndex, start, end geom.Point
 		return ErrInvalidEndVertex
 	}
 
-	to, err := quadedge.ResolveEdge(tempEdge, start)
+	to, err := quadedge.ResolveEdge(sd.Order, tempEdge, start)
 	switch err {
 	case nil:
 		// do nothing

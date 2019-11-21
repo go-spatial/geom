@@ -9,6 +9,7 @@ import (
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
+	"github.com/go-spatial/geom/winding"
 )
 
 func TestFindIntersectingEdges(t *testing.T) {
@@ -24,6 +25,8 @@ func TestFindIntersectingEdges(t *testing.T) {
 		// Use these to force a starting and ending edge
 		StartingDest *geom.Point
 		EndingDest   *geom.Point
+
+		Order winding.Order
 
 		// expected intersected edges
 		ExpectedLines []geom.Line
@@ -47,7 +50,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 			for _, ln := range tc.Lines {
 				pts = append(pts, ln[0], ln[1])
 			}
-			sd, err = NewForPoints(ctx, pts)
+			sd, err = NewForPoints(ctx, tc.Order, pts)
 			if err != nil {
 				panic(err)
 			}
@@ -56,7 +59,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 			for i, ln := range tc.Lines {
 
 				start, end := geom.Point(tc.Lines[i][0]), geom.Point(tc.Lines[i][1])
-				if _, _, exists, _ := ResolveStartingEndingEdges(vertexIndex, start, end); exists {
+				if _, _, exists, _ := ResolveStartingEndingEdges(sd.Order, vertexIndex, start, end); exists {
 					continue
 				}
 				t.Logf("Adding edge %05v of %05v -- %v", i, len(tc.Lines), wkt.MustEncode(tc.Lines[i]))
@@ -142,7 +145,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 				displaysd = true
 			}
 
-			gotLines, err := FindIntersectingEdges(startingEdge, endingEdge)
+			gotLines, err := FindIntersectingEdges(sd.Order, startingEdge, endingEdge)
 			if err != nil {
 				displaysd = true
 				t.Errorf("error, expected nil, got: %v", err)
