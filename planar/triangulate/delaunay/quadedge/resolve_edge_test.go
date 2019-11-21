@@ -8,7 +8,7 @@ import (
 	"github.com/go-spatial/geom/winding"
 )
 
-func TestResolveEdge2(t *testing.T) {
+func TestResolveEdge(t *testing.T) {
 	type tcase struct {
 		edge         *Edge
 		order        winding.Order
@@ -23,6 +23,7 @@ func TestResolveEdge2(t *testing.T) {
 				t.Errorf("error for %v, expected %v got %v", wkt.MustEncode(tc.dest), tc.err, gotErr)
 			}
 			if gotEdge != tc.expectedEdge {
+				t.Log("edge:", gotEdge)
 				t.Errorf("edge  for %v, expected %v got %v", wkt.MustEncode(tc.dest), wkt.MustEncode(tc.expectedEdge.AsLine()), wkt.MustEncode(gotEdge.AsLine()))
 			}
 		}
@@ -30,9 +31,9 @@ func TestResolveEdge2(t *testing.T) {
 
 	tests := map[string]tcase{}
 
-	{ // build out y-up tests case for edge with POINTS(0 0,5 0, 0 5).
+	{ // build out y-up tests case for edge with POINTS(0 0,5 0, 0 -5).
 		//	 where ab is counter clockwise, this will, also, implicitly cover ab clockwise.
-		nameFormat := "y-up resolve case %v"
+		nameFormat := "y-up resolve ccw case %v"
 		order := winding.Order{}
 		edge := BuildEdgeGraphAroundPoint(
 			geom.Point{0, 0},
@@ -89,8 +90,255 @@ func TestResolveEdge2(t *testing.T) {
 			cases[i].order = order
 			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
 		}
-	}
 
+		nameFormat = "y-up resolve cw %v"
+		edge = edge50
+		cases = []tcase{
+			{ // case cw ccw cw
+				dest:         geom.Point{3, -3},
+				expectedEdge: edge05,
+			},
+			{ // case cw ccw zdb
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge05,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case cw zda cw
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+		}
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+		// for colinear edges
+		edge = BuildEdgeGraphAroundPoint(
+			geom.Point{0, 0},
+			geom.Point{5, 0},
+			geom.Point{-5, 0},
+		)
+		nameFormat = "y-up resolve zab 1 %v"
+		edge_50 := edge.FindONextDest(geom.Point{-5, 0})
+		edge50 = edge.FindONextDest(geom.Point{5, 0})
+		edge = edge50
+		cases = []tcase{
+			{ // case zab ccw cw
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge_50,
+			},
+			{ // case zab cw ccw
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge50,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{-3, 0},
+				expectedEdge: edge_50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+		}
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+		// for colinear edges (one edge)
+		edge = BuildEdgeGraphAroundPoint(
+			geom.Point{0, 0},
+			geom.Point{5, 0},
+		)
+		nameFormat = "y-up resolve zab 2 %v"
+		edge50 = edge.FindONextDest(geom.Point{5, 0})
+		edge = edge50
+		cases = []tcase{
+			{ // case zab ccw cw
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge50,
+			},
+			{ // case zab cw ccw
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge50,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{-3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+		}
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+
+	}
+	{ // build out y-down tests case for edge with POINTS(0 0,5 0, 0 5).
+		//	 where ab is counter clockwise, this will, also, implicitly cover ab clockwise.
+		nameFormat := "y-down resolve ccw case %v"
+		order := winding.Order{
+			YPositiveDown: true,
+		}
+		edge := BuildEdgeGraphAroundPoint(
+			geom.Point{0, 0},
+			geom.Point{5, 0},
+			geom.Point{0, 5},
+		)
+		edge05 := edge.FindONextDest(geom.Point{0, 5})
+		edge50 := edge.FindONextDest(geom.Point{5, 0})
+		edge = edge05
+		cases := []tcase{
+			{ // case 0
+				dest:         geom.Point{0, 0},
+				expectedEdge: nil,
+				err:          ErrInvalidEndVertex,
+			},
+			{ // case 1
+				dest:         geom.Point{-3, 3},
+				expectedEdge: edge50,
+			},
+			{ // case 2
+				dest:         geom.Point{-3, -3},
+				expectedEdge: edge50,
+			},
+			{ // case 3
+				dest:         geom.Point{-3, 0},
+				expectedEdge: edge50,
+			},
+			{ // case 4
+				dest:         geom.Point{3, 3},
+				expectedEdge: edge05,
+			},
+			{ // case 5
+				dest:         geom.Point{3, -3},
+				expectedEdge: edge50,
+			},
+			{ // case 6
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case 7
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge05,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case 8
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge50,
+			},
+		}
+
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+
+		nameFormat = "y-down resolve cw %v"
+		edge = edge50
+		cases = []tcase{
+			{ // case cw ccw cw
+				dest:         geom.Point{3, 3},
+				expectedEdge: edge05,
+			},
+			{ // case cw ccw zdb
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge05,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case cw zda cw
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+		}
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+		// for colinear edges
+		edge = BuildEdgeGraphAroundPoint(
+			geom.Point{0, 0},
+			geom.Point{5, 0},
+			geom.Point{-5, 0},
+		)
+		nameFormat = "y-down resolve zab 1 %v"
+		edge_50 := edge.FindONextDest(geom.Point{-5, 0})
+		edge50 = edge.FindONextDest(geom.Point{5, 0})
+		edge = edge50
+		cases = []tcase{
+			{ // case zab ccw cw
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge_50,
+			},
+			{ // case zab cw ccw
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge50,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{-3, 0},
+				expectedEdge: edge_50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+		}
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+		// for colinear edges (one edge)
+		edge = BuildEdgeGraphAroundPoint(
+			geom.Point{0, 0},
+			geom.Point{5, 0},
+		)
+		nameFormat = "y-down resolve zab 2 %v"
+		edge50 = edge.FindONextDest(geom.Point{5, 0})
+		edge = edge50
+		cases = []tcase{
+			{ // case zab ccw cw
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge50,
+			},
+			{ // case zab cw ccw
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge50,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case zab zda zdb
+				dest:         geom.Point{-3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+		}
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+
+	}
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
 	}
