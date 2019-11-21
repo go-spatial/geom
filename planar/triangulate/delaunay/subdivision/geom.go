@@ -54,14 +54,14 @@ func NewSubdivisionFromGeomLines(lines []geom.Line, order winding.Order) *Subdiv
 				// edge already in graph
 				continue
 			}
-			oe, _ = quadedge.ResolveEdge(oe, dest)
+			oe, _ = quadedge.ResolveEdge(order, oe, dest)
 			if oe == nil {
 				oe = indexMap[orig]
 			}
 		}
 
 		if de != nil {
-			de, _ = quadedge.ResolveEdge(de, orig)
+			de, _ = quadedge.ResolveEdge(order, de, orig)
 			if de == nil {
 				de = indexMap[dest]
 			}

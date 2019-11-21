@@ -2,6 +2,7 @@ package quadedge
 
 import (
 	"log"
+	"math"
 
 	"github.com/go-spatial/geom/winding"
 
@@ -41,6 +42,9 @@ func Splice(a, b *Edge) {
 // left face after the connection is complete.
 // Additionally, the data pointers of the new edge are set.
 func Connect(a, b *Edge, order winding.Order) *Edge {
+	if b == nil || a == nil {
+		return nil
+	}
 	if debug {
 		log.Printf("\n\n\tvalidate a:\n%v\n", a.DumpAllEdges())
 		if err := Validate(a, order); err != nil {
@@ -64,7 +68,7 @@ func Connect(a, b *Edge, order winding.Order) *Edge {
 		log.Printf("\n\n\tConnect\n\n")
 		log.Printf("Connecting %v to %v:", wkt.MustEncode(*a.Dest()), wkt.MustEncode(*b.Orig()))
 	}
-	bb, err := ResolveEdge(b, *a.Dest())
+	bb, err := ResolveEdge(order, b, *a.Dest())
 	if debug {
 		if err != nil {
 			panic(err)
@@ -170,4 +174,14 @@ func RightOf(x geom.Point, e *Edge) bool {
 		return false
 	}
 	return sign(x.Subtract(*org).CrossProduct(dst.Subtract(*org))) == -1.0
+}
+
+func sign(f float64) float64 {
+	if cmp.Float(f, 0.0) {
+		return 0.0
+	}
+	if math.Signbit(f) {
+		return -1.0
+	}
+	return 1.0
 }

@@ -37,7 +37,7 @@ type Subdivision struct {
 }
 
 // New initialize a subdivision to the triangle defined by the points a,b,c.
-func New(a, b, c geom.Point) *Subdivision {
+func New(order winding.Order, a, b, c geom.Point) *Subdivision {
 
 	ea := quadedge.New()
 	ea.EndPoints(&a, &b)
@@ -55,7 +55,7 @@ func New(a, b, c geom.Point) *Subdivision {
 	quadedge.Splice(ec.Sym(), ea)
 
 	tri := geom.Triangle{[2]float64(a), [2]float64(b), [2]float64(c)}
-	se, err := quadedge.ResolveEdge(ea, geom.Point(tri.Center()))
+	se, err := quadedge.ResolveEdge(order, ea, geom.Point(tri.Center()))
 	if err != nil {
 		// should never happen
 		panic(err)
@@ -65,6 +65,7 @@ func New(a, b, c geom.Point) *Subdivision {
 		startingEdge: se,
 		ptcount:      3,
 		frame:        [3]geom.Point{a, b, c},
+		Order:        order,
 	}
 }
 
@@ -98,7 +99,7 @@ func (sdid *SubdivisionInsertionDump) DumpAllEdges() string {
 
 // NewForPoints creates a new subdivision for the given points, the points are
 // sorted and duplicate points are not added
-func NewForPoints(ctx context.Context, points [][2]float64) (sd *Subdivision, err error) {
+func NewForPoints(ctx context.Context, order winding.Order, points [][2]float64) (sd *Subdivision, err error) {
 	//	if debug {
 	defer func() {
 		if err != nil && err != context.Canceled {
@@ -112,7 +113,7 @@ func NewForPoints(ctx context.Context, points [][2]float64) (sd *Subdivision, er
 	}
 
 	tri := geom.NewTriangleContainingPoints(points...)
-	sd = New(tri[0], tri[1], tri[2])
+	sd = New(order, tri[0], tri[1], tri[2])
 
 	if debug {
 		if err := sd.Validate(ctx); err != nil {
@@ -196,7 +197,7 @@ func NewForPoints(ctx context.Context, points [][2]float64) (sd *Subdivision, er
 // and proceeds in the general direction of x. Based on the
 // pseudocode in Guibas and Stolfi (1985) p.121
 func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
-	return locate(sd.startingEdge, x, sd.ptcount*2)
+	return locate(sd.Order, sd.startingEdge, x, sd.ptcount*2)
 }
 
 // InsertSite will insert a new point into a subdivision representing a Delaunay
@@ -699,7 +700,7 @@ func WalkAllTriangles(ctx context.Context, se *quadedge.Edge, fn func(start, mid
 
 // FindIntersectingEdges will find all edges in the graph that would be intersected by the origin of the starting edge and the
 // dest of the endingEdge
-func FindIntersectingEdges(startingEdge, endingEdge *quadedge.Edge) (edges []*quadedge.Edge, err error) {
+func FindIntersectingEdges(order winding.Order, startingEdge, endingEdge *quadedge.Edge) (edges []*quadedge.Edge, err error) {
 	/*
 					 Move starting edge so that the graph look like
 					 ◌ .
@@ -739,8 +740,8 @@ func FindIntersectingEdges(startingEdge, endingEdge *quadedge.Edge) (edges []*qu
 		return edges, nil
 	}
 
-	startingEdge, _ = quadedge.ResolveEdge(startingEdge, end)
-	endingEdge, _ = quadedge.ResolveEdge(endingEdge, start)
+	startingEdge, _ = quadedge.ResolveEdge(order, startingEdge, end)
+	endingEdge, _ = quadedge.ResolveEdge(order, endingEdge, start)
 
 	if cmp.GeomPointEqual(*startingEdge.Dest(), end) ||
 		cmp.GeomPointEqual(*endingEdge.Dest(), start) {
@@ -861,7 +862,7 @@ func testEdge(x geom.Point, e *quadedge.Edge) (*quadedge.Edge, bool) {
 	}
 }
 
-func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
+func locate(order winding.Order, se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 
 	var (
 		e     *quadedge.Edge
@@ -875,7 +876,7 @@ func locate(se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 		log.Printf("\n\nlocate\n\n")
 		log.Printf("Original Starting Edge: %v", wkt.MustEncode(se.AsLine()))
 	}
-	se, err = quadedge.ResolveEdge(se, x)
+	se, err = quadedge.ResolveEdge(order, se, x)
 	if debug {
 		log.Printf("Starting Edge: %v : %v", wkt.MustEncode(se.AsLine()), err)
 	}

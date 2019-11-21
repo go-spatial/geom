@@ -40,8 +40,8 @@ func TestSplice(t *testing.T) {
 				return
 			}
 
-			tc.a, _ = ResolveEdge(tc.a, *tc.b.Orig())
-			tc.b, _ = ResolveEdge(tc.b, *tc.a.Orig())
+			tc.a, _ = ResolveEdge(order, tc.a, *tc.b.Orig())
+			tc.b, _ = ResolveEdge(order, tc.b, *tc.a.Orig())
 			t.Logf("Splicing a:%v to b: %v", wkt.MustEncode(tc.a.AsLine()), wkt.MustEncode(tc.b.AsLine()))
 
 			Splice(tc.a.Sym(), tc.b)
@@ -127,8 +127,10 @@ func TestConnect(t *testing.T) {
 				return
 			}
 
-			tc.a, _ = ResolveEdge(tc.a, *tc.b.Orig())
-			tc.b, _ = ResolveEdge(tc.b, *tc.a.Orig())
+			aOrig := *tc.a.Orig()
+			bOrig := *tc.b.Orig()
+			tc.a, _ = ResolveEdge(order, tc.a, bOrig)
+			tc.b, _ = ResolveEdge(order, tc.b, aOrig)
 			t.Logf("Connecting a:%v to b: %v", wkt.MustEncode(tc.a.AsLine()), wkt.MustEncode(tc.b.AsLine()))
 
 			e := Connect(tc.a, tc.b, order)

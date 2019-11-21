@@ -18,6 +18,7 @@ import (
 	"github.com/go-spatial/geom/internal/debugger"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision"
+	"github.com/go-spatial/geom/winding"
 )
 
 func logEdges(sd *subdivision.Subdivision) {
@@ -52,7 +53,7 @@ func Draw(t *testing.T, rec debugger.Recorder, name string, pts ...geom.Point) {
 
 	tri := geom.NewTriangleContaining(pts...)
 	ext := geom.NewExtentFromPoints(pts...)
-	sd := subdivision.New(geom.Point(tri[0]), geom.Point(tri[1]), geom.Point(tri[2]))
+	sd := subdivision.New(winding.Order{}, geom.Point(tri[0]), geom.Point(tri[1]), geom.Point(tri[2]))
 
 	for i, pt := range pts {
 		if i != 0 && pts[i-1][0] == pt[0] && pts[i-1][1] == pt[1] {

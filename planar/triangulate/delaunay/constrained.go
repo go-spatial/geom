@@ -12,11 +12,13 @@ import (
 	"github.com/go-spatial/geom/encoding/wkt"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/subdivision"
+	"github.com/go-spatial/geom/winding"
 )
 
 type GeomConstrained struct {
 	Points      []geom.Point
 	Constraints []geom.Line
+	Order       winding.Order
 }
 
 var EnableConstraints bool
@@ -64,7 +66,7 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 	if len(pts) == 0 {
 		return nil, nil
 	}
-	sd, err := subdivision.NewForPoints(ctx, pts)
+	sd, err := subdivision.NewForPoints(ctx, ct.Order, pts)
 	if err != nil {
 		if debug && err != context.Canceled {
 			if err1, ok := err.(quadedge.ErrInvalid); ok {
@@ -113,6 +115,7 @@ func (ct *GeomConstrained) Triangles(ctx context.Context, includeFrame bool) ([]
 type Constrained struct {
 	Points      [][2]float64
 	Constraints [][2][2]float64
+	Order       winding.Order
 }
 
 func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triangles [][3]geom.Point, err error) {
@@ -123,7 +126,7 @@ func (ct *Constrained) Triangles(ctx context.Context, includeFrame bool) (triang
 	if len(pts) == 0 {
 		return nil, nil
 	}
-	sd, err := subdivision.NewForPoints(ctx, pts)
+	sd, err := subdivision.NewForPoints(ctx, ct.Order, pts)
 	if err != nil {
 		return nil, err
 	}
