@@ -7,7 +7,7 @@ import "github.com/go-spatial/geom"
 // order for it to build a valid edge graph
 func BuildEdgeGraphAroundPoint(ocoord geom.Point, dcoords ...geom.Point) *Edge {
 	if len(dcoords) == 0 {
-		panic("dccords does not have any points")
+		panic("dcords does not have any points")
 	}
 	edges := make([]*Edge, len(dcoords))
 	for i := range dcoords {
