@@ -8,17 +8,96 @@ import (
 	"github.com/go-spatial/geom/winding"
 )
 
-func findEdgeWithDest(e *Edge, dest geom.Point) *Edge {
-	var edg *Edge = e
-	e.WalkAllONext(func(e *Edge) bool {
-		if cmp.GeomPointEqual(dest, *e.Dest()) {
-			edg = e
-			return false
+func TestResolveEdge2(t *testing.T) {
+	type tcase struct {
+		edge         *Edge
+		order        winding.Order
+		dest         geom.Point
+		expectedEdge *Edge
+		err          error
+	}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			gotEdge, gotErr := ResolveEdge(tc.order, tc.edge, tc.dest)
+			if tc.err != gotErr {
+				t.Errorf("error for %v, expected %v got %v", wkt.MustEncode(tc.dest), tc.err, gotErr)
+			}
+			if gotEdge != tc.expectedEdge {
+				t.Errorf("edge  for %v, expected %v got %v", wkt.MustEncode(tc.dest), wkt.MustEncode(tc.expectedEdge.AsLine()), wkt.MustEncode(gotEdge.AsLine()))
+			}
 		}
-		return true
-	})
-	return edg
+	}
+
+	tests := map[string]tcase{}
+
+	{ // build out y-up tests case for edge with POINTS(0 0,5 0, 0 5).
+		//	 where ab is counter clockwise, this will, also, implicitly cover ab clockwise.
+		nameFormat := "y-up resolve case %v"
+		order := winding.Order{}
+		edge := BuildEdgeGraphAroundPoint(
+			geom.Point{0, 0},
+			geom.Point{5, 0},
+			geom.Point{0, -5},
+		)
+		edge05 := edge.FindONextDest(geom.Point{0, -5})
+		edge50 := edge.FindONextDest(geom.Point{5, 0})
+		edge = edge05
+		cases := []tcase{
+			{ // case 0
+				dest:         geom.Point{0, 0},
+				expectedEdge: nil,
+				err:          ErrInvalidEndVertex,
+			},
+			{ // case 1
+				dest:         geom.Point{-3, -3},
+				expectedEdge: edge50,
+			},
+			{ // case 2
+				dest:         geom.Point{-3, 3},
+				expectedEdge: edge50,
+			},
+			{ // case 3
+				dest:         geom.Point{-3, 0},
+				expectedEdge: edge50,
+			},
+			{ // case 4
+				dest:         geom.Point{3, -3},
+				expectedEdge: edge05,
+			},
+			{ // case 5
+				dest:         geom.Point{3, 3},
+				expectedEdge: edge50,
+			},
+			{ // case 6
+				dest:         geom.Point{3, 0},
+				expectedEdge: edge50,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case 7
+				dest:         geom.Point{0, -3},
+				expectedEdge: edge05,
+				err:          geom.ErrPointsAreCoLinear,
+			},
+			{ // case 8
+				dest:         geom.Point{0, 3},
+				expectedEdge: edge50,
+			},
+		}
+
+		for i := range cases {
+			cases[i].edge = edge
+			cases[i].order = order
+			tests[fmt.Sprintf(nameFormat, i)] = cases[i]
+		}
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+
 }
+
+/*
 
 func TestResolveEdge(t *testing.T) {
 	type tcase struct {
@@ -61,7 +140,7 @@ func TestResolveEdge(t *testing.T) {
 				startingEdge := findEdgeWithDest(edge, ep)
 				t.Run(wkt.MustEncode(startingEdge.AsLine()), func(t *testing.T) {
 
-					got, err := ResolveEdge(startingEdge, tc.dest)
+					got, err := ResolveEdge(order, startingEdge, tc.dest)
 					if tc.err != err {
 						t.Errorf("error, expected %v got %v", tc.err, err)
 					}
@@ -222,3 +301,5 @@ func TestResolveEdge(t *testing.T) {
 		t.Run(tc.Desc, fn(tc))
 	}
 }
+
+*/
