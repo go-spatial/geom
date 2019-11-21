@@ -363,3 +363,57 @@ func TestRectifyPolygon(t *testing.T) {
 		t.Run(name, fn(tc))
 	}
 }
+
+func TestXProduct(t *testing.T) {
+	type tcase struct {
+		pts [][2]float64
+		sum float64
+	}
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			sum := xprod(tc.pts...)
+			if !cmp.Float(tc.sum, sum) {
+				if len(tc.pts) <= 3 {
+					t.Errorf("sum(%v), xexpected %g got %g", tc.pts, tc.sum, sum)
+				} else {
+					t.Errorf("sum(%v...), xexpected %g got %g", tc.pts[:3], tc.sum, sum)
+				}
+			}
+		}
+	}
+	tests := []tcase{
+		{
+			pts: [][2]float64{
+				{0, 0}, {5, 0}, {-3, 3},
+			},
+			sum: 15.0,
+		},
+		{
+			pts: [][2]float64{
+				{5, 0}, {-3, 3}, {0, 0},
+			},
+			sum: 15.0,
+		},
+		{ // da
+			pts: [][2]float64{
+				{0, 0}, {-3, 3}, {5, 0},
+			},
+			sum: -15.0,
+		},
+		{
+			pts: [][2]float64{
+				{0, -5}, {5, 0}, {0, 0},
+			},
+			sum: 25.0,
+		},
+		{
+			pts: [][2]float64{
+				{5, 0}, {0, -5}, {0, 0},
+			},
+			sum: -25.0,
+		},
+	}
+	for i := range tests {
+		t.Run("", fn(tests[i]))
+	}
+}

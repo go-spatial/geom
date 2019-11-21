@@ -5,6 +5,7 @@ package winding
 import (
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/go-spatial/geom"
 )
@@ -67,15 +68,42 @@ func (w Winding) Not() Winding {
 	return Winding(-1 * int8(w))
 }
 
-// Orient will take the points and calculate the Orientation of the points. by
-// summing the normal vectors. It will return 0 of the given points are colinear
-// or 1, or -1 for clockwise and counter clockwise depending on the direction of
-// the y axis. If the y axis increase as you go up on the graph then clockwise will
-// be -1, otherwise it will be 1; vice versa for counter-clockwise.
-func Orient(pts ...[2]float64) int8 {
-	if len(pts) < 3 {
-		return 0
+// reference: https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
+
+/*
+func shoelace(pts ...[2]float64) (sum float64) {
+	for i := range pts {
+		j := (i + 1) % len(pts)
+		prd := (pts[j][0] - pts[i][0]) * (pts[j][1] + pts[i][1])
+		sum += prd
+		if debug {
+			log.Printf("sum(%v,%v): %g  -- %g", i, j, sum, prd)
+		}
 	}
+	if debug {
+		log.Printf("sum:%g", sum)
+	}
+	return sum
+}
+
+func openlayers2(pts ...[2]float64) (area float64) {
+	for i := range pts {
+		j := (i + 1) % len(pts)
+		area += pts[i][0] * pts[j][1]
+		area -= pts[j][0] * pts[i][1]
+
+		if debug {
+			log.Printf("area(%v,%v): %g", i, j, area)
+		}
+	}
+	if debug {
+		log.Printf("area:%g", area)
+	}
+	return area
+
+}
+*/
+func xprod(pts ...[2]float64) float64 {
 	var (
 		sum = 0.0
 		dop = 0.0
@@ -93,14 +121,27 @@ func Orient(pts ...[2]float64) int8 {
 		}
 		li = i
 	}
-	switch {
-	case sum == 0:
+	return sum
+
+}
+
+// Orient will take the points and calculate the Orientation of the points. by
+// summing the normal vectors. It will return 0 of the given points are colinear
+// or 1, or -1 for clockwise and counter clockwise depending on the direction of
+// the y axis. If the y axis increase as you go up on the graph then clockwise will
+// be -1, otherwise it will be 1; vice versa for counter-clockwise.
+func Orient(pts ...[2]float64) int8 {
+	if len(pts) < 3 {
 		return 0
-	case sum < 0:
-		return -1
-	default:
-		return 1
 	}
+	sum := xprod(pts...)
+	if sum == 0.0 {
+		return 0 // colinear
+	}
+	if math.Signbit(sum) {
+		return -1 // counter clockwise
+	}
+	return 1 // clockwise
 }
 
 // Orientation returns the orientation of the set of the points given the
