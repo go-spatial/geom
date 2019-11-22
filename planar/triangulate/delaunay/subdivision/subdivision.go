@@ -210,6 +210,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		log.Printf("\n\nInsertSite   %v  \n\n", wkt.MustEncode(x))
 	}
 
+	// TODO(gdey): should we increment count here?
 	sd.ptcount++
 	e, got := sd.locate(x)
 	if !got {
@@ -833,7 +834,9 @@ func ptEqual(x geom.Point, a *geom.Point) bool {
 	return cmp.GeomPointEqual(x, *a)
 }
 
-func testEdge(x geom.Point, e *quadedge.Edge) (*quadedge.Edge, bool) {
+// testEdge will walk the edge (e) toward the point (x)
+// returns the next edge or the found edge, found indicates if the edge was found
+func testEdge(x geom.Point, e *quadedge.Edge) (next *quadedge.Edge, found bool) {
 	switch {
 	case ptEqual(x, e.Orig()) || ptEqual(x, e.Dest()):
 		return e, true
@@ -862,6 +865,8 @@ func testEdge(x geom.Point, e *quadedge.Edge) (*quadedge.Edge, bool) {
 	}
 }
 
+// locate will walk the edge graph looking for the first edge from the se such that the point (x) is
+// counter clockwise to it.
 func locate(order winding.Order, se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 
 	var (
@@ -894,6 +899,7 @@ func locate(order winding.Order, se *quadedge.Edge, x geom.Point, limit int) (*q
 		if e == se || count > limit {
 			e = nil
 
+			// brute force walk all edges to find a suitable edge
 			WalkAllEdges(se, func(ee *quadedge.Edge) error {
 				if _, ok = testEdge(x, ee); ok {
 					e = ee
