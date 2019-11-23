@@ -163,8 +163,11 @@ func OnEdge(pt geom.Point, e *Edge) bool {
 // RightOf indicates if the point is right of the Edge
 // If a point is below the line it is to it's right
 // If a point is above the line it is to it's left
-// However with screen coordinates, the Y-axis is flipped,
-func RightOf(x geom.Point, e *Edge) bool {
+func RightOf(yflip bool, x geom.Point, e *Edge) bool {
+	mul := 1.0
+	if yflip {
+		mul = -1.0
+	}
 	org := e.Orig()
 	if org == nil {
 		return false
@@ -173,7 +176,7 @@ func RightOf(x geom.Point, e *Edge) bool {
 	if dst == nil {
 		return false
 	}
-	return sign(x.Subtract(*org).CrossProduct(dst.Subtract(*org))) == -1.0
+	return sign(x.Subtract(*org).CrossProduct(dst.Subtract(*org))) == mul
 }
 
 func sign(f float64) float64 {
