@@ -3,6 +3,7 @@ package quadedge
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/planar/intersect"
@@ -270,6 +271,10 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 
 	points := []geom.Point{}
 	segs := []geom.Line{}
+	var (
+		onextCounterClockwiseCount int
+		oprevClockwiseCount        int
+	)
 	e.WalkAllONext(func(ee *Edge) bool {
 		dest := ee.Dest()
 		if dest == nil {
@@ -299,6 +304,30 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 			)
 		}
 		segs = append(segs, e.AsLine())
+
+		if debug {
+			log.Printf("edge .    : %v", wkt.MustEncode(ee.AsLine()))
+			log.Printf("edge.ONext: %v", wkt.MustEncode(ee.ONext().AsLine()))
+			log.Printf("edge.OPrev: %v", wkt.MustEncode(ee.OPrev().AsLine()))
+		}
+		// Check to see if ONext edge is not clockwise
+		onextDest := ee.ONext().Dest()
+		onextWinding := order.OfGeomPoints(orig, *dest, *onextDest)
+		switch {
+		case onextWinding.IsClockwise():
+			onextCounterClockwiseCount--
+		case onextWinding.IsCounterClockwise():
+			onextCounterClockwiseCount++
+		}
+		oprevDest := ee.OPrev().Dest()
+		oprevWinding := order.OfGeomPoints(orig, *dest, *oprevDest)
+		switch {
+		case oprevWinding.IsClockwise():
+			oprevClockwiseCount++
+		case oprevWinding.IsCounterClockwise():
+			oprevClockwiseCount--
+		}
+
 		return true
 	})
 	if len(err) != 0 {
@@ -306,23 +335,18 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 	}
 
 	if len(points) > 2 {
+		if oprevClockwiseCount <= 0 {
+			err = append(
+				err,
+				fmt.Sprintf("expected all points to be clockwise"),
+			)
 
-		winding := order.OfGeomPoints(points...)
-		if winding.IsColinear() {
-			// All points are colinear to each other,
-			// Need to check winding order with original point
-			// not enough information just using the outer points, we need to include the origin
-			winding = order.OfGeomPoints(append(points, orig)...)
 		}
-
-		if !winding.IsCounterClockwise() {
-			err = append(err, fmt.Sprintf("1. (%v) expected all points to be counter-clockwise(%v):\n%v:%v\n%v",
-				winding.ShortString(),
-				order.CounterClockwise().ShortString(),
-				wkt.MustEncode(orig),
-				wkt.MustEncode(points),
-				e.DumpAllEdges(),
-			))
+		if onextCounterClockwiseCount <= 0 {
+			err = append(
+				err,
+				fmt.Sprintf("expected all points to be counter-clockwise"),
+			)
 		}
 
 		// New we need to check that there are no self intersecting lines.
