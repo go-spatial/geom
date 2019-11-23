@@ -297,3 +297,78 @@ func TestNewSubdivision(t *testing.T) {
 		}
 	}
 }
+
+func genAndTestNewSD(t *testing.T, order winding.Order, trianglePoint [3]geom.Point) (*Subdivision, []*quadedge.Edge) {
+	triangleEdge := make([]*quadedge.Edge, len(trianglePoint))
+	sd := New(order, trianglePoint[0], trianglePoint[1], trianglePoint[2])
+	se := sd.startingEdge
+	if !cmp.GeomPointEqual(*(se.Orig()), trianglePoint[0]) {
+		se = se.FindONextDest(trianglePoint[0]).Sym()
+	}
+
+	triangleEdge[0] = se.FindONextDest(trianglePoint[2])
+	triangleEdge[1] = triangleEdge[0].ONext().Sym()
+	triangleEdge[2] = triangleEdge[0].Sym()
+
+	for i := range trianglePoint {
+		// verify that point edge is origin is correct
+		if !cmp.GeomPointEqual(*(triangleEdge[i].Orig()), trianglePoint[i]) {
+			t.Errorf("new edge %v origin, expected %v got %v", i, wkt.MustEncode(trianglePoint[i]), wkt.MustEncode(*(triangleEdge[i].Orig())))
+			return nil, nil
+		}
+		// Let's verify that all vertex have only two edges
+		if triangleEdge[i].ONext() == triangleEdge[i] || triangleEdge[i].ONext().ONext() != triangleEdge[i] {
+			t.Errorf("vertex %v, expected two edges, got not two", i)
+			return nil, nil
+		}
+	}
+	return sd, triangleEdge
+}
+
+func testEdgeONextOPrevDest(t *testing.T, i string, e *quadedge.Edge, onextDest geom.Point, oprevDest geom.Point) {
+	printedEdge := false
+	if !cmp.GeomPointEqual(*(e.ONext().Dest()), onextDest) {
+		t.Logf("edge %v", wkt.MustEncode(e.AsLine()))
+		printedEdge = true
+		t.Errorf("edge %v onext, expected %v got %v", i, onextDest, *(e.ONext().Dest()))
+	}
+	if !cmp.GeomPointEqual(*(e.OPrev().Dest()), oprevDest) {
+		if !printedEdge {
+			t.Logf("edge %v", wkt.MustEncode(e.AsLine()))
+		}
+		t.Errorf("edge %v oprev, expected %v got %v", i, oprevDest, *(e.OPrev().Dest()))
+	}
+}
+
+func TestSubdivisionInsertSiteOnePoint(t *testing.T) {
+	var (
+		order         winding.Order
+		trianglePoint = [...]geom.Point{
+			geom.Point{-100, -100},
+			geom.Point{0, 100},
+			geom.Point{100, -100},
+		}
+		insertPoint = geom.Point{0, 0}
+	)
+
+	sd, triangleEdge := genAndTestNewSD(t, order, trianglePoint)
+	if sd == nil {
+		return
+	}
+
+	sd.InsertSite(insertPoint)
+
+	for i := range trianglePoint {
+		// Let's verify that all vertex have only two edges
+		if triangleEdge[i].ONext() == triangleEdge[i] ||
+			triangleEdge[i].ONext().ONext() == triangleEdge[i] ||
+			triangleEdge[i].ONext().ONext().ONext() != triangleEdge[i] {
+			t.Errorf("vertex %v, expected three edges, got not three", i)
+		}
+	}
+
+	testEdgeONextOPrevDest(t, "0", triangleEdge[0], insertPoint, trianglePoint[1])
+	testEdgeONextOPrevDest(t, "2", triangleEdge[2], trianglePoint[1], insertPoint)
+	testEdgeONextOPrevDest(t, "1", triangleEdge[1], insertPoint, trianglePoint[2])
+
+}

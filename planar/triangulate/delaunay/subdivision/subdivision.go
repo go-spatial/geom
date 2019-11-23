@@ -41,16 +41,13 @@ func New(order winding.Order, a, b, c geom.Point) *Subdivision {
 
 	ea := quadedge.New()
 	ea.EndPoints(&a, &b)
-	log.Printf("ea: %v", wkt.MustEncode(ea.AsLine()))
 
 	eb := quadedge.New()
 	quadedge.Splice(ea.Sym(), eb)
 	eb.EndPoints(&b, &c)
-	log.Printf("eb: %v", wkt.MustEncode(eb.AsLine()))
 
 	ec := quadedge.New()
 	ec.EndPoints(&c, &a)
-	log.Printf("ec: %v", wkt.MustEncode(ec.AsLine()))
 	quadedge.Splice(eb.Sym(), ec)
 	quadedge.Splice(ec.Sym(), ea)
 
@@ -206,6 +203,9 @@ func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
 // from Guibas and Stolfi (1985) p.120, with slight modifications and a bug fix.
 func (sd *Subdivision) InsertSite(x geom.Point) bool {
 
+	var (
+		err error
+	)
 	if debug {
 		log.Printf("\n\nInsertSite   %v  \n\n", wkt.MustEncode(x))
 	}
@@ -233,6 +233,17 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		}
 		// Point is already in subdivision
 		return true
+	}
+
+	e, err = quadedge.ResolveEdge(sd.Order, e, x)
+	if err != nil {
+		panic(err)
+	}
+	if debug {
+		log.Printf("resolve edge %v found edge: %p %v", wkt.MustEncode(x), e, wkt.MustEncode(e.AsLine()))
+		log.Printf("vertexes: %v", e.DumpAllEdges())
+		log.Printf("subdivision")
+		DumpSubdivision(sd)
 	}
 
 	// x should only be somewhere in the middle.
@@ -338,7 +349,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 			containsPoint = crl.ContainsPoint([2]float64(x))
 		}
 		switch {
-		case quadedge.RightOf(*t.Dest(), e) &&
+		case quadedge.RightOf(sd.Order.YPositiveDown, *t.Dest(), e) &&
 			containsPoint:
 			if debug {
 				log.Printf("Circle from points: %v,%v,%v \n%v\n%v",
@@ -836,24 +847,24 @@ func ptEqual(x geom.Point, a *geom.Point) bool {
 
 // testEdge will walk the edge (e) toward the point (x)
 // returns the next edge or the found edge, found indicates if the edge was found
-func testEdge(x geom.Point, e *quadedge.Edge) (next *quadedge.Edge, found bool) {
+func testEdge(order winding.Order, x geom.Point, e *quadedge.Edge) (next *quadedge.Edge, found bool) {
 	switch {
 	case ptEqual(x, e.Orig()) || ptEqual(x, e.Dest()):
 		return e, true
 
-	case quadedge.RightOf(x, e):
+	case quadedge.RightOf(order.YPositiveDown, x, e):
 		if debug {
 			log.Printf("%v right of  %v", wkt.MustEncode(x), wkt.MustEncode(e.AsLine()))
 		}
 		return e.Sym(), false
 
-	case !quadedge.RightOf(x, e.ONext()):
+	case !quadedge.RightOf(order.YPositiveDown, x, e.ONext()):
 		if debug {
 			log.Printf("%v not right of  %v", wkt.MustEncode(x), wkt.MustEncode(e.ONext().AsLine()))
 		}
 		return e.ONext(), false
 
-	case !quadedge.RightOf(x, e.DPrev()):
+	case !quadedge.RightOf(order.YPositiveDown, x, e.DPrev()):
 		if debug {
 			log.Printf("%v not right of  %v", wkt.MustEncode(x), wkt.MustEncode(e.DPrev().AsLine()))
 		}
@@ -867,6 +878,29 @@ func testEdge(x geom.Point, e *quadedge.Edge) (next *quadedge.Edge, found bool) 
 
 // locate will walk the edge graph looking for the first edge from the se such that the point (x) is
 // counter clockwise to it.
+//
+/* origianl C++ code from paper
+Edge* Subdivision::Locate(const Point2d& x)
+// Returns an edge e, s.t. either x is on e, or e is an edge of
+// a triangle containing x. The search starts from startingEdge
+// and proceeds in the general direction of x. Based on the
+// pseudocode in Guibas and Stolfi (1985) p.121.
+{
+	Edge* e = startingEdge;
+	while (TRUE) {
+	if (x == e->Org2d() || x == e->Dest2d()) {
+    	return e;
+	} else if (RightOf(x, e)) {
+		e = e->Sym();
+	} else if (!RightOf(x, e->Onext())) {
+		e = e->Onext();
+	} else if (!RightOf(x, e->Dprev()))
+		e = e->Dprev();
+	} else {
+    	return e;
+	}
+}
+*/
 func locate(order winding.Order, se *quadedge.Edge, x geom.Point, limit int) (*quadedge.Edge, bool) {
 
 	var (
@@ -886,7 +920,7 @@ func locate(order winding.Order, se *quadedge.Edge, x geom.Point, limit int) (*q
 		log.Printf("Starting Edge: %v : %v", wkt.MustEncode(se.AsLine()), err)
 	}
 
-	for e, ok = testEdge(x, se); !ok; e, ok = testEdge(x, e) {
+	for e, ok = testEdge(order, x, se); !ok; e, ok = testEdge(order, x, e) {
 		if debug {
 			log.Printf("next Edge: %v", wkt.MustEncode(e.AsLine()))
 		}
@@ -901,7 +935,7 @@ func locate(order winding.Order, se *quadedge.Edge, x geom.Point, limit int) (*q
 
 			// brute force walk all edges to find a suitable edge
 			WalkAllEdges(se, func(ee *quadedge.Edge) error {
-				if _, ok = testEdge(x, ee); ok {
+				if _, ok = testEdge(order, x, ee); ok {
 					e = ee
 					return ErrCancelled
 				}
