@@ -2,7 +2,6 @@ package quadedge
 
 import (
 	"log"
-	"math"
 
 	"github.com/go-spatial/geom/winding"
 
@@ -164,9 +163,9 @@ func OnEdge(pt geom.Point, e *Edge) bool {
 // If a point is below the line it is to it's right
 // If a point is above the line it is to it's left
 func RightOf(yflip bool, x geom.Point, e *Edge) bool {
-	mul := 1.0
-	if yflip {
-		mul = -1.0
+
+	order := winding.Order{
+		YPositiveDown: yflip,
 	}
 	org := e.Orig()
 	if org == nil {
@@ -176,15 +175,15 @@ func RightOf(yflip bool, x geom.Point, e *Edge) bool {
 	if dst == nil {
 		return false
 	}
-	return sign(x.Subtract(*org).CrossProduct(dst.Subtract(*org))) == mul
-}
-
-func sign(f float64) float64 {
-	if cmp.Float(f, 0.0) {
-		return 0.0
+	w := order.OfGeomPoints(*org, *dst, x)
+	if debug {
+		log.Printf(
+			"%v right of %v ? (%v) %t",
+			wkt.MustEncode(x),
+			wkt.MustEncode(e.AsLine()),
+			w.ShortString(),
+			w.IsClockwise(),
+		)
 	}
-	if math.Signbit(f) {
-		return -1.0
-	}
-	return 1.0
+	return w.IsClockwise()
 }

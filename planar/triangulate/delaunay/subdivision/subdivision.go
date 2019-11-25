@@ -280,7 +280,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		log.Printf("Splice base,e: %v", wkt.MustEncode(e.AsLine()))
 	}
 	quadedge.Splice(base, e)
-	sd.startingEdge = base
+	startingEdge := base
 	if debug {
 		log.Printf("base edges: %v", base.DumpAllEdges())
 		log.Printf("connecting e[ %v ] to base.Sym[ %v ]",
@@ -299,10 +299,10 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		log.Printf("e.LPrev: %v", wkt.MustEncode(e.LPrev().AsLine()))
 		log.Printf("e.RNext: %v", wkt.MustEncode(e.RNext().AsLine()))
 		log.Printf("e.RPrev: %v", wkt.MustEncode(e.RPrev().AsLine()))
-		log.Printf("se: %v", wkt.MustEncode(sd.startingEdge.AsLine()))
+		log.Printf("se: %v", wkt.MustEncode(startingEdge.AsLine()))
 	}
 	count := 0
-	for e.LNext() != sd.startingEdge {
+	for e.LNext() != startingEdge {
 		if debug {
 			log.Printf("connecting e[ %v ] to base.Sym[ %v ]",
 				wkt.MustEncode(e.AsLine()),
@@ -313,7 +313,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		e = base.OPrev()
 		if debug {
 			count++
-			log.Printf("se: %v", wkt.MustEncode(sd.startingEdge.AsLine()))
+			log.Printf("se: %v", wkt.MustEncode(startingEdge.AsLine()))
 			log.Printf("base: %v", wkt.MustEncode(base.AsLine()))
 			log.Printf("e == base.OPrev: %v", wkt.MustEncode(e.AsLine()))
 			log.Printf("e.LNext: %v", wkt.MustEncode(e.LNext().AsLine()))
@@ -339,7 +339,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 	for {
 		t := e.OPrev()
 		if debug {
-			log.Printf("se: %v", wkt.MustEncode(sd.startingEdge.AsLine()))
+			log.Printf("se: %v", wkt.MustEncode(startingEdge.AsLine()))
 			log.Printf("e: %v", wkt.MustEncode(e.AsLine()))
 			log.Printf("e.OPrev/t: %v", wkt.MustEncode(t.AsLine()))
 		}
@@ -381,7 +381,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 			}
 			e = e.OPrev()
 
-		case e.ONext() == sd.startingEdge: // no more suspect edges
+		case e.ONext() == startingEdge: // no more suspect edges
 			if debug {
 				if err := sd.Validate(context.Background()); err != nil {
 					if err1, ok := err.(quadedge.ErrInvalid); ok {
