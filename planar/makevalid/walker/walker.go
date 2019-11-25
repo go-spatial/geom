@@ -9,7 +9,7 @@ import (
 	"github.com/go-spatial/geom/encoding/wkt"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
+	cmppkg "github.com/go-spatial/geom/cmp"
 	"github.com/go-spatial/geom/planar"
 )
 
@@ -221,7 +221,7 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 	}
 
 	// normalize ring
-	cmp.RotateToLeftMostPoint(rng)
+	cmppkg.RotateToLeftMostPoint(rng)
 
 	pIdx := func(i int) int {
 		if i == 0 {
@@ -287,7 +287,7 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 			if len(sliver) >= 3 { // make a copy to free up memory.
 				ps := make([][2]float64, len(sliver))
 				copy(ps, sliver)
-				cmp.RotateToLeftMostPoint(ps)
+				cmppkg.RotateToLeftMostPoint(ps)
 				if debug {
 					log.Printf("ring: %v", wkt.MustEncode(rng))
 					log.Printf("sliver: %v", wkt.MustEncode(sliver))
@@ -302,7 +302,7 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 		}
 
 		// do a quick check to see if b is on ac
-		removeB := planar.IsPointOnLine(rng[i], rng[pidx], rng[nidx])
+		removeB := planar.IsPointOnLine(cmp, rng[i], rng[pidx], rng[nidx])
 
 		// ab … bc The sliver is going to be from b … just before b. So, the ring will be …abc… or …ac… depending on removeB
 		if debug {
@@ -323,7 +323,7 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 		sliver := removeBridge(cut(&rng, idx, i))
 
 		if len(sliver) >= 3 {
-			cmp.RotateToLeftMostPoint(sliver)
+			cmppkg.RotateToLeftMostPoint(sliver)
 			if debug {
 				log.Printf("ring: %v", wkt.MustEncode(rng))
 				log.Printf("sliver: %v", wkt.MustEncode(sliver))
@@ -352,6 +352,6 @@ func PolygonForRing(ctx context.Context, rng [][2]float64) (plyg [][][2]float64)
 
 	plyg[0] = make([][2]float64, len(rng))
 	copy(plyg[0], rng)
-	cmp.RotateToLeftMostPoint(plyg[0])
+	cmppkg.RotateToLeftMostPoint(plyg[0])
 	return plyg
 }

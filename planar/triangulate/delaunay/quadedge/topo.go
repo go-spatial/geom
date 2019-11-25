@@ -156,7 +156,7 @@ func OnEdge(pt geom.Point, e *Edge) bool {
 		return false
 	}
 	l := geom.Line{*org, *dst}
-	return planar.IsPointOnLineSegment(pt, l)
+	return planar.IsPointOnLineSegment(cmp, pt, l)
 }
 
 // RightOf indicates if the point is right of the Edge
