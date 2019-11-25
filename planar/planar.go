@@ -46,23 +46,23 @@ func Slope(line [2][2]float64) (m, b float64, defined bool) {
 }
 
 // IsPointOnLine checks if pt is on the lines l1, l2 by checking slope and intersect form
-func IsPointOnLine(pt [2]float64, l1, l2 [2]float64) bool {
+func IsPointOnLine(compare cmp.Compare, pt [2]float64, l1, l2 [2]float64) bool {
 	m, b, defined := Slope([2][2]float64{l1, l2})
 	switch {
 	case !defined:
 		// line is vertical, so if we the x values are the same it's on the line.
-		return cmp.Float(pt[0], l1[0])
+		return compare.Float(pt[0], l1[0])
 	case m == 0:
 		// line is horizontal, so if the y values are the same it's on the line.
-		return cmp.Float(pt[1], l1[1])
+		return compare.Float(pt[1], l1[1])
 	default:
 		y := (m * pt[0]) + b
-		return cmp.Float(pt[1], y)
+		return compare.Float(pt[1], y)
 	}
 }
 
 // IsPointOnLineSegment checks if pt is on the line segment (seg)
-func IsPointOnLineSegment(pt geom.Point, seg geom.Line) bool {
+func IsPointOnLineSegment(compare cmp.Compare, pt geom.Point, seg geom.Line) bool {
 	// first order the x and y of the line.
 	minx, miny, maxx, maxy := seg[0][0], seg[0][1], seg[1][0], seg[1][1]
 	if minx > maxx {
@@ -75,7 +75,7 @@ func IsPointOnLineSegment(pt geom.Point, seg geom.Line) bool {
 		// Outside the extent of the line
 		return false
 	}
-	return IsPointOnLine(pt, seg[0], seg[1])
+	return IsPointOnLine(compare, pt, seg[0], seg[1])
 }
 
 // PointOnLineAt will return a point on the given line at the distance from the
