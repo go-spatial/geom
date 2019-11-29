@@ -235,6 +235,9 @@ func (e *Edge) IsEqual(e1 *Edge) bool {
 // oriented
 func Validate(e *Edge, order winding.Order) (err1 error) {
 
+	if debug {
+		log.Printf("\n\nValidating edge\n%v", wkt.MustEncode(e.AsLine()))
+	}
 	const radius = 10
 	var err ErrInvalid
 
@@ -267,14 +270,24 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 	}
 
 	orig := *e.Orig()
-	seen := make(map[geom.Point]bool)
 
 	points := []geom.Point{}
+	didSee := func(pt geom.Point) (int, bool) {
+		for i := range points {
+			if cmp.GeomPointEqual(pt, points[i]) {
+				return i, true
+			}
+		}
+		return -1, false
+	}
 	segs := []geom.Line{}
 	var (
 		onextCounterClockwiseCount int
 		oprevClockwiseCount        int
 	)
+	if debug {
+		log.Print("walking edges\n\n")
+	}
 	e.WalkAllONext(func(ee *Edge) bool {
 		dest := ee.Dest()
 		if dest == nil {
@@ -285,12 +298,15 @@ func Validate(e *Edge, order winding.Order) (err1 error) {
 			err = append(err, "expected edge to have origin")
 			return false
 		}
-		if seen[*dest] {
-			err = append(err, "dest not unique")
+		if debug {
+			log.Printf("edge .    (%p): %v", ee, wkt.MustEncode(ee.Dest()))
+			log.Printf("edge.ONext(%p): %v", ee.ONext(), wkt.MustEncode(ee.ONext().Dest()))
+		}
+		if i, ok := didSee(*dest); ok {
+			err = append(err, fmt.Sprintf("dest[%v] not unique -- %v : %v", wkt.MustEncode(*dest), i, wkt.MustEncode(points[i])))
 			err = append(err, ee.DumpAllEdges())
 			return false
 		}
-		seen[*ee.Dest()] = true
 		points = append(points, *ee.Dest())
 
 		if !cmp.GeomPointEqual(*ee.Orig(), orig) {

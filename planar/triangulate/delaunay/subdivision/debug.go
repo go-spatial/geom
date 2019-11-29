@@ -17,6 +17,13 @@ const (
 	debug = false
 )
 
+/*
+For when we have debug as a var
+func ToggleDebug() {
+	debug = !debug
+}
+*/
+
 func init() {
 	debugger.DefaultOutputDir = "output"
 	log.SetFlags(log.LstdFlags | log.Lshortfile)

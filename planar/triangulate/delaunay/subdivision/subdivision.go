@@ -203,9 +203,6 @@ func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
 // from Guibas and Stolfi (1985) p.120, with slight modifications and a bug fix.
 func (sd *Subdivision) InsertSite(x geom.Point) bool {
 
-	var (
-		err error
-	)
 	if debug {
 		log.Printf("\n\nInsertSite   %v  \n\n", wkt.MustEncode(x))
 	}
@@ -233,17 +230,6 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		}
 		// Point is already in subdivision
 		return true
-	}
-
-	e, err = quadedge.ResolveEdge(sd.Order, e, x)
-	if err != nil {
-		panic(err)
-	}
-	if debug {
-		log.Printf("resolve edge %v found edge: %p %v", wkt.MustEncode(x), e, wkt.MustEncode(e.AsLine()))
-		log.Printf("vertexes: %v", e.DumpAllEdges())
-		log.Printf("subdivision")
-		DumpSubdivision(sd)
 	}
 
 	// x should only be somewhere in the middle.
@@ -361,7 +347,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 				)
 				log.Printf("Point of consideration: %v", wkt.MustEncode(x))
 				log.Printf("%v right of %v", wkt.MustEncode(*t.Dest()), wkt.MustEncode(e.AsLine()))
-				log.Printf("Swapping e: %v", wkt.MustEncode(e.AsLine()))
+				log.Printf("Swapping e(%p): %v", e, wkt.MustEncode(e.AsLine()))
 			}
 
 			if cmp.GeomPointEqual(*(e.OPrev().Dest()), *(e.Sym().OPrev().Dest())) {
@@ -371,6 +357,21 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 
 				log.Printf("%v", e.DumpAllEdges())
 				DumpSubdivision(sd)
+				if err := sd.Validate(context.Background()); err != nil {
+					if err1, ok := err.(quadedge.ErrInvalid); ok {
+						for i, estr := range err1 {
+							log.Printf("sd validate err: %03v : %v", i, estr)
+						}
+					}
+				}
+				if err := quadedge.Validate(e, sd.Order); err != nil {
+					if err1, ok := err.(quadedge.ErrInvalid); ok {
+						for i, estr := range err1 {
+							log.Printf("edge validate err: %03v : %v", i, estr)
+						}
+					}
+
+				}
 				panic("Weird edge, where the OPrev and Sym:OPrev are the same")
 			}
 			quadedge.Swap(e)
@@ -848,6 +849,12 @@ func ptEqual(x geom.Point, a *geom.Point) bool {
 // testEdge will walk the edge (e) toward the point (x)
 // returns the next edge or the found edge, found indicates if the edge was found
 func testEdge(order winding.Order, x geom.Point, e *quadedge.Edge) (next *quadedge.Edge, found bool) {
+	if debug {
+		log.Printf("test Edge: %v X: %v",
+			wkt.MustEncode(e.AsLine()),
+			wkt.MustEncode(x),
+		)
+	}
 	switch {
 	case ptEqual(x, e.Orig()) || ptEqual(x, e.Dest()):
 		return e, true

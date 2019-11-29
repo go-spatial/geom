@@ -363,13 +363,8 @@ func (enc Encoder) encode(geo geom.Geometry) error {
 		return enc.encodePoint(g.XY())
 
 	case *geom.Point:
-		err := enc.string("POINT ")
-		if err != nil {
-			return err
-		}
-
 		if g == nil {
-			return enc.string("EMPTY")
+			return enc.string("POINT EMPTY")
 		}
 
 		return enc.encode(g.XY())

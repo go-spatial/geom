@@ -1,3 +1,11 @@
 package quadedge
 
-const debug = false
+const (
+	debug = false
+)
+
+/*
+func ToggleDebug() {
+	debug = !debug
+}
+*/

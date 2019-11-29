@@ -208,7 +208,8 @@ func TestValidate(t *testing.T) {
 				geom.Point{-2, 1},
 			),
 			err: ErrInvalid{
-				"expected all points to be counter-clockwise: MULTIPOINT (-2 -1,-2 0,-2 1)",
+				"expected all points to be clockwise",
+				"expected all points to be counter-clockwise",
 			},
 		},
 		{
@@ -247,7 +248,8 @@ func TestValidate(t *testing.T) {
 				geom.Point{384, 112},
 			),
 			err: ErrInvalid{
-				"expected all points to be counter-clockwise: MULTIPOINT (368 117,384 112,372 114)",
+				"expected all points to be clockwise",
+				"expected all points to be counter-clockwise",
 			},
 		},
 		{
@@ -282,7 +284,8 @@ func TestValidate(t *testing.T) {
 				geom.Point{0, -1},
 			),
 			err: ErrInvalid{
-				"expected all points to be counter-clockwise: MULTIPOINT (-1 0,-1 0,0 -1,1 0,0 1)",
+				"expected all points to be clockwise",
+				"expected all points to be counter-clockwise",
 			},
 		},
 		{
@@ -295,7 +298,8 @@ func TestValidate(t *testing.T) {
 				geom.Point{384, 112},
 			),
 			err: ErrInvalid{
-				"found self interstion for vertics POINT (376 119) and POINT (384 112)",
+				"expected all points to be clockwise",
+				"expected all points to be counter-clockwise",
 			},
 		},
 		{
@@ -320,7 +324,8 @@ func TestValidate(t *testing.T) {
 				geom.Point{273, 525},
 			),
 			err: ErrInvalid{
-				"expected all points to be counter-clockwise: MULTIPOINT (-2511 -3640,-2511 -3640,273 525,426 539,369 793,475.500 8853)",
+				"expected all points to be clockwise",
+				"expected all points to be counter-clockwise",
 			},
 		},
 	}
