@@ -1,10 +1,17 @@
 package makevalid
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
+	"os"
+	"path"
+	"sort"
+	"strings"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/internal/test/must"
 	"github.com/go-spatial/geom/planar"
 	"github.com/go-spatial/geom/planar/makevalid/hitmap"
 )
@@ -42,37 +49,78 @@ func (mvc makevalidCase) Hitmap(clp *geom.Extent) (hm planar.HitMapper) {
 	return hm
 }
 
-var makevalidTestCases = [...]makevalidCase{
-	{ //  (0) Triangle Test case
-		Description:          "Triangle",
-		MultiPolygon:         &geom.MultiPolygon{{{{1, 1}, {15, 10}, {10, 20}}}},
-		ExpectedMultiPolygon: &geom.MultiPolygon{{{{1, 1}, {15, 10}, {10, 20}}}},
-	}, // (0) Triangle Test case
-	{ //  (1) Four squire IO_OI
-		Description:  "Four Square IO_OI",
-		MultiPolygon: &geom.MultiPolygon{{{{1, 4}, {9, 4}, {9, 0}, {5, 0}, {5, 8}, {1, 8}}}},
-		ExpectedMultiPolygon: &geom.MultiPolygon{
-			{{{1, 4}, {5, 4}, {5, 8}, {1, 8}}},
-			{{{5, 0}, {9, 0}, {9, 4}, {5, 4}}},
-		},
-	}, // (1) four square IO_OI
-	{ //  (2) four columns invalid multipolygon
-		Description: "Four columns invalid multipolygon",
-		MultiPolygon: &geom.MultiPolygon{
-			{ // First Polygon
-				{{0, 7}, {3, 7}, {3, 3}, {0, 3}}, // Main squire.
-				{{1, 5}, {3, 4}, {5, 5}, {3, 7}}, // invalid cutout.
-			},
-			{{{3, 7}, {6, 8}, {6, 0}, {3, 0}}},
-		},
-		ExpectedMultiPolygon: &geom.MultiPolygon{{
-			{{0, 3}, {3, 3}, {3, 0}, {6, 0}, {6, 8}, {3, 7}, {0, 7}},
-			{{1, 5}, {3, 7}, {5, 5}, {3, 4}},
-		}},
-	}, // (2) Four columns invalid multipolygon
-	{ //  (3) Square
-		Description:          "Square",
-		MultiPolygon:         &geom.MultiPolygon{{{{0, 0}, {4096, 0}, {4096, 4096}, {0, 4096}}}},
-		ExpectedMultiPolygon: &geom.MultiPolygon{{{{0, 0}, {4096, 0}, {4096, 4096}, {0, 4096}}}},
-	}, // (3) Square
-}
+var makevalidTestCases = func() []makevalidCase {
+
+	f, err := os.Open(path.Join("testdata", "testcases"))
+
+	if err != nil {
+		panic(fmt.Sprintf("opening testcase dir: %v ", err))
+	}
+	list, err := f.Readdir(-1)
+	f.Close()
+	if err != nil {
+		panic(fmt.Sprintf("reading testcase dir: %v ", err))
+	}
+	// 0 is input filename, 1 is expected filename
+	cases := make(map[string][2]string)
+	var keys []string
+	for i := range list {
+		if list[i].IsDir() {
+			continue
+		}
+		name := strings.ToLower(list[i].Name())
+		if !strings.HasSuffix(name, ".wkt") {
+			continue
+		}
+		if !strings.HasPrefix(name, "multipolygon_") {
+			continue
+		}
+		key := bytes.TrimPrefix([]byte(list[i].Name()), []byte("multipolygon_"))
+
+		// is it input?
+		pos := 0
+		switch {
+		case bytes.HasSuffix(key, []byte("_input.wkt")):
+			key = bytes.ReplaceAll(
+				bytes.TrimSuffix(key, []byte("_input.wkt")),
+				[]byte("_"),
+				[]byte(" "),
+			)
+			pos = 0
+		case bytes.HasSuffix(key, []byte("_expected.wkt")):
+			key = bytes.ReplaceAll(
+				bytes.TrimSuffix(key, []byte("_expected.wkt")),
+				[]byte("_"),
+				[]byte(" "),
+			)
+			pos = 1
+		default:
+			continue
+		}
+		casename, ok := cases[string(key)]
+		if !ok {
+			keys = append(keys, string(key))
+		}
+		casename[pos] = list[i].Name()
+		cases[string(key)] = casename
+	}
+	sort.Strings(keys)
+	tcases := make([]makevalidCase, len(keys))
+	for i := range keys {
+		var input, expected *geom.MultiPolygon
+		if cases[keys[i]][0] != "" {
+			fn := path.Join("testdata", "testcases", cases[keys[i]][0])
+			input = must.MPPointer(must.ReadMultiPolygon(fn))
+		}
+		if cases[keys[i]][1] != "" {
+			fn := path.Join("testdata", "testcases", cases[keys[i]][1])
+			expected = must.MPPointer(must.ReadMultiPolygon(fn))
+		}
+		tcases[i] = makevalidCase{
+			Description:          keys[i],
+			MultiPolygon:         input,
+			ExpectedMultiPolygon: expected,
+		}
+	}
+	return tcases
+}()

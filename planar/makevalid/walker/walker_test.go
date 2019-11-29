@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
 )
 
 func init() {
@@ -182,8 +181,8 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 			idx: []int{0, 1},
 			polygons: [][][][2]float64{
-				{{{0, 0}, {10, 0}, {10, 10}, {0, 10}}},
-				{{{0, 0}, {10, 0}, {10, 10}, {0, 10}}},
+				{{{0, 10}, {10, 10}, {10, 0}, {0, 0}}},
+				{{{0, 10}, {10, 10}, {10, 0}, {0, 0}}},
 			},
 			seenTriangles: [][]int{
 				{0, 1},
@@ -218,7 +217,7 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 			idx: []int{0},
 			polygons: [][][][2]float64{
-				{{{0, 0}, {10, 0}, {10, 10}, {0, 10}}, {{0, 7}, {7, 7}, {7, 2}}},
+				{{{0, 10}, {10, 10}, {10, 0}, {0, 0}}, {{7, 2}, {7, 7}, {0, 7}}},
 				{{{0, 0}, {10, 0}, {10, 10}, {0, 10}}},
 			},
 			seenTriangles: [][]int{
@@ -263,7 +262,7 @@ func TestPolygonForTriangle(t *testing.T) {
 			},
 			idx: []int{0},
 			polygons: [][][][2]float64{
-				{{{0, 0}, {8, 0}, {8, 8}, {0, 8}}, {{2, 2}, {2, 5}, {5, 5}, {5, 2}}},
+				{{{0, 8}, {8, 8}, {8, 0}, {0, 0}}, {{5, 2}, {5, 5}, {2, 5}, {2, 2}}},
 			},
 			seenTriangles: [][]int{
 				{0, 1, 2, 3, 4, 5, 6, 7},

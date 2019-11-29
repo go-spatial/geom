@@ -59,10 +59,11 @@ func TestIsPointOnLine(t *testing.T) {
 		segment  geom.Line
 		expected bool
 	}
+
 	fn := func(tc tcase) (string, func(*testing.T)) {
 		return fmt.Sprintf("%v on %v", tc.point, tc.segment),
 			func(t *testing.T) {
-				if tc.expected != IsPointOnLine(tc.point, tc.segment[0], tc.segment[1]) {
+				if tc.expected != IsPointOnLine(cmp.DefaultCompare(), tc.point, tc.segment[0], tc.segment[1]) {
 					t.Errorf("expected %v, got %v", tc.expected, !tc.expected)
 				}
 			}
@@ -128,7 +129,7 @@ func TestIsPointOnLineSegment(t *testing.T) {
 	fn := func(tc tcase) (string, func(*testing.T)) {
 		return fmt.Sprintf("%v on %v", tc.point, tc.segment),
 			func(t *testing.T) {
-				if tc.expected != IsPointOnLineSegment(tc.point, tc.segment) {
+				if tc.expected != IsPointOnLineSegment(cmp.DefaultCompare(), tc.point, tc.segment) {
 					t.Errorf("expected %v, got %v", tc.expected, !tc.expected)
 				}
 			}
