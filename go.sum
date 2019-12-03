@@ -2,6 +2,8 @@ github.com/arolek/p v0.0.0-20191103215535-df3c295ed582 h1:DugKk4B3PpqfZ1QunDSPqN
 github.com/arolek/p v0.0.0-20191103215535-df3c295ed582/go.mod h1:JPNItmi3yb44Q5QWM+Kh5n9oeRhfcJzPNS90mbLo25U=
 github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb h1:FYO+lZtAUnakgSW9xYs7QvgawjCDM5wgHaXoDhYHNH4=
 github.com/gdey/errors v0.0.0-20190426172550-8ebd5bc891fb/go.mod h1:PFaV7MgSRe92Wo9O2H2i1CIm7urUk10AgdSHKyBfjmQ=
+github.com/go-spatial/proj v0.2.0 h1:sii5Now3GFEyR9hV2SBJFWFz95s4xSaZmP0aYDk1K6c=
+github.com/go-spatial/proj v0.2.0/go.mod h1:ePHHp7ITVc4eIVW5sgG/0Eu9RMAGOQUgM/D1ZkccY+0=
 github.com/golang/protobuf v1.3.2 h1:6nsPYzhq5kReh6QImI3k5qWzO4PEbvbIW2cwSfR/6xs=
 github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/google/uuid v1.0.0 h1:b4Gk+7WdP/d3HZH8EJsZpvV7EtDOgaZLtnaNGIu1adA=
