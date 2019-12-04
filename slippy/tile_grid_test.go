@@ -1,8 +1,11 @@
 package slippy
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/go-spatial/proj"
+	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestTileGridSize(t *testing.T) {
@@ -15,13 +18,20 @@ func TestTileGridSize(t *testing.T) {
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			grid := GetGrid(tc.srid)
-			sizex, sizey := grid.GridSize(tc.zoom)
-			if sizex != tc.expectedSizeX {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), sizex, tc.expectedSizeX)
+			grid, err := NewGrid(tc.srid)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if sizey != tc.expectedSizeY {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), sizey, tc.expectedSizeY)
+
+			tile, ok := grid.Size(tc.zoom)
+			if !ok {
+				t.Fatal("expected ok")
+			}
+			if tile.X != tc.expectedSizeX {
+				t.Errorf("got %v expected %v", tile.X, tc.expectedSizeX)
+			}
+			if tile.Y != tc.expectedSizeY {
+				t.Errorf("got %v expected %v", tile.Y, tc.expectedSizeY)
 			}
 		}
 	}
@@ -68,13 +78,16 @@ func TestTileGridContains(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
-		grid := GetGrid(tc.srid)
-
 		return func(t *testing.T) {
-			output := grid.ContainsIndex(tc.zoom, tc.x, tc.y)
+			grid, err := NewGrid(tc.srid)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			if output != tc.expected {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
+			_, ok := grid.ToNative(NewTile(tc.zoom, tc.x, tc.y))
+
+			if ok != tc.expected {
+				t.Errorf("got %v expected %v", ok, tc.expected)
 			}
 		}
 	}
@@ -90,7 +103,7 @@ func TestTileGridContains(t *testing.T) {
 		"3857_zoom0_fail": {
 			srid:     3857,
 			zoom:     0,
-			x:        1,
+			x:        2,
 			y:        0,
 			expected: false,
 		},
@@ -104,7 +117,7 @@ func TestTileGridContains(t *testing.T) {
 		"4326_zoom0_pass": {
 			srid:     4326,
 			zoom:     0,
-			x:        1,
+			x:        2,
 			y:        0,
 			expected: true,
 		},
@@ -112,7 +125,7 @@ func TestTileGridContains(t *testing.T) {
 			srid:     4326,
 			zoom:     0,
 			x:        0,
-			y:        1,
+			y:        2,
 			expected: false,
 		},
 		"4326_zoom12_pass": {
@@ -129,7 +142,7 @@ func TestTileGridContains(t *testing.T) {
 	}
 }
 
-func TestLat2YIndex(t *testing.T) {
+func TestFromNativeY(t *testing.T) {
 	type tcase struct {
 		lat      float64
 		srid     uint
@@ -138,11 +151,28 @@ func TestLat2YIndex(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
-		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := grid.Lat2YIndex(tc.zoom, tc.lat)
-			if output != tc.expected {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
+			grid, err := NewGrid(tc.srid)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			pt := geom.Point{0, tc.lat}
+			if tc.srid != 4326 {
+				pts, err := proj.Convert(proj.EPSGCode(tc.srid), pt[:])
+				if err != nil {
+					t.Fatal(err, tc.srid)
+				}
+				pt = geom.Point{pts[0], pts[1]}
+			}
+
+			tile, ok := grid.FromNative(tc.zoom, pt)
+			if !ok {
+				t.Fatal("expected ok")
+			}
+
+			if tile.Y != tc.expected {
+				t.Errorf("got %v expected %v", tile.Y, tc.expected)
 			}
 		}
 	}
@@ -215,7 +245,7 @@ func TestLat2YIndex(t *testing.T) {
 	}
 }
 
-func TestLon2XIndex(t *testing.T) {
+func TestFromNativeX(t *testing.T) {
 	type tcase struct {
 		lon      float64
 		srid     uint
@@ -224,11 +254,28 @@ func TestLon2XIndex(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
-		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := grid.Lon2XIndex(tc.zoom, tc.lon)
-			if output != tc.expected {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
+			grid, err := NewGrid(tc.srid)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			pt := geom.Point{tc.lon, 0}
+			if tc.srid != 4326 {
+				pts, err := proj.Convert(proj.EPSGCode(tc.srid), pt[:])
+				if err != nil {
+					t.Fatal(err, tc.srid)
+				}
+				pt = geom.Point{pts[0], pts[1]}
+			}
+
+			tile, ok := grid.FromNative(tc.zoom, pt)
+			if !ok {
+				t.Fatal("expected ok")
+			}
+
+			if tile.X != tc.expected {
+				t.Errorf("got %v expected %v", tile.X, tc.expected)
 			}
 		}
 	}
@@ -301,7 +348,7 @@ func TestLon2XIndex(t *testing.T) {
 	}
 }
 
-func TestXIndex2Lon(t *testing.T) {
+func TestToNativeX(t *testing.T) {
 	type tcase struct {
 		x        uint
 		srid     uint
@@ -310,11 +357,27 @@ func TestXIndex2Lon(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
-		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := grid.XIndex2Lon(tc.zoom, tc.x)
-			if output != tc.expected {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v)", t.Name(), output, tc.expected)
+			grid, err := NewGrid(tc.srid)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			pt, ok := grid.ToNative(NewTile(tc.zoom, tc.x, 0))
+			if !ok {
+				t.Fatal("expected ok")
+			}
+
+			if tc.srid != 4326 {
+				pts, err := proj.Inverse(proj.EPSGCode(tc.srid), pt[:])
+				if err != nil {
+					t.Fatal(err, tc.srid, pt)
+				}
+				pt = geom.Point{pts[0], pts[1]}
+			}
+
+			if !cmp.Float(pt.X(), tc.expected) {
+				t.Errorf("got %v expected %v", pt.X(), tc.expected)
 			}
 		}
 	}
@@ -375,7 +438,7 @@ func TestXIndex2Lon(t *testing.T) {
 	}
 }
 
-func TestYIndex2Lat(t *testing.T) {
+func TestToNativeY(t *testing.T) {
 	type tcase struct {
 		y        uint
 		srid     uint
@@ -384,12 +447,28 @@ func TestYIndex2Lat(t *testing.T) {
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
-		grid := GetGrid(tc.srid)
 		return func(t *testing.T) {
-			output := grid.YIndex2Lat(tc.zoom, tc.y)
-			outs := fmt.Sprintf("%.8f", output)
-			if outs != fmt.Sprintf("%.8f", tc.expected) {
-				t.Errorf("testcase (%v) failed. output (%v) does not match expected (%v) close enough", t.Name(), output, tc.expected)
+			grid, err := NewGrid(tc.srid)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			pt, ok := grid.ToNative(NewTile(tc.zoom, 0, tc.y))
+			if !ok {
+				t.Fatal("expected ok")
+			}
+
+			if tc.srid != 4326 {
+				pts, err := proj.Inverse(proj.EPSGCode(tc.srid), pt[:])
+				if err != nil {
+					t.Fatal(err)
+				}
+				pt = geom.Point{pts[0], pts[1]}
+			}
+
+
+			if !cmp.Float(pt.Y(), tc.expected) {
+				t.Errorf("got %v expected %v", pt.Y(), tc.expected)
 			}
 		}
 	}
