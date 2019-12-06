@@ -11,7 +11,6 @@ import (
 	"github.com/go-spatial/geom/winding"
 
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
-	mustold "github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
 
 	"github.com/go-spatial/geom"
 )
@@ -209,15 +208,14 @@ func TestNewForPoints(t *testing.T) {
 		},
 		{
 			Desc:   "counter clockwise error east of china",
-			Points: mustold.ReadPoints("testdata/east_of_china.points"),
+			Points: must.ReadPoints("testdata/east_of_china.points"),
 			//TODO(gdey): should not be erroring
 			Skip: "Currently erroring with intersecting lines, need to fix",
 		},
 		{
 			Desc:   "error failed to insert point 8",
 			Points: [][2]float64{[2]float64{-1.3625395451e+07, 4.551405984e+06}, [2]float64{-1.3625385953e+07, 4.551392498e+06}, [2]float64{-1.3625144745e+07, 4.551583426e+06}, [2]float64{-1.3625317363e+07, 4.55141451e+06}, [2]float64{-1.3625204228e+07, 4.551495519e+06}, [2]float64{-1.3625225288e+07, 4.551499794e+06}, [2]float64{-1.3625218504e+07, 4.55149004e+06}, [2]float64{-1.3625167969e+07, 4.551553549e+06}, [2]float64{-1.3625206458e+07, 4.551498625e+06}, [2]float64{-1.3625137934e+07, 4.551573731e+06}},
-			//Points: mustold.ReadPoints("testdata/failed_to_insert_point_8_points.wkt"),
-			Lines: must.ReadLines("testdata/failed_to_insert_point_8_lines.wkt"),
+			Lines:  must.ReadLines("testdata/failed_to_insert_point_8_lines.wkt"),
 		},
 		{
 			Desc:   "issue 96 1",

@@ -8,9 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-spatial/geom/internal/test/must"
 	"github.com/go-spatial/geom/winding"
-
-	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
@@ -89,7 +88,7 @@ func TestTriangulate(t *testing.T) {
 		{
 			Desc:   "From Parse MultiLines #4",
 			points: []geom.Point{{10, 20}, {20, 20}, {20, 10}, {20, 0}, {10, 0}, {0, 0}, {0, 10}, {0, 20}},
-			edges: must.ParseMultilines([]byte(
+			edges: must.ParseLines([]byte(
 				`MULTILINESTRING ((0 10,0 20),(0 20,10 20),(10 20,0 10),(10 20,20 20),(20 20,20 10),(20 10,10 20),(20 10,20 0),(20 0,10 0),(10 0,20 10),(10 0,0 0),(0 0,0 10),(0 10,10 0),(10 0,20 10),(0 10,10 0),(0 10,20 10),(20 10,10 20),(10 20,0 10))`,
 			)),
 		},
@@ -308,7 +307,7 @@ func TestTriangulate(t *testing.T) {
 				{2309, 1201},
 				{2309, 1208},
 			},
-			edges: must.ParseMultilines([]byte(
+			edges: must.ParseLines([]byte(
 				`MULTILINESTRING ((2305 1210,2302 1209),(2302 1209,2301 1208),(2301 1208,2305 1210),(2305 1210,2301 1208),(2301 1208,2300 1206),(2300 1206,2305 1210),(2305 1210,2300 1206),(2300 1206,2299 1205),(2299 1205,2305 1210),(2305 1210,2299 1205),(2299 1205,2297 1203),(2297 1203,2305 1210),(2297 1203,2296 1202),(2296 1202,2294 1197),(2294 1197,2297 1203),(2297 1203,2294 1197),(2294 1197,2309 1200),(2309 1200,2297 1203),(2297 1203,2309 1200),(2309 1200,2309 1201),(2309 1201,2297 1203),(2297 1203,2309 1201),(2305 1210,2297 1203),(2305 1210,2309 1201),(2309 1201,2309 1208),(2309 1208,2305 1210))`,
 			)),
 		},

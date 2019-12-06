@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
+	"github.com/go-spatial/geom/internal/test/must"
 	"github.com/go-spatial/geom/winding"
 )
 
@@ -43,7 +43,7 @@ func TestNewSubdivisionFromGeomLines(t *testing.T) {
 		// subtests
 		{
 			Desc:  "intersecting_lines",
-			Lines: must.ReadMultilines("testdata/intersecting_lines_97.lines"),
+			Lines: must.ReadLines("testdata/intersecting_lines_97.lines"),
 			Skip:  "Failing will have to look at why",
 		},
 	}

@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkt"
+	"github.com/go-spatial/geom/internal/test/must"
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
-	"github.com/go-spatial/geom/planar/triangulate/delaunay/test/must"
 	"github.com/go-spatial/geom/winding"
 )
 
@@ -170,10 +170,10 @@ func TestFindIntersectingEdges(t *testing.T) {
 			// starting edge: LINESTRING (2674.923 3448.779,2676.168 3439.720)
 			// ending edge: LINESTRING (2687.408 3432.536,2685.657 3436.985)
 			// intersecting edge: LINESTRING (2674.923 3448.779,2687.408 3432.536)
-			Lines: must.ReadMultilines("testdata/intersecting_lines_97_trucated.lines"),
+			Lines: must.ReadLines("testdata/intersecting_lines_97_trucated.lines"),
 			Start: geom.Point{2674.923, 3448.779},
 			End:   geom.Point{2687.408, 3432.536},
-			ExpectedLines: must.ParseMultilines([]byte(
+			ExpectedLines: must.ParseLines([]byte(
 				`MULTILINESTRING((2676.168 3439.720,2678.653 3446.005),(2676.168 3439.720,2678.653 3446.005),(2676.168 3439.720,2685.657 3436.985),(2680.390 3431.154,2685.657 3436.985))`,
 			)),
 		},
@@ -182,7 +182,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 			// starting edge: LINESTRING (1469.542 3159.987,1482.934 3156.923)
 			// ending edge: LINESTRING (1492.312 3183.492,1484.801 3180.385)
 			// intersecting edge: LINESTRING (1469.542 3159.987,1492.312 3183.492)
-			Lines: must.ReadMultilines("testdata/asia_issue.lines"),
+			Lines: must.ReadLines("testdata/asia_issue.lines"),
 			Start: geom.Point{1469.542, 3159.987},
 			End:   geom.Point{1492.312, 3183.492},
 			ExpectedLines: []geom.Line{
@@ -208,7 +208,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 			// starting edge: LINESTRING (4080 312,4081 310)
 			// ending edge: LINESTRING (4082 310,4082 309)
 			// intersecting edge: LINESTRING (4080 312,4082 310)
-			Lines:         must.ReadMultilines("testdata/find_intersects_test_02.lines"),
+			Lines:         must.ReadLines("testdata/find_intersects_test_02.lines"),
 			Start:         geom.Point{4080, 312},
 			End:           geom.Point{4082, 310},
 			ExpectedLines: []geom.Line{},
@@ -217,7 +217,7 @@ func TestFindIntersectingEdges(t *testing.T) {
 			// starting edge: LINESTRING (4080 312,4081 310)
 			// ending edge: LINESTRING (4082 310,4082 309)
 			// intersecting edge: LINESTRING (4080 312,4082 310)
-			Lines: must.ReadMultilines("testdata/find_intersects_test_02.lines"),
+			Lines: must.ReadLines("testdata/find_intersects_test_02.lines"),
 			Start: geom.Point{4081, 310},
 			End:   geom.Point{4083, 312},
 			ExpectedLines: []geom.Line{
