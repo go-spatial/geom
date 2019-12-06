@@ -7,7 +7,7 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-func TestParseMultilines(t *testing.T) {
+func TestParseLines(t *testing.T) {
 	type tcase struct {
 		Content   []byte
 		Lines     []geom.Line
@@ -22,7 +22,7 @@ func TestParseMultilines(t *testing.T) {
 				}
 			}()
 
-			l := ParseMultilines(tc.Content)
+			l := ParseLines(tc.Content)
 			if tc.WillPanic {
 				t.Errorf("expected panic!")
 				return
