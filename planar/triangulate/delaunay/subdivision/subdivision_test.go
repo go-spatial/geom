@@ -510,7 +510,7 @@ func TestSubdivisionInsertSiteTwoPoint2(t *testing.T) {
 		}
 		insertPoints = []geom.Point{
 			{0, 0},
-			{0, -5},
+			{0, 5},
 		}
 	)
 

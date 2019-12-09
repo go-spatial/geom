@@ -855,8 +855,17 @@ func testEdge(order winding.Order, x geom.Point, e *quadedge.Edge) (next *quaded
 			wkt.MustEncode(x),
 		)
 	}
+	if debug {
+		log.Printf("RightOf e: %v", quadedge.RightOf(order.YPositiveDown, x, e))
+		log.Printf("RightOf e.ONext: %v", quadedge.RightOf(order.YPositiveDown, x, e.ONext()))
+		log.Printf("RightOf e.DPrev: %v", quadedge.RightOf(order.YPositiveDown, x, e.DPrev()))
+
+	}
 	switch {
 	case ptEqual(x, e.Orig()) || ptEqual(x, e.Dest()):
+		if debug {
+			log.Printf("point (%v) on edge %v", wkt.MustEncode(x), wkt.MustEncode(e.AsLine()))
+		}
 		return e, true
 
 	case quadedge.RightOf(order.YPositiveDown, x, e):
