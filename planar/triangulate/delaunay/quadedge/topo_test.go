@@ -359,3 +359,51 @@ func TestConnect(t *testing.T) {
 		t.Run(fn(tests[i]))
 	}
 }
+
+func TestRightOf(t *testing.T) {
+	type tcase struct {
+		Pt        geom.Point
+		Edge      *Edge
+		YFlip     bool
+		IsRightOf bool
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			isRightOf := RightOf(tc.YFlip, tc.Pt, tc.Edge)
+			if isRightOf != tc.IsRightOf {
+				t.Errorf("isRightOf, expected %v got %v", isRightOf, tc.IsRightOf)
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"#1": tcase{
+			Pt:        geom.Point{0, 5},
+			Edge:      NewWithEndPoints(&geom.Point{-100, -100}, &geom.Point{0, 0}),
+			IsRightOf: false,
+		},
+		"#1-yflip": tcase{
+			Pt:        geom.Point{0, 5},
+			Edge:      NewWithEndPoints(&geom.Point{-100, -100}, &geom.Point{0, 0}),
+			IsRightOf: true,
+			YFlip:     true,
+		},
+		"#2": tcase{
+			Pt:        geom.Point{0, -5},
+			Edge:      NewWithEndPoints(&geom.Point{-100, -100}, &geom.Point{0, 0}),
+			IsRightOf: true,
+		},
+		"#2-yflip": tcase{
+			Pt:        geom.Point{0, -5},
+			Edge:      NewWithEndPoints(&geom.Point{-100, -100}, &geom.Point{0, 0}),
+			IsRightOf: false,
+			YFlip:     true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+
+}
