@@ -2,11 +2,12 @@ package geom
 
 import (
 	"fmt"
-	"math"
 )
 
-const tolerance = 0.000001
+//const tolerance = 0.000001
+const tolerance = 0.000000001
 
+/*
 // Float64 compares two floats to see if they are within the given tolerance.
 func cmpFloat(f1, f2 float64) bool {
 	if math.IsInf(f1, 1) {
@@ -23,9 +24,10 @@ func cmpFloat(f1, f2 float64) bool {
 	}
 	return math.Abs(f1-f2) < tolerance
 }
+*/
 func pointEqual(p1, p2 [2]float64) bool { return cmpFloat(p1[0], p2[0]) && cmpFloat(p1[1], p2[1]) }
 
-// Triangle is a array representation of a geometry trinagle.
+// Triangle is a array representation of a geometry triangle.
 type Triangle [3][2]float64
 
 // Center returns a point at the center of the triangle.
