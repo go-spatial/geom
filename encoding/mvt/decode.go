@@ -1,7 +1,6 @@
 package mvt
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
