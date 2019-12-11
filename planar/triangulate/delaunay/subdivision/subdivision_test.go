@@ -2,7 +2,9 @@ package subdivision
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"math"
 	"testing"
 
 	"github.com/go-spatial/geom/internal/test/must"
@@ -189,28 +191,9 @@ func TestNewForPoints(t *testing.T) {
 			Lines:  must.ReadLines("testdata/new_for_points/multiline_bad-external-point-full_expected.wkt"),
 		},
 		{
-			Desc:   "something wrong with Florida",
-			Points: must.ReadPoints("testdata/florida.points"),
-			Lines:  must.ReadLines("testdata/florida_expected.lines"),
-			//TODO(gdey): should not be erroring
-			Skip: "Currently erroring with intersecting lines, need to fix",
-		},
-		{
-			Desc:   "something wrong with north Africa",
-			Points: must.ReadPoints("testdata/north_africa.points"),
-			//TODO(gdey): should not be erroring
-			Skip: "Currently erroring with intersecting lines, need to fix",
-		},
-		{
 			Desc:   "intersecting lines are generated 1",
 			Points: must.ReadPoints("testdata/new_for_points/multipoint_intersecting-lines-1_input.wkt"),
 			Lines:  must.ReadLines("testdata/new_for_points/multiline_intersecting-lines-1_expected.wkt"),
-		},
-		{
-			Desc:   "counter clockwise error east of china",
-			Points: must.ReadPoints("testdata/east_of_china.points"),
-			//TODO(gdey): should not be erroring
-			Skip: "Currently erroring with intersecting lines, need to fix",
 		},
 		{
 			Desc:   "error failed to insert point 8",
@@ -223,15 +206,34 @@ func TestNewForPoints(t *testing.T) {
 			Lines:  must.ReadLines("testdata/issue/96/lines_1.wkt"),
 		},
 		{
-			Desc:   "issue 96 2",
-			Points: must.ReadPoints("testdata/issue/96/points_2.wkt"),
-			//TODO(gdey): should not be erroring
-			Skip: "erroring with clockwise and counterclockwise issues, need to fix",
-		},
-		{
 			Desc:   "issue 96 simplified",
 			Points: must.ReadPoints("testdata/issue/96/points_simplified.wkt"),
 			Lines:  must.ReadLines("testdata/issue/96/lines_simplified.wkt"),
+		},
+		{
+			Desc:   "issue 96 2",
+			Points: must.ReadPoints("testdata/issue/96/points_2.wkt"),
+			//TODO(gdey): should not be erroring
+			//	Skip: "erroring with clockwise and counterclockwise issues, need to fix",
+		},
+		{
+			Desc:   "counter clockwise error east of china",
+			Points: must.ReadPoints("testdata/east_of_china.points"),
+			//TODO(gdey): should not be erroring
+			Skip: "Currently erroring with intersecting lines, need to fix",
+		},
+		{
+			Desc:   "something wrong with Florida",
+			Points: must.ReadPoints("testdata/florida.points"),
+			Lines:  must.ReadLines("testdata/florida_expected.lines"),
+			//TODO(gdey): should not be erroring
+			Skip: "Currently erroring with intersecting lines, need to fix",
+		},
+		{
+			Desc:   "something wrong with north Africa",
+			Points: must.ReadPoints("testdata/north_africa.points"),
+			//TODO(gdey): should not be erroring
+			Skip: "Currently erroring with intersecting lines, need to fix",
 		},
 	}
 
@@ -382,6 +384,18 @@ func edgeCount(e *quadedge.Edge) (c int) {
 	}
 	return c + 1
 }
+func logEdgeDest(t *testing.T, e *quadedge.Edge, total int) {
+	if e == nil {
+		return
+	}
+	padding := int(math.Log10(float64(total)))
+	t.Logf("%0*v: %v", padding, 0, wkt.MustEncode(*e.Dest()))
+	for ne, c := e.ONext(), 1; ne != e; ne, c = ne.ONext(), c+1 {
+		t.Logf("%0*v: %v", padding, c, wkt.MustEncode(*ne.Dest()))
+	}
+}
+
+var PrintOutEdge bool
 
 func checkEdge(t *testing.T, lbl string, e *quadedge.Edge, pts ...geom.Point) bool {
 	if e == nil {
@@ -389,8 +403,26 @@ func checkEdge(t *testing.T, lbl string, e *quadedge.Edge, pts ...geom.Point) bo
 		return false
 	}
 
+	if PrintOutEdge {
+		fmt.Printf(`
+edge %v
+%v
+%v
+
+`,
+			lbl,
+			wkt.MustEncode(*e.Orig()),
+			wkt.MustEncode(e.AsLine()),
+		)
+		for ne, c := e.ONext(), 1; ne != e; ne, c = ne.ONext(), c+1 {
+			fmt.Printf("%v\n", wkt.MustEncode(ne.AsLine()))
+		}
+		fmt.Printf("\n")
+	}
+
 	if count := edgeCount(e); count != len(pts)+1 {
-		t.Errorf("vertex %v edges, expected %v, got %v", wkt.MustEncode(*e.Orig()), len(pts)+1, count)
+		t.Errorf("edge %v :vertex %v edges, expected %v, got %v", lbl, wkt.MustEncode(*e.Orig()), len(pts)+1, count)
+		logEdgeDest(t, e, count)
 		return false
 	}
 
@@ -496,6 +528,183 @@ func TestSubdivisionInsertSiteTwoPoint1(t *testing.T) {
 		newEdge.FindONextDest(insertPoints[0]).Sym(),
 		trianglePoint[0], trianglePoint[2],
 	) {
+		return
+	}
+
+}
+func TestSubdivisionInsertSiteFourPointDup(t *testing.T) {
+	var (
+		order         winding.Order
+		trianglePoint = [...]geom.Point{
+			geom.Point{-2000, -5000},
+			geom.Point{-700, 10000},
+			geom.Point{2000, -5000},
+		}
+		insertPoints = []geom.Point{
+			{-103.71, 8.965},
+			{-48.62, 10.678},
+			{-16.23, 33.337},
+			{-11.2, 36.286},
+			{-11.19, 36.292},
+		}
+	)
+	sd, triangleEdge := genAndTestNewSD(t, order, trianglePoint)
+	if sd == nil {
+		return
+	}
+
+	sd.InsertSite(insertPoints[0])
+	if !checkEdge(t, "triangle edge 0", triangleEdge[0],
+		insertPoints[0], trianglePoint[1]) {
+		return
+	}
+
+	if !checkEdge(t, "triangle edge 1", triangleEdge[1],
+		insertPoints[0], trianglePoint[2]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 2", triangleEdge[2],
+		trianglePoint[1], insertPoints[0]) {
+		return
+	}
+
+	sd.InsertSite(insertPoints[1])
+	if !checkEdge(t, "triangle edge 0", triangleEdge[0],
+		insertPoints[0], trianglePoint[1]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 1", triangleEdge[1],
+		insertPoints[0], insertPoints[1], trianglePoint[2]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 2", triangleEdge[2],
+		trianglePoint[1], insertPoints[1], insertPoints[0]) {
+		return
+	}
+
+	insertEdge0 := triangleEdge[0].ONext().Sym()
+	if !checkEdge(t, "insert edge 0", insertEdge0,
+		trianglePoint[2], insertPoints[1], trianglePoint[1]) {
+		return
+	}
+
+	insertEdge1 := triangleEdge[2].ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 1", insertEdge1,
+		trianglePoint[1], insertPoints[0]) {
+		return
+	}
+
+	sd.InsertSite(insertPoints[2])
+
+	if !checkEdge(t, "triangle edge 0", triangleEdge[0],
+		insertPoints[0], trianglePoint[1]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 1", triangleEdge[1],
+		insertPoints[0], insertPoints[2], trianglePoint[2]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 2", triangleEdge[2],
+		trianglePoint[1], insertPoints[2], insertPoints[1], insertPoints[0]) {
+		return
+
+	}
+
+	insertEdge0 = triangleEdge[0].ONext().Sym()
+	if !checkEdge(t, "insert edge 0", insertEdge0,
+		trianglePoint[2], insertPoints[1], insertPoints[2], trianglePoint[1]) {
+		return
+	}
+	insertEdge1 = triangleEdge[2].ONext().ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 1", insertEdge1,
+		insertPoints[2], insertPoints[0]) {
+		return
+	}
+	insertEdge2 := triangleEdge[2].ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 2", insertEdge2,
+		trianglePoint[1], insertPoints[0], insertPoints[1]) {
+		return
+	}
+
+	sd.InsertSite(insertPoints[3])
+
+	if !checkEdge(t, "triangle edge 0", triangleEdge[0],
+		insertPoints[0], trianglePoint[1]) {
+		return
+	}
+
+	if !checkEdge(t, "triangle edge 1", triangleEdge[1],
+		insertPoints[0], insertPoints[3], trianglePoint[2]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 2", triangleEdge[2],
+		trianglePoint[1], insertPoints[3], insertPoints[1], insertPoints[0]) {
+		return
+	}
+
+	//PrintOutEdge = true
+	insertEdge0 = triangleEdge[0].ONext().Sym()
+	if !checkEdge(t, "insert edge 0", insertEdge0,
+		trianglePoint[2], insertPoints[1], insertPoints[2], insertPoints[3], trianglePoint[1]) {
+		return
+	}
+	insertEdge1 = triangleEdge[2].ONext().ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 1", insertEdge1,
+		insertPoints[3], insertPoints[2], insertPoints[0]) {
+		return
+	}
+	insertEdge2 = insertEdge1.ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 2", insertEdge2,
+		insertPoints[3], insertPoints[0]) {
+		return
+	}
+	insertEdge3 := triangleEdge[2].ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 3", insertEdge3,
+		trianglePoint[1], insertPoints[0], insertPoints[2], insertPoints[1]) {
+		return
+	}
+	//PrintOutEdge = false
+
+	sd.InsertSite(insertPoints[4])
+
+	if !checkEdge(t, "triangle edge 0", triangleEdge[0],
+		insertPoints[0], trianglePoint[1]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 1", triangleEdge[1],
+		insertPoints[0], insertPoints[4], trianglePoint[2]) {
+		return
+	}
+	if !checkEdge(t, "triangle edge 2", triangleEdge[2],
+		trianglePoint[1], insertPoints[4], insertPoints[1], insertPoints[0]) {
+		return
+	}
+
+	insertEdge0 = triangleEdge[0].ONext().Sym()
+	if !checkEdge(t, "insert edge 0", insertEdge0,
+		trianglePoint[2], insertPoints[1], insertPoints[2], insertPoints[3], insertPoints[4], trianglePoint[1]) {
+		return
+	}
+	insertEdge1 = triangleEdge[2].ONext().ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 1", insertEdge1,
+		insertPoints[4], insertPoints[3], insertPoints[2], insertPoints[0]) {
+		return
+	}
+
+	insertEdge2 = insertEdge1.ONext().ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 2", insertEdge2,
+		insertPoints[3], insertPoints[0]) {
+		return
+	}
+
+	insertEdge3 = insertEdge2.ONext().Sym()
+	if !checkEdge(t, "insert edge 3", insertEdge3,
+		insertPoints[1], insertPoints[4], insertPoints[0]) {
+		return
+	}
+	insertEdge4 := insertEdge3.ONext().ONext().Sym()
+	if !checkEdge(t, "insert edge 4", insertEdge4,
+		insertPoints[1], trianglePoint[2], trianglePoint[1], insertPoints[0]) {
 		return
 	}
 

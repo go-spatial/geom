@@ -338,12 +338,14 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		case quadedge.RightOf(sd.Order.YPositiveDown, *t.Dest(), e) &&
 			containsPoint:
 			if debug {
-				log.Printf("Circle from points: %v,%v,%v \n%v\n%v",
+				log.Printf("Circle from points: %v,%v,%v \n%v\n%v:%v:%v",
 					wkt.MustEncode(*e.Orig()),
 					wkt.MustEncode(*t.Dest()),
 					wkt.MustEncode(*e.Dest()),
-					wkt.MustEncode(crl.AsLineString(100)),
+					wkt.MustEncode(crl.AsLineString(200)),
 					containsPoint,
+					crl.Radius,
+					crl.Center,
 				)
 				log.Printf("Point of consideration: %v", wkt.MustEncode(x))
 				log.Printf("%v right of %v", wkt.MustEncode(*t.Dest()), wkt.MustEncode(e.AsLine()))
@@ -376,7 +378,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 			}
 			quadedge.Swap(e)
 			if debug {
-				log.Printf("e: %v", e.AsLine())
+				log.Printf("after swap e: %v", e.AsLine())
 				log.Printf("e(wkt): %v", wkt.MustEncode(e.AsLine()))
 				log.Printf("e.OPrev: %v", wkt.MustEncode(e.OPrev().AsLine()))
 			}
