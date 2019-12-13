@@ -142,16 +142,18 @@ func main() {
 		fmt.Printf("Polygon:\n%v\n", plywkt)
 	*/
 	order := winding.Order{}
+	grid3857, _ := slippy.NewGrid(3857)
 
 	var clipRegion *geom.Extent
 	{
-		webs := slippy.Pixels2Webs(tile.Z, uint(*buffer))
-		clipRegion = tile.Extent3857().ExpandBy(webs)
+		webs := slippy.PixelsToNative(grid3857, tile.Z, uint(*buffer))
+		ext, _ := slippy.Extent(grid3857, tile)
+		clipRegion = ext.ExpandBy(webs)
 	}
 
 	if *simplifyGeo {
 		simp := simplify.DouglasPeucker{
-			Tolerance: slippy.Pixels2Webs(tile.Z, 10.0),
+			Tolerance: slippy.PixelsToNative(grid3857, tile.Z, 10.0),
 		}
 
 		var err error
@@ -189,7 +191,8 @@ func main() {
 			mvgeoFile := fileTemplate.NewFile("original_makevalid")
 			mvgeoFile.WriteWKTGeom(mkvgeo)
 			mvgeoFile.Close()
-			if mvtgeo := mvt.PrepareGeo(mkvgeo, tile.Extent3857(), *mvtExtent); mvtgeo != nil {
+			ext, _ := slippy.Extent(grid3857, tile)
+			if mvtgeo := mvt.PrepareGeo(mkvgeo, ext, *mvtExtent); mvtgeo != nil {
 				mvtgeof := fileTemplate.NewFile("original_mvt_geo")
 				mvtgeof.WriteWKTGeom(mvtgeo)
 				mvtgeof.Close()
@@ -292,7 +295,8 @@ func main() {
 	polygonFile.Close()
 
 	{
-		mvtgeo := mvt.PrepareGeo(newMp, tile.Extent3857(), *mvtExtent)
+		ext, _ := slippy.Extent(grid3857, tile)
+		mvtgeo := mvt.PrepareGeo(newMp, ext, *mvtExtent)
 		if mvtgeo != nil {
 			mvtgeof := fileTemplate.NewFile("mvt_geo")
 			mvtgeof.WriteWKTGeom(mvtgeo)
