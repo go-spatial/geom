@@ -1,0 +1,55 @@
+# This came about from points being too close and having a point be added that is the same.
+
+triangle( -2000 -5000, -700 10000, 2000 -5000)
+points( -103.71 8.965, -48.62 10.678, -16.23 33.3337, -11.2 36.286, -11.19 36.292)
+
+check {
+	t0 : p0 t1
+	t1 : p0 t2
+	t2 : t1 p0
+}
+
+check {
+	t0 : p0 t1
+	t1 : p0 p1 t2
+	t2 : t1 p1 p0
+
+	e0 = t2.onext.sym   : t2 p1 t1
+	e1 = t2.onext(2).sym : t1 p0 
+}
+
+check {
+	t0 : p0 t1
+	t1 : p0 p2 t2
+	t2 : t1 p2 p1 p0
+
+	e0 = t0.onext.sym    : t2 p1 p2 t1
+	e1 = t2.onext(3).sym : p2 p0
+	e2 = t2.onext(2).sym : t1 p0 p1  
+}
+
+check {
+	t0 : p0 t1
+	t1 : p0 p3 p2
+	t2 : t1 p3 p1 p0
+
+	e0 = t0.onext.sym    : t2 p1 p2 p3 t1
+	e1 = t2.onext(3).sym : p3 p2 p0
+	e2 = e1.onext(2).sym : p3 p0
+	e3 = e2.onext(2).sym : t1 p0 p2 p1
+}
+
+check [debug] {
+	t0 : p0 t1
+	t1 : p0 p4 p2
+	t2 : t1 p4 p1 p0
+
+	e0 = t0.onext.sym    : t2 p1 p2 p3
+	e1 = t2.onext(3).sym : p4 p3 p2 p0
+	e2 = e1.onext(3).sym : p3 p0
+	e3 = e2.onext.sym    : p1 p4 p0
+	e4 = e3.onext(2).sym : p1 t2 t1 p0
+}
+	 
+... # this will suppress the error of not enough check blocks
+
