@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/internal/test/must"
+	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 	"github.com/go-spatial/geom/winding"
 )
 
@@ -34,6 +35,11 @@ func TestNewSubdivisionFromGeomLines(t *testing.T) {
 			}
 			if err := sd.Validate(context.Background()); err != nil {
 				t.Errorf("error, expected nil, got %v", err)
+				if err1, ok := err.(quadedge.ErrInvalid); ok {
+					for i, estr := range err1 {
+						t.Logf("%v: %v", i, estr)
+					}
+				}
 			}
 
 		}

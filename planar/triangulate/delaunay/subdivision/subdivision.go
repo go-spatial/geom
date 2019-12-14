@@ -197,6 +197,11 @@ func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
 	return locate(sd.Order, sd.startingEdge, x, sd.ptcount*2)
 }
 
+func setOfThreeAreColinear(order winding.Order, p1, p2, p3, p4 geom.Point) bool {
+	//	log.Printf("Checking order of  %v %v %v %v", wkt.MustEncode(p1), wkt.MustEncode(p2), wkt.MustEncode(p3), wkt.MustEncode(p4))
+	return order.OfGeomPoints(p1, p2, p3).IsColinear() || order.OfGeomPoints(p1, p2, p4).IsColinear() || order.OfGeomPoints(p1, p3, p4).IsColinear()
+}
+
 // InsertSite will insert a new point into a subdivision representing a Delaunay
 // triangulation, and fixes the affected edges so that the result
 // is  still a Delaunay triangulation. This is based on the pseudocode
@@ -251,6 +256,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 		if debug {
 			log.Printf("removing %v", wkt.MustEncode(e.ONext().AsLine()))
 		}
+		quadedge.Delete(e.ONext())
 
 	}
 
@@ -329,10 +335,18 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 			log.Printf("e: %v", wkt.MustEncode(e.AsLine()))
 			log.Printf("e.OPrev/t: %v", wkt.MustEncode(t.AsLine()))
 		}
-		crl, err := geom.CircleFromPoints([2]float64(*e.Orig()), [2]float64(*t.Dest()), [2]float64(*e.Dest()))
-		containsPoint := false
-		if err == nil {
-			containsPoint = crl.ContainsPoint([2]float64(x))
+		var (
+			containsPoint = false
+			crl           geom.Circle
+			err           error
+		)
+
+		if !setOfThreeAreColinear(sd.Order, x, *e.Orig(), *e.Dest(), *t.Dest()) {
+
+			crl, err = geom.CircleFromPoints([2]float64(*e.Orig()), [2]float64(*t.Dest()), [2]float64(*e.Dest()))
+			if err == nil {
+				containsPoint = crl.ContainsPoint([2]float64(x))
+			}
 		}
 		switch {
 		case quadedge.RightOf(sd.Order.YPositiveDown, *t.Dest(), e) &&
