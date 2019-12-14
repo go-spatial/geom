@@ -58,23 +58,23 @@ func TestCircleFromPoints(t *testing.T) {
 		},
 		"center outside of triangle": {
 			p:      [3][2]float64{{1, 0}, {10, 20}, {5, 5}},
-			circle: geom.Circle{Center: [2]float64{-21.642857, 22.214286}, Radius: 31.7202},
+			circle: geom.Circle{Center: [2]float64{-21.642857142857142, 22.214285714285715}, Radius: 31.72023753674861},
 		},
 		"center outside of triangle 1": {
 			p:      [3][2]float64{{1, 0}, {5, 5}, {10, 20}},
-			circle: geom.Circle{Center: [2]float64{-21.642857, 22.214286}, Radius: 31.7202},
+			circle: geom.Circle{Center: [2]float64{-21.642857142857142, 22.214285714285715}, Radius: 31.72023753674861},
 		},
 		"center outside of triangle 2": {
 			p:      [3][2]float64{{5, 5}, {1, 0}, {10, 20}},
-			circle: geom.Circle{Center: [2]float64{-21.642857, 22.214286}, Radius: 31.7202},
+			circle: geom.Circle{Center: [2]float64{-21.642857142857142, 22.214285714285715}, Radius: 31.72023753674861},
 		},
 		"center right triangle": {
 			p:      [3][2]float64{{1, 0}, {10, 0}, {10, 7}},
-			circle: geom.Circle{Center: [2]float64{5.5, 3.5}, Radius: 5.7009},
+			circle: geom.Circle{Center: [2]float64{5.5, 3.5}, Radius: 5.70087712549569},
 		},
 		"center right triangle 1": {
 			p:      [3][2]float64{{10, 0}, {1, 0}, {10, 7}},
-			circle: geom.Circle{Center: [2]float64{5.5, 3.5}, Radius: 5.7009},
+			circle: geom.Circle{Center: [2]float64{5.5, 3.5}, Radius: 5.70087712549569},
 		},
 	}
 	for name, tc := range tests {
