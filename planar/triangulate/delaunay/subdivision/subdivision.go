@@ -197,6 +197,10 @@ func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
 	return locate(sd.Order, sd.startingEdge, x, sd.ptcount*2)
 }
 
+// StartingEdge returns the starting edge of the subdivision, this may change after an
+// InsertSite call.
+func (sd *Subdivision) StartingEdge() *quadedge.Edge { return sd.startingEdge }
+
 func setOfThreeAreColinear(order winding.Order, p1, p2, p3, p4 geom.Point) bool {
 	//	log.Printf("Checking order of  %v %v %v %v", wkt.MustEncode(p1), wkt.MustEncode(p2), wkt.MustEncode(p3), wkt.MustEncode(p4))
 	return order.OfGeomPoints(p1, p2, p3).IsColinear() || order.OfGeomPoints(p1, p2, p4).IsColinear() || order.OfGeomPoints(p1, p3, p4).IsColinear()
