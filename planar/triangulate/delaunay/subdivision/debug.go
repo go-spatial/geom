@@ -13,20 +13,23 @@ import (
 	"github.com/go-spatial/geom/planar/triangulate/delaunay/quadedge"
 )
 
+/*
 const (
 	debug = false
 )
+*/
 
-/*
-For when we have debug as a var
+//For when we have debug as a var
+var debug = false
+
 func ToggleDebug() {
 	debug = !debug
 }
-*/
 
 func init() {
 	debugger.DefaultOutputDir = "output"
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.Printf("Debug %v", debug)
 }
 
 // ErrAssumptionFailed is an assert of when our assumptions fails, in debug mode it will return and error. In

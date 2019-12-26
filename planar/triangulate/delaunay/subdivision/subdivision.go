@@ -397,6 +397,13 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 			quadedge.Swap(e)
 			if debug {
 				log.Printf("after swap e: %v", e.AsLine())
+				/*
+					quadedge.Swap(e)
+					log.Printf("after swap e: %v", e.AsLine())
+					quadedge.Swap(e)
+					e = e.Sym()
+					log.Printf("after swap e: %v", e.AsLine())
+				*/
 				log.Printf("e(wkt): %v", wkt.MustEncode(e.AsLine()))
 				log.Printf("e.OPrev: %v", wkt.MustEncode(e.OPrev().AsLine()))
 			}
