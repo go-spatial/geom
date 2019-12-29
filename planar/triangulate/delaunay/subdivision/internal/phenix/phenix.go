@@ -17,6 +17,8 @@ import (
 	"github.com/go-spatial/geom/winding"
 )
 
+var ToggleDebug func()
+
 type LabeledPoint struct {
 	Point *geom.Point
 	Label string
@@ -54,7 +56,7 @@ func (pb *PointBag) LabeledPoint(lbl string) LabeledPoint {
 
 func (pb *PointBag) NewPhenix(name string, checkFn func(*PointBag) []Check) *Phenix {
 	checks := checkFn(pb)
-	return NewPhenix(name, pb.TrianglePoints, pb.Points, checks...)
+	return NewPhenix(1, name, pb.TrianglePoints, pb.Points, checks...)
 }
 
 func (pb *PointBag) NewEDefinition(desc string) (edef EDefinition) {
@@ -121,7 +123,7 @@ func testEdgeONextOPrevDest1(t *testing.T, lbl string, e *quadedge.Edge, pts ...
 			if !printedEdge {
 				printedEdge = true
 			}
-			t.Errorf("edge %v onext [%v], expected %v [%v] got %v", lbl, i, *pts[i].Point, pts[i].Label, *(ne.Dest()))
+			t.Errorf("edge %v onext [%v], expected %v [%v] got %v", lbl, i, wkt.MustEncode(*pts[i].Point), pts[i].Label, wkt.MustEncode(*(ne.Dest())))
 			return false
 		}
 		if !cmp.GeomPointEqual(*(pe.Dest()), *pts[j].Point) {
@@ -264,6 +266,36 @@ type Phenix struct {
 	VerifyCheckCount bool
 }
 
+func (p *Phenix) LabelForPoint(pt geom.Point) string {
+	// first search through TrianglePoints
+	for i := range p.TrianglePoints {
+		if cmp.GeomPointEqual(pt, p.TrianglePoints[i]) {
+			return fmt.Sprintf("t%d", i)
+		}
+	}
+	for i := range p.Points {
+		if cmp.GeomPointEqual(pt, p.Points[i]) {
+			return fmt.Sprintf("p%d", i)
+		}
+	}
+	return ""
+}
+
+func (p *Phenix) LabelForEdge(pt geom.Point) string {
+	// first search through TrianglePoints
+	for i := range p.TrianglePoints {
+		if cmp.GeomPointEqual(pt, p.TrianglePoints[i]) {
+			return fmt.Sprintf("t%d", i)
+		}
+	}
+	for i := range p.Points {
+		if cmp.GeomPointEqual(pt, p.Points[i]) {
+			return fmt.Sprintf("e%d", i)
+		}
+	}
+	return ""
+}
+
 func genAndTestNewSD(t *testing.T, order winding.Order, trianglePoint [3]geom.Point) (*subdivision.Subdivision, [3]*quadedge.Edge) {
 	t.Helper()
 	var triangleEdge [3]*quadedge.Edge
@@ -308,7 +340,10 @@ func (p *Phenix) Test(t *testing.T) {
 	}
 
 	for i := range p.Points {
-		t.Logf("Inserting Point p%d : %v", i, p.Points[i])
+		if p.Checks[i].Debug && ToggleDebug != nil {
+			ToggleDebug()
+		}
+		t.Logf("Inserting Point p%d : %v", i, wkt.MustEncode(p.Points[i]))
 		if !p.Subdivision.InsertSite(p.Points[i]) {
 			t.Log("failed to insert point")
 		}
@@ -334,16 +369,25 @@ func (p *Phenix) Test(t *testing.T) {
 			p.Checks[i].edgeMap["t2"].edge = p.TriangleEdge[2]
 			if !p.Checks[i].Test(t) {
 				t.Log(p.Subdivision.StartingEdge().DumpAllEdges())
+				if p.Checks[i].Debug && ToggleDebug != nil {
+					ToggleDebug()
+				}
 				return
 			}
 		} else if p.VerifyCheckCount {
 			t.Errorf("number of checks, expected %v, got %v", len(p.Points), len(p.Checks))
+			if p.Checks[i].Debug && ToggleDebug != nil {
+				ToggleDebug()
+			}
 			return
+		}
+		if p.Checks[i].Debug && ToggleDebug != nil {
+			ToggleDebug()
 		}
 	}
 }
 
-func NewPhenix(name string, trianglePoints [3]geom.Point, points []geom.Point, checks ...Check) *Phenix {
+func NewPhenix(depth int, name string, trianglePoints [3]geom.Point, points []geom.Point, checks ...Check) *Phenix {
 	var (
 		ok   bool
 		file string
@@ -351,7 +395,7 @@ func NewPhenix(name string, trianglePoints [3]geom.Point, points []geom.Point, c
 	)
 
 	// Get the caller info
-	if _, file, line, ok = runtime.Caller(1); ok {
+	if _, file, line, ok = runtime.Caller(depth + 1); ok {
 		// let's get the short version of the file.
 		file = filepath.Base(file)
 	} else {
