@@ -202,8 +202,19 @@ func (sd *Subdivision) locate(x geom.Point) (*quadedge.Edge, bool) {
 func (sd *Subdivision) StartingEdge() *quadedge.Edge { return sd.startingEdge }
 
 func setOfThreeAreColinear(order winding.Order, p1, p2, p3, p4 geom.Point) bool {
-	//	log.Printf("Checking order of  %v %v %v %v", wkt.MustEncode(p1), wkt.MustEncode(p2), wkt.MustEncode(p3), wkt.MustEncode(p4))
-	return order.OfGeomPoints(p1, p2, p3).IsColinear() || order.OfGeomPoints(p1, p2, p4).IsColinear() || order.OfGeomPoints(p1, p3, p4).IsColinear()
+	s1 := order.OfGeomPoints(p1, p2, p3).IsColinear()
+	s2 := order.OfGeomPoints(p1, p2, p4).IsColinear()
+	s3 := order.OfGeomPoints(p1, p3, p4).IsColinear()
+	s4 := order.OfGeomPoints(p2, p3, p4).IsColinear()
+	if debug {
+		log.Printf("Checking order of  %v %v %v %v", wkt.MustEncode(p1), wkt.MustEncode(p2), wkt.MustEncode(p3), wkt.MustEncode(p4))
+		o1 := order.ThreePointsAreColinear(p1, p2, p3)
+		o1 = order.ThreePointsAreColinear(p1, p2, p4)
+		o1 = order.ThreePointsAreColinear(p1, p3, p4)
+		o1 = order.ThreePointsAreColinear(p2, p3, p4)
+		log.Printf("o1: %v -- s1 %t s2 %t s3 %t s4 %t", o1, s1, s2, s3, s4)
+	}
+	return s1 || s2 || s3 || s4
 }
 
 // InsertSite will insert a new point into a subdivision representing a Delaunay
@@ -352,6 +363,7 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 				containsPoint = crl.ContainsPoint([2]float64(x))
 			}
 		}
+	RETRY:
 		switch {
 		case quadedge.RightOf(sd.Order.YPositiveDown, *t.Dest(), e) &&
 			containsPoint:
@@ -393,6 +405,16 @@ func (sd *Subdivision) InsertSite(x geom.Point) bool {
 
 				}
 				panic("Weird edge, where the OPrev and Sym:OPrev are the same")
+			}
+
+			// Let's make sure the swap isn't going to be be bad for the graph before we do it.
+			{
+				a := e.OPrev()
+				b := e.Sym().OPrev()
+				if sd.Order.ThreePointsAreColinear(*e.Dest(), *a.Dest(), *b.Dest()) {
+					containsPoint = false
+					goto RETRY
+				}
 			}
 			quadedge.Swap(e)
 			if debug {

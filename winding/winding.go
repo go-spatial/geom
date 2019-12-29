@@ -8,6 +8,8 @@ import (
 	"math"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
+	"github.com/go-spatial/geom/encoding/wkt"
 )
 
 // Winding is the clockwise direction of a set of points.
@@ -244,6 +246,25 @@ func (Order) Colinear() Winding { return Colinear }
 
 // Collinear is a alias for colinear
 func (Order) Collinear() Winding { return Colinear }
+
+func (order Order) ThreePointsAreColinear(pt1, pt2, pt3 geom.Point) bool {
+
+	// Ware are using the area of the triangle
+	a := pt1[0] - pt2[0]
+	b := pt2[0] - pt3[0]
+	c := pt1[1] - pt2[1]
+	d := pt2[1] - pt3[1]
+	e := a * d
+	f := b * c
+
+	area := .5 * (e - f)
+	if debug {
+		log.Printf("points: %v %v %v", wkt.MustEncode(pt1), wkt.MustEncode(pt2), wkt.MustEncode(pt3))
+		log.Println("area of triangle: ", area)
+	}
+	return cmp.Float(area, 0.0)
+
+}
 
 // OfPoints returns the winding order of the given points
 func OfPoints(pts ...[2]float64) Winding { return Order{}.OfPoints(pts...) }

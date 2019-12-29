@@ -119,7 +119,7 @@ func Connect(a, b *Edge, order winding.Order) *Edge {
 	return e
 }
 
-// Swap Essentially turns edge e counterclockwase inside its enclosing
+// Swap Essentially turns edge e counterclockwise inside its enclosing
 // quadrilateral. The data pointers are modified accordingly.
 func Swap(e *Edge) {
 	a := e.OPrev()
