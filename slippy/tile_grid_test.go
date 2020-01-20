@@ -2,7 +2,7 @@ package slippy
 
 import (
 	"testing"
-
+	"math/rand"
 	"github.com/go-spatial/proj"
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
@@ -22,7 +22,9 @@ func TestTileGridSize(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
+			if grid.SRID() != tc.srid {
+				t.Fatal(err)
+			}
 			tile, ok := grid.Size(tc.zoom)
 			if !ok {
 				t.Fatal("expected ok")
@@ -142,12 +144,12 @@ func TestTileGridContains(t *testing.T) {
 	}
 }
 
-func TestFromNativeY(t *testing.T) {
+func TestFromNative(t *testing.T) {
 	type tcase struct {
-		lat      float64
+		point    geom.Point
 		srid     uint
 		zoom     uint
-		expected uint
+		expected [2]uint
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
@@ -157,7 +159,7 @@ func TestFromNativeY(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			pt := geom.Point{0, tc.lat}
+			pt := tc.point
 			if tc.srid != 4326 {
 				pts, err := proj.Convert(proj.EPSGCode(tc.srid), pt[:])
 				if err != nil {
@@ -171,72 +173,89 @@ func TestFromNativeY(t *testing.T) {
 				t.Fatal("expected ok")
 			}
 
-			if tile.Y != tc.expected {
-				t.Errorf("got %v expected %v", tile.Y, tc.expected)
+			if tile.X != tc.expected[0] {
+				t.Errorf("got %v expected %v", tile.X, tc.expected[0])
+			}
+
+			if tile.Y != tc.expected[1] {
+				t.Errorf("got %v expected %v", tile.Y, tc.expected[1])
 			}
 		}
 	}
-
+	
+	// expected = tile column, tile row
 	tests := map[string]tcase{
-		"3857_0": {
-			lat:      0.0,
+		"3857_z0": {
+			point:    geom.Point{0.0, 0.0},
 			srid:     3857,
 			zoom:     0,
-			expected: 0,
+			expected: [2]uint{0, 0},
 		},
-		"3857_south": {
-			lat:      -85.0511,
+		"3857_z0_random": {
+			point:    geom.Point{0, 0 + rand.Float64() * 85.0511},
 			srid:     3857,
 			zoom:     0,
-			expected: 0,
+			expected: [2]uint{0, 0},
 		},
-		"3857_north": {
-			lat:      85.0511,
-			srid:     3857,
-			zoom:     0,
-			expected: 0,
-		},
-		"3857_z10_north": {
-			lat:      85.0511,
+		"3857_z10_quad1": {
+			point:    geom.Point{179.99999, 85.0511},
 			srid:     3857,
 			zoom:     10,
-			expected: 0,
+			expected: [2]uint{1023, 0},
 		},
-		"3857_z10_south": {
-			lat:      -85.0511,
+		"3857_z10_quad2": {
+			point:    geom.Point{-179.99999, 85.0511},
 			srid:     3857,
 			zoom:     10,
-			expected: 1023,
+			expected: [2]uint{0, 0},
 		},
-		"4326_0": {
-			lat:      0.0,
+		"3857_z10_quad3": {
+			point:    geom.Point{-179.99999, -85.0511},
+			srid:     3857,
+			zoom:     10,
+			expected: [2]uint{0, 1023},
+		},
+		"3857_z10_quad4": {
+			point:    geom.Point{179.99999, -85.0511},
+			srid:     3857,
+			zoom:     10,
+			expected: [2]uint{1023, 1023},
+		},
+		"4326_z0_quad1": {
+			point:    geom.Point{0.0, 0.0},
 			srid:     4326,
 			zoom:     0,
-			expected: 0,
+			expected: [2]uint{1, 0},
 		},
-		"4326_south": {
-			lat:      -89.99999,
+		"4326_z0_quad2": {
+			point:    geom.Point{-1.0, 0.0},
 			srid:     4326,
 			zoom:     0,
-			expected: 0,
+			expected: [2]uint{0, 0},
 		},
-		"4326_north": {
-			lat:      89.99999,
-			srid:     4326,
-			zoom:     0,
-			expected: 0,
-		},
-		"4326_z10_north": {
-			lat:      89.99999,
+		"4326_z10_quad1": {
+			point:    geom.Point{179.99999, 89.99999},
 			srid:     4326,
 			zoom:     10,
-			expected: 0,
+			expected: [2]uint{2047, 0},
 		},
-		"4326_z10_south": {
-			lat:      -89.99999,
+		"4326_z10_quad2": {
+			point:    geom.Point{-179.99999, 89.99999},
 			srid:     4326,
 			zoom:     10,
-			expected: 1023,
+			expected: [2]uint{0, 0},
+		},
+		"4326_z10_quad3": {
+			point:    geom.Point{-179.99999, -89.99999},
+			srid:     4326,
+			zoom:     10,
+			expected: [2]uint{0, 1023},
+		},
+		"4326_z10_quad4": {
+			point:    geom.Point{179.99999, -89.99999},
+			srid:     4326,
+			zoom:     10,
+			expected: [2]uint{2047, 1023},
 		},
 	}
 
@@ -245,115 +264,13 @@ func TestFromNativeY(t *testing.T) {
 	}
 }
 
-func TestFromNativeX(t *testing.T) {
-	type tcase struct {
-		lon      float64
-		srid     uint
-		zoom     uint
-		expected uint
-	}
-
-	fn := func(tc tcase) func(t *testing.T) {
-		return func(t *testing.T) {
-			grid, err := NewGrid(tc.srid)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			pt := geom.Point{tc.lon, 0}
-			if tc.srid != 4326 {
-				pts, err := proj.Convert(proj.EPSGCode(tc.srid), pt[:])
-				if err != nil {
-					t.Fatal(err, tc.srid)
-				}
-				pt = geom.Point{pts[0], pts[1]}
-			}
-
-			tile, ok := grid.FromNative(tc.zoom, pt)
-			if !ok {
-				t.Fatal("expected ok")
-			}
-
-			if tile.X != tc.expected {
-				t.Errorf("got %v expected %v", tile.X, tc.expected)
-			}
-		}
-	}
-
-	tests := map[string]tcase{
-		"3857_0": {
-			lon:      0.0,
-			srid:     3857,
-			zoom:     0,
-			expected: 0,
-		},
-		"3857_west": {
-			lon:      -179.99999,
-			srid:     3857,
-			zoom:     0,
-			expected: 0,
-		},
-		"3857_east": {
-			lon:      179.99999,
-			srid:     3857,
-			zoom:     0,
-			expected: 0,
-		},
-		"3857_z10_west": {
-			lon:      -179.99999,
-			srid:     3857,
-			zoom:     10,
-			expected: 0,
-		},
-		"3857_z10_east": {
-			lon:      179.99999,
-			srid:     3857,
-			zoom:     10,
-			expected: 1023,
-		},
-		"4326_0": {
-			lon:      0.0,
-			srid:     4326,
-			zoom:     0,
-			expected: 1,
-		},
-		"4326_west": {
-			lon:      -179.99999,
-			srid:     4326,
-			zoom:     0,
-			expected: 0,
-		},
-		"4326_east": {
-			lon:      179.99999,
-			srid:     4326,
-			zoom:     0,
-			expected: 1,
-		},
-		"4326_z10_west": {
-			lon:      -179.99999,
-			srid:     4326,
-			zoom:     10,
-			expected: 0,
-		},
-		"4326_z10_east": {
-			lon:      179.99999,
-			srid:     4326,
-			zoom:     10,
-			expected: 2047,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
-	}
-}
-
-func TestToNativeX(t *testing.T) {
+func TestToNative(t *testing.T) {
 	type tcase struct {
 		x        uint
+		y        uint
 		srid     uint
 		zoom     uint
-		expected float64
+		expected [2]float64
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
@@ -363,7 +280,7 @@ func TestToNativeX(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			pt, ok := grid.ToNative(NewTile(tc.zoom, tc.x, 0))
+			pt, ok := grid.ToNative(NewTile(tc.zoom, tc.x, tc.y))
 			if !ok {
 				t.Fatal("expected ok")
 			}
@@ -376,139 +293,93 @@ func TestToNativeX(t *testing.T) {
 				pt = geom.Point{pts[0], pts[1]}
 			}
 
-			if !cmp.Float(pt.X(), tc.expected) {
-				t.Errorf("got %v expected %v", pt.X(), tc.expected)
+			if !cmp.Float(pt.X(), tc.expected[0]) {
+				t.Errorf("got %v expected %v", pt.X(), tc.expected[0])
+			}
+
+			if !cmp.Float(pt.Y(), tc.expected[1]) {
+				t.Errorf("got %v expected %v", pt.Y(), tc.expected[1])
 			}
 		}
 	}
 
 	tests := map[string]tcase{
-		"3857_z0_west": {
+		"3857_z0": {
 			x:        0,
+			y:		  0,
 			srid:     3857,
 			zoom:     0,
-			expected: -180,
+			expected: [2]float64{-180.0, 85.0511},
 		},
-		"3857_z10_west": {
-			x:        0,
-			srid:     3857,
-			zoom:     10,
-			expected: -180,
-		},
-		"3857_z10_east": {
+		"3857_z10_q1": {
 			x:        1023,
+			y:		  0,
 			srid:     3857,
 			zoom:     10,
-			expected: 179.6484375,
+			expected: [2]float64{179.6484375, 85.0511},
 		},
-		"4326_z0_west": {
+		"3857_z10_q2": {
 			x:        0,
-			srid:     4326,
-			zoom:     0,
-			expected: -180,
+			y:		  0,
+			srid:     3857,
+			zoom:     10,
+			expected: [2]float64{-180.0, 85.0511},
 		},
-		"4326_z0_east": {
+		"3857_z10_q3": {
+			x:        0,
+			y:		  1023,
+			srid:     3857,
+			zoom:     10,
+			expected: [2]float64{-180.0, -85.0207},
+		},
+		"3857_z10_q4": {
+			x:        1023,
+			y:		  1023,
+			srid:     3857,
+			zoom:     10,
+			expected: [2]float64{179.6484375, -85.0207},
+		},
+		"4326_z0_q1": {
 			x:        1,
+			y:		  0,
 			srid:     4326,
 			zoom:     0,
-			expected: 0,
+			expected: [2]float64{0, 90},
 		},
-		"4326_z10_west": {
+		"4326_z0_q2": {
 			x:        0,
+			y:		  0,
 			srid:     4326,
-			zoom:     10,
-			expected: -180.0,
+			zoom:     0,
+			expected: [2]float64{-180, 90},
 		},
-		"4326_z10_east": {
+		"4326_z10_q1": {
 			x:        2047,
+			y:		  0,
 			srid:     4326,
 			zoom:     10,
-			expected: (179.6484375 + 180.0) / 2.0,
+			expected: [2]float64{179.8242, 89.99999},
 		},
-		"4326_z10_center": {
-			x:        1024,
+		"4326_z10_q2": {
+			x:        0,
+			y:		  0,
 			srid:     4326,
 			zoom:     10,
-			expected: 0.0,
+			expected: [2]float64{-179.99999, 89.99999},
 		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, fn(tc))
-	}
-}
-
-func TestToNativeY(t *testing.T) {
-	type tcase struct {
-		y        uint
-		srid     uint
-		zoom     uint
-		expected float64
-	}
-
-	fn := func(tc tcase) func(t *testing.T) {
-		return func(t *testing.T) {
-			grid, err := NewGrid(tc.srid)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			pt, ok := grid.ToNative(NewTile(tc.zoom, 0, tc.y))
-			if !ok {
-				t.Fatal("expected ok")
-			}
-
-			if tc.srid != 4326 {
-				pts, err := proj.Inverse(proj.EPSGCode(tc.srid), pt[:])
-				if err != nil {
-					t.Fatal(err)
-				}
-				pt = geom.Point{pts[0], pts[1]}
-			}
-
-
-			if !cmp.Float(pt.Y(), tc.expected) {
-				t.Errorf("got %v expected %v", pt.Y(), tc.expected)
-			}
-		}
-	}
-
-	tests := map[string]tcase{
-		"3857_z0_north": {
-			y:        0,
-			srid:     3857,
-			zoom:     0,
-			expected: 85.05112878,
-		},
-		"3857_z10_north": {
-			y:        0,
-			srid:     3857,
-			zoom:     10,
-			expected: 85.05112878,
-		},
-		"3857_z10_south": {
-			y:        1023,
-			srid:     3857,
-			zoom:     10,
-			expected: -85.02070774,
-		},
-		"4326_z0_north": {
-			y:        0,
-			srid:     4326,
-			zoom:     0,
-			expected: 90,
-		},
-		"4326_z10_north": {
-			y:        0,
+		"4326_z10_q3": {
+			x:        0,
+			y:		  1023,
 			srid:     4326,
 			zoom:     10,
-			expected: 90,
+			expected: [2]float64{-179.99999, -89.8242},
 		},
-		"4326_z10_south": {
-			y:        1023,
+		"4326_z10_q4": {
+			x:        2047,
+			y:		  1023,
 			srid:     4326,
 			zoom:     10,
-			expected: -89.82421875,
+			expected: [2]float64{179.8242, -89.8242},
 		},
 	}
 
