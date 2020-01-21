@@ -146,8 +146,7 @@ func TestFromNative(t *testing.T) {
 	type tcase struct {
 		point    geom.Point
 		srid     uint
-		zoom     uint
-		expected [2]uint
+		expected *Tile
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
@@ -166,17 +165,13 @@ func TestFromNative(t *testing.T) {
 				pt = geom.Point{pts[0], pts[1]}
 			}
 
-			tile, ok := grid.FromNative(tc.zoom, pt)
+			tile, ok := grid.FromNative(tc.expected.Z, pt)
 			if !ok {
 				t.Fatal("expected ok")
 			}
 
-			if tile.X != tc.expected[0] {
-				t.Errorf("got %v expected %v", tile.X, tc.expected[0])
-			}
-
-			if tile.Y != tc.expected[1] {
-				t.Errorf("got %v expected %v", tile.Y, tc.expected[1])
+			if *tc.expected != *tile {
+				t.Errorf("got %v expected %v", *tile, *tc.expected)
 			}
 		}
 	}
@@ -186,74 +181,62 @@ func TestFromNative(t *testing.T) {
 		"3857_z0": {
 			point:    geom.Point{0.0, 0.0},
 			srid:     3857,
-			zoom:     0,
-			expected: [2]uint{0, 0},
+			expected: NewTile(0, 0, 0),
 		},
 		"3857_z0_random": {
 			point:    geom.Point{96.7283, 43.5473},
 			srid:     3857,
-			zoom:     0,
-			expected: [2]uint{0, 0},
+			expected: NewTile(0, 0, 0),
 		},
 		"3857_z10_quad1": {
 			point:    geom.Point{179.99999, 85.0511},
 			srid:     3857,
-			zoom:     10,
-			expected: [2]uint{1023, 0},
+			expected: NewTile(10, 1023, 0),
 		},
 		"3857_z10_quad2": {
 			point:    geom.Point{-179.99999, 85.0511},
 			srid:     3857,
-			zoom:     10,
-			expected: [2]uint{0, 0},
+			expected: NewTile(10, 0, 0),
 		},
 		"3857_z10_quad3": {
 			point:    geom.Point{-179.99999, -85.0511},
 			srid:     3857,
-			zoom:     10,
-			expected: [2]uint{0, 1023},
+			expected: NewTile(10, 0, 1023),
 		},
 		"3857_z10_quad4": {
 			point:    geom.Point{179.99999, -85.0511},
 			srid:     3857,
-			zoom:     10,
-			expected: [2]uint{1023, 1023},
+			expected: NewTile(10, 1023, 1023),
 		},
 		"4326_z0_quad1": {
 			point:    geom.Point{0.0, 0.0},
 			srid:     4326,
-			zoom:     0,
-			expected: [2]uint{1, 0},
+			expected: NewTile(0, 1, 0),
 		},
 		"4326_z0_quad2": {
 			point:    geom.Point{-1.0, 0.0},
 			srid:     4326,
-			zoom:     0,
-			expected: [2]uint{0, 0},
+			expected: NewTile(0, 0, 0),
 		},
 		"4326_z10_quad1": {
 			point:    geom.Point{179.99999, 89.99999},
 			srid:     4326,
-			zoom:     10,
-			expected: [2]uint{2047, 0},
+			expected: NewTile(10, 2047, 0),
 		},
 		"4326_z10_quad2": {
 			point:    geom.Point{-179.99999, 89.99999},
 			srid:     4326,
-			zoom:     10,
-			expected: [2]uint{0, 0},
+			expected: NewTile(10, 0, 0),
 		},
 		"4326_z10_quad3": {
 			point:    geom.Point{-179.99999, -89.99999},
 			srid:     4326,
-			zoom:     10,
-			expected: [2]uint{0, 1023},
+			expected: NewTile(10, 0, 1023),
 		},
 		"4326_z10_quad4": {
 			point:    geom.Point{179.99999, -89.99999},
 			srid:     4326,
-			zoom:     10,
-			expected: [2]uint{2047, 1023},
+			expected: NewTile(10, 2047, 1023),
 		},
 	}
 
@@ -264,10 +247,8 @@ func TestFromNative(t *testing.T) {
 
 func TestToNative(t *testing.T) {
 	type tcase struct {
-		x        uint
-		y        uint
+		tile     *Tile
 		srid     uint
-		zoom     uint
 		expected geom.Point
 	}
 
@@ -278,7 +259,7 @@ func TestToNative(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			pt, ok := grid.ToNative(NewTile(tc.zoom, tc.x, tc.y))
+			pt, ok := grid.ToNative(tc.tile)
 			if !ok {
 				t.Fatal("expected ok")
 			}
@@ -300,80 +281,58 @@ func TestToNative(t *testing.T) {
 
 	tests := map[string]tcase{
 		"3857_z0": {
-			x:        0,
-			y:		  0,
+			tile:     NewTile(0, 0, 0),
 			srid:     3857,
-			zoom:     0,
 			expected: geom.Point{-179.9999999749438, 85.05112877764508},
 		},
 		"3857_z10_q1": {
-			x:        1023,
-			y:		  0,
+			tile:     NewTile(10, 1023, 0),
 			srid:     3857,
-			zoom:     10,
 			expected: geom.Point{179.64843747499273, 85.05112877764508},
 		},
 		"3857_z10_q2": {
-			x:        0,
-			y:		  0,
+			tile:     NewTile(10, 0, 0),
 			srid:     3857,
-			zoom:     10,
 			expected: geom.Point{-179.9999999749438, 85.05112877764508},
 		},
 		"3857_z10_q3": {
-			x:        0,
-			y:		  1023,
+			tile:     NewTile(10, 0, 1023),
 			srid:     3857,
-			zoom:     10,
 			expected: geom.Point{-179.9999999749438, -85.0207077409554},
 		},
 		"3857_z10_q4": {
-			x:        1023,
-			y:		  1023,
+			tile:     NewTile(10, 1023, 1023),
 			srid:     3857,
-			zoom:     10,
 			expected: geom.Point{179.64843747499273, -85.0207077409554},
 		},
 		"4326_z0_q1": {
-			x:        1,
-			y:		  0,
+			tile:     NewTile(0, 1, 0),
 			srid:     4326,
-			zoom:     0,
 			expected: geom.Point{0, 90},
 		},
 		"4326_z0_q2": {
-			x:        0,
-			y:		  0,
+			tile:     NewTile(0, 0, 0),
 			srid:     4326,
-			zoom:     0,
 			expected: geom.Point{-180, 90},
 		},
 		"4326_z10_q1": {
-			x:        2047,
-			y:		  0,
+			tile:     NewTile(10, 2047, 0),
 			srid:     4326,
-			zoom:     10,
 			expected: geom.Point{179.82421875, 90},
 		},
 		"4326_z10_q2": {
-			x:        0,
-			y:		  0,
+			tile:     NewTile(10, 0, 0),
 			srid:     4326,
-			zoom:     10,
 			expected: geom.Point{-180, 90},
 		},
 		"4326_z10_q3": {
-			x:        0,
-			y:		  1023,
+			tile:     NewTile(10, 0, 1023),
 			srid:     4326,
-			zoom:     10,
 			expected: geom.Point{-180, -89.82421875},
 		},
 		"4326_z10_q4": {
-			x:        2047,
-			y:		  1023,
+			tile:     NewTile(10, 2047, 1023),
 			srid:     4326,
-			zoom:     10,
 			expected: geom.Point{179.82421875, -89.82421875},
 		},
 	}
