@@ -2,10 +2,8 @@ package slippy
 
 import (
 	"testing"
-	"math/rand"
 	"github.com/go-spatial/proj"
 	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/cmp"
 )
 
 func TestTileGridSize(t *testing.T) {
@@ -192,7 +190,7 @@ func TestFromNative(t *testing.T) {
 			expected: [2]uint{0, 0},
 		},
 		"3857_z0_random": {
-			point:    geom.Point{0, 0 + rand.Float64() * 85.0511},
+			point:    geom.Point{96.7283, 43.5473},
 			srid:     3857,
 			zoom:     0,
 			expected: [2]uint{0, 0},
@@ -270,7 +268,7 @@ func TestToNative(t *testing.T) {
 		y        uint
 		srid     uint
 		zoom     uint
-		expected [2]float64
+		expected geom.Point
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
@@ -293,13 +291,10 @@ func TestToNative(t *testing.T) {
 				pt = geom.Point{pts[0], pts[1]}
 			}
 
-			if !cmp.Float(pt.X(), tc.expected[0]) {
-				t.Errorf("got %v expected %v", pt.X(), tc.expected[0])
+			if pt != tc.expected {
+				t.Errorf("got %v expected %v", pt, tc.expected)
 			}
 
-			if !cmp.Float(pt.Y(), tc.expected[1]) {
-				t.Errorf("got %v expected %v", pt.Y(), tc.expected[1])
-			}
 		}
 	}
 
@@ -309,77 +304,77 @@ func TestToNative(t *testing.T) {
 			y:		  0,
 			srid:     3857,
 			zoom:     0,
-			expected: [2]float64{-180.0, 85.0511},
+			expected: geom.Point{-179.9999999749438, 85.05112877764508},
 		},
 		"3857_z10_q1": {
 			x:        1023,
 			y:		  0,
 			srid:     3857,
 			zoom:     10,
-			expected: [2]float64{179.6484375, 85.0511},
+			expected: geom.Point{179.64843747499273, 85.05112877764508},
 		},
 		"3857_z10_q2": {
 			x:        0,
 			y:		  0,
 			srid:     3857,
 			zoom:     10,
-			expected: [2]float64{-180.0, 85.0511},
+			expected: geom.Point{-179.9999999749438, 85.05112877764508},
 		},
 		"3857_z10_q3": {
 			x:        0,
 			y:		  1023,
 			srid:     3857,
 			zoom:     10,
-			expected: [2]float64{-180.0, -85.0207},
+			expected: geom.Point{-179.9999999749438, -85.0207077409554},
 		},
 		"3857_z10_q4": {
 			x:        1023,
 			y:		  1023,
 			srid:     3857,
 			zoom:     10,
-			expected: [2]float64{179.6484375, -85.0207},
+			expected: geom.Point{179.64843747499273, -85.0207077409554},
 		},
 		"4326_z0_q1": {
 			x:        1,
 			y:		  0,
 			srid:     4326,
 			zoom:     0,
-			expected: [2]float64{0, 90},
+			expected: geom.Point{0, 90},
 		},
 		"4326_z0_q2": {
 			x:        0,
 			y:		  0,
 			srid:     4326,
 			zoom:     0,
-			expected: [2]float64{-180, 90},
+			expected: geom.Point{-180, 90},
 		},
 		"4326_z10_q1": {
 			x:        2047,
 			y:		  0,
 			srid:     4326,
 			zoom:     10,
-			expected: [2]float64{179.8242, 89.99999},
+			expected: geom.Point{179.82421875, 90},
 		},
 		"4326_z10_q2": {
 			x:        0,
 			y:		  0,
 			srid:     4326,
 			zoom:     10,
-			expected: [2]float64{-179.99999, 89.99999},
+			expected: geom.Point{-180, 90},
 		},
 		"4326_z10_q3": {
 			x:        0,
 			y:		  1023,
 			srid:     4326,
 			zoom:     10,
-			expected: [2]float64{-179.99999, -89.8242},
+			expected: geom.Point{-180, -89.82421875},
 		},
 		"4326_z10_q4": {
 			x:        2047,
 			y:		  1023,
 			srid:     4326,
 			zoom:     10,
-			expected: [2]float64{179.8242, -89.8242},
+			expected: geom.Point{179.82421875, -89.82421875},
 		},
 	}
 
