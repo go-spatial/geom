@@ -4,6 +4,7 @@ import (
 	"testing"
 	"github.com/go-spatial/proj"
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 )
 
 func TestTileGridSize(t *testing.T) {
@@ -272,7 +273,7 @@ func TestToNative(t *testing.T) {
 				pt = geom.Point{pts[0], pts[1]}
 			}
 
-			if pt != tc.expected {
+			if !cmp.PointEqual(pt, tc.expected) {
 				t.Errorf("got %v expected %v", pt, tc.expected)
 			}
 
