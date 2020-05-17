@@ -44,7 +44,7 @@ func TestPointSetter(t *testing.T) {
 
 		}
 	}
-	testcases := []tcase{
+	tests := []tcase{
 		{
 			point:    [2]float64{10, 20},
 			setter:   &geom.Point{15, 20},
@@ -56,7 +56,7 @@ func TestPointSetter(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testcases {
+	for i, tc := range tests {
 		t.Run(strconv.FormatInt(int64(i), 10), fn(tc))
 	}
 }

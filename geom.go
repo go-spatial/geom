@@ -16,6 +16,48 @@ type Pointer interface {
 	XY() [2]float64
 }
 
+// PointZer is a 3D point.
+type PointZer interface {
+        Geometry
+        XYZ() [3]float64
+}
+
+// PointMer is a 2D+1D point.
+type PointMer interface {
+        Geometry
+        XYM() [3]float64
+}
+
+// PointZMer is a 3D+1D point.
+type PointZMer interface {
+        Geometry
+        XYZM() [4]float64
+}
+
+// PointSer is a 2D point + SRID
+type PointSer interface {
+        Geometry
+	XYS() struct {Srid uint32; Xy Point}
+}
+
+// PointZSer is a 3D point + SRID
+type PointZSer interface {
+        Geometry
+	XYZS() struct {Srid uint32; Xyz PointZ}
+}
+
+// PointMSer is a 2D+1D point + SRID
+type PointMSer interface {
+        Geometry
+	XYMS() struct {Srid uint32; Xym PointM}
+}
+
+// PointZMSer is a 3D+1D point + SRID
+type PointZMSer interface {
+        Geometry
+        XYZMS() struct {Srid uint32; Xyzm PointZM}
+}
+
 // MultiPointer is a geometry with multiple points.
 type MultiPointer interface {
 	Geometry
