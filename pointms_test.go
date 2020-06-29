@@ -38,7 +38,10 @@ func TestPointMSSetter(t *testing.T) {
 				return
 			}
 			xyms := tc.setter.XYMS()
-			tc_xyms := struct {Srid uint32; Xym geom.PointM}{tc.point_srid, geom.PointM{tc.point_xym[0], tc.point_xym[1], tc.point_xym[2]}}
+			tc_xyms := struct {
+				Srid uint32
+				Xym  geom.PointM
+			}{tc.point_srid, geom.PointM{tc.point_xym[0], tc.point_xym[1], tc.point_xym[2]}}
 			if !reflect.DeepEqual(tc_xyms, xyms) {
 				t.Errorf("XYZS, expected %v, got %v", tc_xyms, xyms)
 			}
@@ -73,26 +76,26 @@ func TestPointMS(t *testing.T) {
 						t.Errorf("xym, expected %v got %v", exp_xym, xym)
 					}
 				})
-                                t.Run("s", func(t *testing.T) {
-                                        s := pt.S()
-                                        exp_s := pt.Srid
-                                        if s != exp_s {
-                                                t.Errorf("srid, expected %v got %v", exp_s, s)
-                                        }
-                                })
+				t.Run("s", func(t *testing.T) {
+					s := pt.S()
+					exp_s := pt.Srid
+					if s != exp_s {
+						t.Errorf("srid, expected %v got %v", exp_s, s)
+					}
+				})
 				t.Run("xyms", func(t *testing.T) {
-                                        xyms := pt.XYMS()
-                                        exp_xyms := pt
-                                        if xyms != exp_xyms {
-                                                t.Errorf("xyms, expected %v got %v", exp_xyms, xyms)
-                                        }
-                                })
+					xyms := pt.XYMS()
+					exp_xyms := pt
+					if xyms != exp_xyms {
+						t.Errorf("xyms, expected %v got %v", exp_xyms, xyms)
+					}
+				})
 			}
 	}
 	tests := []geom.PointMS{
 		{4326, geom.PointM{0, 1, 1000}}, {4326, geom.PointM{2, 2, 300}}, {4326, geom.PointM{1, 2, 1000}},
-        }
+	}
 	for _, pt := range tests {
 		t.Run(fn(pt))
-        }
+	}
 }

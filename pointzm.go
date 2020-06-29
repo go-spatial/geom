@@ -12,21 +12,21 @@ type PointZM [4]float64
 
 // XYZM returns an array of 3D+1D coordinates
 func (p PointZM) XYZM() [4]float64 {
-        return p
+	return p
 }
 
 // XYZ returns an array of 3D coordinates
 func (p PointZM) XYZ() [3]float64 {
 	return PointZ{
-                p[0],
-                p[1],
+		p[0],
+		p[1],
 		p[2],
-        }
+	}
 }
 
 // M returns the metric related to the 2D point
 func (p PointZM) M() float64 {
-        return p[3]
+	return p[3]
 }
 
 // SetXYZM sets the three coordinates

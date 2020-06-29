@@ -13,15 +13,15 @@ type PointZ [3]float64
 
 // XYZ returns an array of 3D coordinates
 func (p PointZ) XYZ() [3]float64 {
-        return p
+	return p
 }
 
 // XY returns an array of 2D coordinates
 func (p PointZ) XY() [2]float64 {
 	return Point{
-                p[0],
-                p[1],
-        }
+		p[0],
+		p[1],
+	}
 }
 
 // SetXYZ sets the three coordinates
