@@ -10,11 +10,15 @@ var ErrNilPointZMS = errors.New("geom: nil PointZMS")
 // Point describes a simple 3D+1D point with SRID
 type PointZMS struct {
 	Srid uint32
-	Xyzm PointZM }
+	Xyzm PointZM
+}
 
 // XYZMS returns the struct itself
-func (p PointZMS) XYZMS() struct {Srid uint32; Xyzm PointZM} {
-        return p
+func (p PointZMS) XYZMS() struct {
+	Srid uint32
+	Xyzm PointZM
+} {
+	return p
 }
 
 // XYZM returns 3D+1D point
@@ -24,7 +28,7 @@ func (p PointZMS) XYZM() PointZM {
 
 // S returns the srid as uint32
 func (p PointZMS) S() uint32 {
-        return p.Srid
+	return p.Srid
 }
 
 // SetXYZMS sets the XYZM coordinates and the SRID

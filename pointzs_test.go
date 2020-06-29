@@ -38,7 +38,10 @@ func TestPointZSSetter(t *testing.T) {
 				return
 			}
 			xyzs := tc.setter.XYZS()
-			tc_xyzs := struct {Srid uint32; Xyz geom.PointZ}{tc.point_srid, geom.PointZ{tc.point_xyz[0], tc.point_xyz[1], tc.point_xyz[2]}}
+			tc_xyzs := struct {
+				Srid uint32
+				Xyz  geom.PointZ
+			}{tc.point_srid, geom.PointZ{tc.point_xyz[0], tc.point_xyz[1], tc.point_xyz[2]}}
 			if !reflect.DeepEqual(tc_xyzs, xyzs) {
 				t.Errorf("XYZS, expected %v, got %v", tc_xyzs, xyzs)
 			}
@@ -73,26 +76,26 @@ func TestPointZS(t *testing.T) {
 						t.Errorf("xyz, expected %v got %v", exp_xyz, xyz)
 					}
 				})
-                                t.Run("s", func(t *testing.T) {
-                                        s := pt.S()
-                                        exp_s := pt.Srid
-                                        if s != exp_s {
-                                                t.Errorf("srid, expected %v got %v", exp_s, s)
-                                        }
-                                })
+				t.Run("s", func(t *testing.T) {
+					s := pt.S()
+					exp_s := pt.Srid
+					if s != exp_s {
+						t.Errorf("srid, expected %v got %v", exp_s, s)
+					}
+				})
 				t.Run("xyzs", func(t *testing.T) {
-                                        xyzs := pt.XYZS()
-                                        exp_xyzs := pt
-                                        if xyzs != exp_xyzs {
-                                                t.Errorf("xyzs, expected %v got %v", exp_xyzs, xyzs)
-                                        }
-                                })
+					xyzs := pt.XYZS()
+					exp_xyzs := pt
+					if xyzs != exp_xyzs {
+						t.Errorf("xyzs, expected %v got %v", exp_xyzs, xyzs)
+					}
+				})
 			}
 	}
 	tests := []geom.PointZS{
 		{4326, geom.PointZ{0, 1, 2}}, {4326, geom.PointZ{2, 2, 3}}, {4326, geom.PointZ{1, 2, 3}},
-        }
+	}
 	for _, pt := range tests {
 		t.Run(fn(pt))
-        }
+	}
 }

@@ -12,20 +12,20 @@ type PointM [3]float64
 
 // XYM returns an array of 2D+1D coordinates
 func (p PointM) XYM() [3]float64 {
-        return p
+	return p
 }
 
 // XY returns an array of 2D coordinates
 func (p PointM) XY() [2]float64 {
 	return Point{
-                p[0],
-                p[1],
-        }
+		p[0],
+		p[1],
+	}
 }
 
 // M returns the metric related to the 2D point
 func (p PointM) M() float64 {
-        return p[2]
+	return p[2]
 }
 
 // SetXYM sets the three coordinates

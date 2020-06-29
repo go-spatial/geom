@@ -18,44 +18,56 @@ type Pointer interface {
 
 // PointZer is a 3D point.
 type PointZer interface {
-        Geometry
-        XYZ() [3]float64
+	Geometry
+	XYZ() [3]float64
 }
 
 // PointMer is a 2D+1D point.
 type PointMer interface {
-        Geometry
-        XYM() [3]float64
+	Geometry
+	XYM() [3]float64
 }
 
 // PointZMer is a 3D+1D point.
 type PointZMer interface {
-        Geometry
-        XYZM() [4]float64
+	Geometry
+	XYZM() [4]float64
 }
 
 // PointSer is a 2D point + SRID
 type PointSer interface {
-        Geometry
-	XYS() struct {Srid uint32; Xy Point}
+	Geometry
+	XYS() struct {
+		Srid uint32
+		Xy   Point
+	}
 }
 
 // PointZSer is a 3D point + SRID
 type PointZSer interface {
-        Geometry
-	XYZS() struct {Srid uint32; Xyz PointZ}
+	Geometry
+	XYZS() struct {
+		Srid uint32
+		Xyz  PointZ
+	}
 }
 
 // PointMSer is a 2D+1D point + SRID
 type PointMSer interface {
-        Geometry
-	XYMS() struct {Srid uint32; Xym PointM}
+	Geometry
+	XYMS() struct {
+		Srid uint32
+		Xym  PointM
+	}
 }
 
 // PointZMSer is a 3D+1D point + SRID
 type PointZMSer interface {
-        Geometry
-        XYZMS() struct {Srid uint32; Xyzm PointZM}
+	Geometry
+	XYZMS() struct {
+		Srid uint32
+		Xyzm PointZM
+	}
 }
 
 // MultiPointer is a geometry with multiple points.
@@ -68,6 +80,60 @@ type MultiPointer interface {
 type LineStringer interface {
 	Geometry
 	Vertices() [][2]float64
+}
+
+// LineStringMer is a line of two or more M points.
+type LineStringMer interface {
+	Geometry
+	Vertices() [][3]float64
+}
+
+// LineStringZer is a line of two or more Z points.
+type LineStringZer interface {
+	Geometry
+	Vertices() [][3]float64
+}
+
+// LineStringZMer is a line of two or more ZM points.
+type LineStringZMer interface {
+	Geometry
+	Vertices() [][4]float64
+}
+
+// LineStringSer is a line of two or more points + SRID.
+type LineStringSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Ls   LineString
+	}
+}
+
+// LineStringMSer is a line of two or more M points + SRID.
+type LineStringMSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Lsm  LineStringM
+	}
+}
+
+// LineStringZSer is a line of two or more Z points + SRID.
+type LineStringZSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Lsz  LineStringZ
+	}
+}
+
+// LineStringZMSer is a line of two or more ZM points + SRID.
+type LineStringZMSer interface {
+	Geometry
+	Vertices() struct {
+		Srid uint32
+		Lszm LineStringZM
+	}
 }
 
 // MultiLineStringer is a geometry with multiple LineStrings.

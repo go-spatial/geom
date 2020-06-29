@@ -38,7 +38,10 @@ func TestPointZMSSetter(t *testing.T) {
 				return
 			}
 			xyzms := tc.setter.XYZMS()
-			tc_xyzms := struct {Srid uint32; Xyzm geom.PointZM}{tc.point_srid, geom.PointZM{tc.point_xyzm[0], tc.point_xyzm[1], tc.point_xyzm[2], tc.point_xyzm[3]}}
+			tc_xyzms := struct {
+				Srid uint32
+				Xyzm geom.PointZM
+			}{tc.point_srid, geom.PointZM{tc.point_xyzm[0], tc.point_xyzm[1], tc.point_xyzm[2], tc.point_xyzm[3]}}
 			if !reflect.DeepEqual(tc_xyzms, xyzms) {
 				t.Errorf("XYZS, expected %v, got %v", tc_xyzms, xyzms)
 			}
@@ -73,26 +76,26 @@ func TestPointZMS(t *testing.T) {
 						t.Errorf("xyzm, expected %v got %v", exp_xyzm, xyzm)
 					}
 				})
-                                t.Run("s", func(t *testing.T) {
-                                        s := pt.S()
-                                        exp_s := pt.Srid
-                                        if s != exp_s {
-                                                t.Errorf("srid, expected %v got %v", exp_s, s)
-                                        }
-                                })
+				t.Run("s", func(t *testing.T) {
+					s := pt.S()
+					exp_s := pt.Srid
+					if s != exp_s {
+						t.Errorf("srid, expected %v got %v", exp_s, s)
+					}
+				})
 				t.Run("xyzms", func(t *testing.T) {
-                                        xyzms := pt.XYZMS()
-                                        exp_xyzms := pt
-                                        if xyzms != exp_xyzms {
-                                                t.Errorf("xyzms, expected %v got %v", exp_xyzms, xyzms)
-                                        }
-                                })
+					xyzms := pt.XYZMS()
+					exp_xyzms := pt
+					if xyzms != exp_xyzms {
+						t.Errorf("xyzms, expected %v got %v", exp_xyzms, xyzms)
+					}
+				})
 			}
 	}
 	tests := []geom.PointZMS{
 		{4326, geom.PointZM{0, 1, 2, 1000}}, {4326, geom.PointZM{2, 2, 3, 1000}}, {4326, geom.PointZM{1, 2, 3, 1000}},
-        }
+	}
 	for _, pt := range tests {
 		t.Run(fn(pt))
-        }
+	}
 }

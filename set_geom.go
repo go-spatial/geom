@@ -24,32 +24,32 @@ type PointMSetter interface {
 
 // PointZMSetter is a mutable PointZMer
 type PointZMSetter interface {
-        PointZMer
-        SetXYZM([4]float64) error
+	PointZMer
+	SetXYZM([4]float64) error
 }
 
 // PointSSetter is a mutable PointSer
 type PointSSetter interface {
-        PointSer
+	PointSer
 	SetXYS(srid uint32, xy Point) error
 }
 
 // PointZSSetter is a mutable PointZSer
 type PointZSSetter interface {
-        PointZSer
+	PointZSer
 	SetXYZS(srid uint32, xyz PointZ) error
 }
 
 // PointMSSetter is a mutable PointMer
 type PointMSSetter interface {
-        PointMSer
-        SetXYMS(srid uint32, xym PointM) error
+	PointMSer
+	SetXYMS(srid uint32, xym PointM) error
 }
 
 // PointZMSSetter is a mutable PointZMer
 type PointZMSSetter interface {
-        PointZMSer
-        SetXYZMS(srid uint32, xyzm PointZM) error
+	PointZMSer
+	SetXYZMS(srid uint32, xyzm PointZM) error
 }
 
 // MultiPointSetter is a mutable MultiPointer.
@@ -62,6 +62,48 @@ type MultiPointSetter interface {
 type LineStringSetter interface {
 	LineStringer
 	SetVertices([][2]float64) error
+}
+
+// LineStringMSetter is a mutable LineStringMer.
+type LineStringMSetter interface {
+	LineStringMer
+	SetVertices([][3]float64) error
+}
+
+// LineStringZSetter is a mutable LineStringZer.
+type LineStringZSetter interface {
+	LineStringZer
+	SetVertices([][3]float64) error
+}
+
+// LineStringZMSetter is a mutable LineStringZMer.
+type LineStringZMSetter interface {
+	LineStringZMer
+	SetVertices([][4]float64) error
+}
+
+// LineStringSSetter is a mutable LineStringSer.
+type LineStringSSetter interface {
+	LineStringSer
+	SetSRID(srid uint32, ls LineString) error
+}
+
+// LineStringMSSetter is a mutable LineStringMSer.
+type LineStringMSSetter interface {
+	LineStringMSer
+	SetSRID(srid uint32, lsm LineStringM) error
+}
+
+// LineStringZSSetter is a mutable LineStringZSer.
+type LineStringZSSetter interface {
+	LineStringZSer
+	SetSRID(srid uint32, lsz LineStringZ) error
+}
+
+// LineStringZMSSetter is a mutable LineStringZMSer.
+type LineStringZMSSetter interface {
+	LineStringZMSer
+	SetSRID(srid uint32, lszm LineStringZM) error
 }
 
 // MultiLineStringSetter is a mutable MultiLineStringer.

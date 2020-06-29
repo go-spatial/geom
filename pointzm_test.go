@@ -71,25 +71,25 @@ func TestPointZM(t *testing.T) {
 					}
 				})
 				t.Run("xyzm", func(t *testing.T) {
-                                        xyzm := pt.XYZM()
-                                        exp_xyzm := pt
-                                        if xyzm != exp_xyzm {
-                                                t.Errorf("xyzm, expected %v got %v", exp_xyzm, xyzm)
-                                        }
-                                })
+					xyzm := pt.XYZM()
+					exp_xyzm := pt
+					if xyzm != exp_xyzm {
+						t.Errorf("xyzm, expected %v got %v", exp_xyzm, xyzm)
+					}
+				})
 				t.Run("m", func(t *testing.T) {
-                                        m := pt.M()
-                                        exp_m := pt[3]
-                                        if m != exp_m {
-                                                t.Errorf("m, expected %v got %v", exp_m, m)
-                                        }
-                                })
+					m := pt.M()
+					exp_m := pt[3]
+					if m != exp_m {
+						t.Errorf("m, expected %v got %v", exp_m, m)
+					}
+				})
 			}
 	}
 	tests := []geom.PointZM{
-                {0, 1, 2, 1000.}, {2, 2, 3, 1000.}, {1, 2, 3, 1000.},
-        }
+		{0, 1, 2, 1000.}, {2, 2, 3, 1000.}, {1, 2, 3, 1000.},
+	}
 	for _, pt := range tests {
 		t.Run(fn(pt))
-        }
+	}
 }

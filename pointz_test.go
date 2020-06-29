@@ -2,10 +2,10 @@ package geom_test
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"testing"
-	"math"
 
 	"github.com/go-spatial/geom"
 )
@@ -72,25 +72,25 @@ func TestPointZ(t *testing.T) {
 					}
 				})
 				t.Run("xyz", func(t *testing.T) {
-                                        xyz := pt.XYZ()
-                                        exp_xyz := pt
-                                        if xyz != exp_xyz {
-                                                t.Errorf("xyz, expected %v got %v", exp_xyz, xyz)
-                                        }
-                                })
+					xyz := pt.XYZ()
+					exp_xyz := pt
+					if xyz != exp_xyz {
+						t.Errorf("xyz, expected %v got %v", exp_xyz, xyz)
+					}
+				})
 				t.Run("magnitude", func(t *testing.T) {
-                                        m := pt.Magnitude()
-                                        exp_m := math.Sqrt((pt[0] * pt[0]) + (pt[1] * pt[1]) + (pt[2] * pt[2]))
-                                        if m != exp_m {
-                                                t.Errorf("magnitude, expected %v got %v", exp_m, m)
-                                        }
-                                })
+					m := pt.Magnitude()
+					exp_m := math.Sqrt((pt[0] * pt[0]) + (pt[1] * pt[1]) + (pt[2] * pt[2]))
+					if m != exp_m {
+						t.Errorf("magnitude, expected %v got %v", exp_m, m)
+					}
+				})
 			}
 	}
 	tests := []geom.PointZ{
-                {0, 1, 2}, {2, 2, 3}, {1, 2, 3},
-        }
+		{0, 1, 2}, {2, 2, 3}, {1, 2, 3},
+	}
 	for _, pt := range tests {
 		t.Run(fn(pt))
-        }
+	}
 }
