@@ -76,6 +76,60 @@ type MultiPointer interface {
 	Points() [][2]float64
 }
 
+// MultiPointZer is a geometry with multiple 3D points.
+type MultiPointZer interface {
+	Geometry
+	Points() [][3]float64
+}
+
+// MultiPointMer is a geometry with multiple 2+1D points.
+type MultiPointMer interface {
+	Geometry
+	Points() [][3]float64
+}
+
+// MultiPointZMer is a geometry with multiple 3+1D points.
+type MultiPointZMer interface {
+	Geometry
+	Points() [][4]float64
+}
+
+// MultiPointSer is a MultiPoint + SRID.
+type MultiPointSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mp   MultiPoint
+	}
+}
+
+// MultiPointZSer is a MultiPointZ + SRID.
+type MultiPointZSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mpz  MultiPointZ
+	}
+}
+
+// MultiPointMSer is a MultiPointM + SRID.
+type MultiPointMSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mpm  MultiPointM
+	}
+}
+
+// MultiPointZMSer is a MultiPointZM + SRID.
+type MultiPointZMSer interface {
+	Geometry
+	Points() struct {
+		Srid uint32
+		Mpzm MultiPointZM
+	}
+}
+
 // LineStringer is a line of two or more points.
 type LineStringer interface {
 	Geometry
