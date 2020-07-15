@@ -58,6 +58,48 @@ type MultiPointSetter interface {
 	SetPoints([][2]float64) error
 }
 
+// MultiPointZSetter is a mutable MultiPointer.
+type MultiPointZSetter interface {
+	MultiPointZer
+	SetPoints([][3]float64) error
+}
+
+// MultiPointMSetter is a mutable MultiPointer.
+type MultiPointMSetter interface {
+	MultiPointMer
+	SetPoints([][3]float64) error
+}
+
+// MultiPointZMSetter is a mutable MultiPointer.
+type MultiPointZMSetter interface {
+	MultiPointZMer
+	SetPoints([][4]float64) error
+}
+
+// MultiPointSSetter is a mutable MultiPointSer.
+type MultiPointSSetter interface {
+	MultiPointSer
+	SetSRID(srid uint32, mp MultiPoint) error
+}
+
+// MultiPointZSSetter is a mutable MultiPointZSer.
+type MultiPointZSSetter interface {
+	MultiPointZSer
+	SetSRID(srid uint32, mpz MultiPointZ) error
+}
+
+// MultiPointMSSetter is a mutable MultiPointMSer.
+type MultiPointMSSetter interface {
+	MultiPointMSer
+	SetSRID(srid uint32, mpz MultiPointM) error
+}
+
+// MultiPointZMSSetter is a mutable MultiPointZMSer.
+type MultiPointZMSSetter interface {
+	MultiPointZMSer
+	SetSRID(srid uint32, mpzm MultiPointZM) error
+}
+
 // LineStringSetter is a mutable LineStringer.
 type LineStringSetter interface {
 	LineStringer
