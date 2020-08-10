@@ -16,20 +16,23 @@ func TestWKBEncode(t *testing.T) {
 	}
 	var fname string
 
-	fn := func(t *testing.T, tc tcase.C) {
+	fn := func(t *testing.T, tc tcase.C) func(*testing.T) {
+		return func(t *testing.T) {
 
-		if tc.Skip.Is(tcase.TypeEncode) {
-			t.Skip("instructed to skip.")
-		}
+			if tc.Skip.Is(tcase.TypeEncode) {
+				t.Skip("instructed to skip.")
+			}
 
-		bs, err := wkb.EncodeBytes(tc.Expected)
-		if err != nil {
-			log.Println("TestCase:", tc)
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
-		if !reflect.DeepEqual(bs, tc.Bytes) {
-			t.Errorf(" encoded geometry, expected %v got %v", tcase.SprintBinary(tc.Bytes, "\t"), tcase.SprintBinary(bs, "\t"))
+			bs, err := wkb.EncodeBytes(tc.Expected)
+			if err != nil {
+				log.Println("TestCase:", tc)
+				t.Errorf("error, expected nil got %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(bs, tc.Bytes) {
+				t.Errorf(" encoded geometry, expected %v got %v", tcase.SprintBinary(tc.Bytes, "\t"), tcase.SprintBinary(bs, "\t"))
+			}
 		}
 	}
 

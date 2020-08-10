@@ -1,0 +1,39 @@
+desc: EWKB Point with Z component; should be unknown Geometry
+skip: encode
+decode_error: Unknown Geometry Type 1001
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01
+  E9 03 00 00             // type 1001 PointZ
+  00 00 00 00 00 00 F0 3F // x 1
+  00 00 00 00 00 00 00 40 // y 2
+  00 00 00 00 00 00 00 00 // z 0
+}}
+
+desc: EWKB Point with M component; should be unknown Geometry
+skip: encode
+decode_error: Unknown Geometry Type 2001
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01
+  D1 07 00 00             // type 2001 PointM
+  00 00 00 00 00 00 F0 3F // x 1
+  00 00 00 00 00 00 00 40 // y 2
+  00 00 00 00 00 00 00 00 // m 0
+}}
+
+
+desc: EWKB Point with ZM component; should be unknown Geometry
+skip: encode
+decode_error: Unknown Geometry Type 3001
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01
+  B9 0B 00 00             // type 3001 PointZM
+  00 00 00 00 00 00 F0 3F // x 1
+  00 00 00 00 00 00 00 40 // y 2
+  00 00 00 00 00 00 00 00 // z 0
+  00 00 00 00 00 00 00 00 // m 0
+}}
+
+
