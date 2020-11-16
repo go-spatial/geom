@@ -154,6 +154,48 @@ type MultiLineStringSetter interface {
 	SetLineStrings([][][2]float64) error
 }
 
+// MultiLineStringZSetter is a mutable MultiLineStringZer.
+type MultiLineStringZSetter interface {
+	MultiLineStringZer
+	SetLineStringZs([][][3]float64) error
+}
+
+// MultiLineStringMSetter is a mutable MultiLineStringMer.
+type MultiLineStringMSetter interface {
+	MultiLineStringMer
+	SetLineStringMs([][][3]float64) error
+}
+
+// MultiLineStringZMSetter is a mutable MultiLineZMStringer.
+type MultiLineStringZMSetter interface {
+	MultiLineStringZMer
+	SetLineStringZMs([][][4]float64) error
+}
+
+// MultiLineStringSSetter is a mutable MultiLineSStringer.
+type MultiLineStringSSetter interface {
+	MultiLineStringSer
+	SetSRID(srid uint32, mls MultiLineString) error
+}
+
+// MultiLineStringZSSetter is a mutable MultiLineZSStringer.
+type MultiLineStringZSSetter interface {
+	MultiLineStringZSer
+	SetSRID(srid uint32, mlsz MultiLineStringZ) error
+}
+
+// MultiLineStringMSSetter is a mutable MultiLineMSStringer.
+type MultiLineStringMSSetter interface {
+	MultiLineStringMSer
+	SetSRID(srid uint32, mlsm MultiLineStringM) error
+}
+
+// MultiLineStringZMSSetter is a mutable MultiLineZMSStringer.
+type MultiLineStringZMSSetter interface {
+	MultiLineStringZMSer
+	SetSRID(srid uint32, mlszm MultiLineStringZM) error
+}
+
 // PolygonSetter is a mutable Polygoner.
 type PolygonSetter interface {
 	Polygoner

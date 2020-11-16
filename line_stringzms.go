@@ -20,7 +20,9 @@ type LineStringZMS struct {
 func (lszms LineStringZMS) Vertices() struct {
 	Srid uint32
 	Lszm LineStringZM
-} { return lszms }
+} {
+	return lszms
+}
 
 // SetVertices modifies the struct containing the SRID int and the array of 3D + 1 coordinates
 func (lszms *LineStringZMS) SetSRID(srid uint32, lszm LineStringZM) (err error) {
