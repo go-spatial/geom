@@ -16,32 +16,36 @@ func TestMultiLineStringSSetter(t *testing.T) {
 		expected        geom.MultiLineStringSSetter
 		err             error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		err := tc.setter.SetSRID(tc.srid, tc.multilinestring)
-		if tc.err == nil && err != nil {
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
-		if tc.err != nil {
-			if tc.err.Error() != err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err, err)
-			}
-			return
-		}
-		// compare the results
-		if !reflect.DeepEqual(tc.expected, tc.setter) {
-			t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
-		}
 
-		mlss := tc.setter.MultiLineStrings()
-		tc_mlss := struct {
-			Srid uint32
-			Mls  geom.MultiLineString
-		}{tc.srid, tc.multilinestring}
-		if !reflect.DeepEqual(tc_mlss, mlss) {
-			t.Errorf("Referenced MultiLineString, expected %v got %v", tc_mlss, mlss)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			err := tc.setter.SetSRID(tc.srid, tc.multilinestring)
+			if tc.err == nil && err != nil {
+				t.Errorf("error, expected nil got %v", err)
+				return
+			}
+			if tc.err != nil {
+				if tc.err.Error() != err.Error() {
+					t.Errorf("error, expected %v got %v", tc.err, err)
+				}
+				return
+			}
+			// compare the results
+			if !reflect.DeepEqual(tc.expected, tc.setter) {
+				t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
+			}
+
+			mlss := tc.setter.MultiLineStrings()
+			tc_mlss := struct {
+				Srid uint32
+				Mls  geom.MultiLineString
+			}{tc.srid, tc.multilinestring}
+			if !reflect.DeepEqual(tc_mlss, mlss) {
+				t.Errorf("Referenced MultiLineString, expected %v got %v", tc_mlss, mlss)
+			}
 		}
 	}
+
 	tests := []tcase{
 		{
 			srid: 4326,
@@ -87,8 +91,8 @@ func TestMultiLineStringSSetter(t *testing.T) {
 			err:    geom.ErrNilMultiLineStringS,
 		},
 	}
-	for i, tc := range tests {
-		tc := tc
-		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+
+	for i := range tests {
+		t.Run(strconv.FormatInt(int64(i), 10), fn(tests[i]))
 	}
 }

@@ -16,32 +16,36 @@ func TestMultiLineStringZMSSetter(t *testing.T) {
 		expected          geom.MultiLineStringZMSSetter
 		err               error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		err := tc.setter.SetSRID(tc.srid, tc.multilinestringzm)
-		if tc.err == nil && err != nil {
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
-		if tc.err != nil {
-			if tc.err.Error() != err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err, err)
-			}
-			return
-		}
-		// compare the results
-		if !reflect.DeepEqual(tc.expected, tc.setter) {
-			t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
-		}
 
-		mlszms := tc.setter.MultiLineStringZMs()
-		tc_mlszms := struct {
-			Srid  uint32
-			Mlszm geom.MultiLineStringZM
-		}{tc.srid, tc.multilinestringzm}
-		if !reflect.DeepEqual(tc_mlszms, mlszms) {
-			t.Errorf("Referenced MultiLineStringZM, expected %v got %v", tc_mlszms, mlszms)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			err := tc.setter.SetSRID(tc.srid, tc.multilinestringzm)
+			if tc.err == nil && err != nil {
+				t.Errorf("error, expected nil got %v", err)
+				return
+			}
+			if tc.err != nil {
+				if tc.err.Error() != err.Error() {
+					t.Errorf("error, expected %v got %v", tc.err, err)
+				}
+				return
+			}
+			// compare the results
+			if !reflect.DeepEqual(tc.expected, tc.setter) {
+				t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
+			}
+
+			mlszms := tc.setter.MultiLineStringZMs()
+			tc_mlszms := struct {
+				Srid  uint32
+				Mlszm geom.MultiLineStringZM
+			}{tc.srid, tc.multilinestringzm}
+			if !reflect.DeepEqual(tc_mlszms, mlszms) {
+				t.Errorf("Referenced MultiLineStringZM, expected %v got %v", tc_mlszms, mlszms)
+			}
 		}
 	}
+
 	tests := []tcase{
 		{
 			srid: 4326,
@@ -87,8 +91,8 @@ func TestMultiLineStringZMSSetter(t *testing.T) {
 			err:    geom.ErrNilMultiLineStringZMS,
 		},
 	}
-	for i, tc := range tests {
-		tc := tc
-		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+
+	for i := range tests {
+		t.Run(strconv.FormatInt(int64(i), 10), fn(tests[i]))
 	}
 }

@@ -15,28 +15,32 @@ func TestMultiLineStringMSetter(t *testing.T) {
 		expected geom.MultiLineStringMSetter
 		err      error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		err := tc.setter.SetLineStringMs(tc.pointms)
-		if tc.err == nil && err != nil {
-			t.Errorf("error, expected nil got %v", err)
-			return
-		}
-		if tc.err != nil {
-			if tc.err.Error() != err.Error() {
-				t.Errorf("error, expected %v got %v", tc.err, err)
-			}
-			return
-		}
 
-		// compare the results
-		if !reflect.DeepEqual(tc.expected, tc.setter) {
-			t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
-		}
-		mlm := tc.setter.LineStringMs()
-		if !reflect.DeepEqual(tc.pointms, mlm) {
-			t.Errorf("LineStringMs, expected %v got %v", tc.pointms, mlm)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			err := tc.setter.SetLineStringMs(tc.pointms)
+			if tc.err == nil && err != nil {
+				t.Errorf("error, expected nil got %v", err)
+				return
+			}
+			if tc.err != nil {
+				if tc.err.Error() != err.Error() {
+					t.Errorf("error, expected %v got %v", tc.err, err)
+				}
+				return
+			}
+
+			// compare the results
+			if !reflect.DeepEqual(tc.expected, tc.setter) {
+				t.Errorf("setter, expected %v got %v", tc.expected, tc.setter)
+			}
+			mlm := tc.setter.LineStringMs()
+			if !reflect.DeepEqual(tc.pointms, mlm) {
+				t.Errorf("LineStringMs, expected %v got %v", tc.pointms, mlm)
+			}
 		}
 	}
+
 	tests := []tcase{
 		{
 			pointms: [][][3]float64{
@@ -75,9 +79,9 @@ func TestMultiLineStringMSetter(t *testing.T) {
 			err:    geom.ErrNilMultiLineStringM,
 		},
 	}
-	for i, tc := range tests {
-		tc := tc
-		t.Run(strconv.FormatInt(int64(i), 10), func(t *testing.T) { fn(t, tc) })
+
+	for i := range tests {
+		t.Run(strconv.FormatInt(int64(i), 10), fn(tests[i]))
 	}
 
 }
