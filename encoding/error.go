@@ -6,9 +6,15 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// ErrUnknownGeometry is a wrapper around a geom.Geometry that is invalid
+// ErrUnknownGeometry is returned when a geometry type that is unknown is asked
+// to be encoded
 type ErrUnknownGeometry struct {
 	Geom geom.Geometry
+}
+
+// Error fulfills the error interface
+func (e ErrUnknownGeometry) Error() string {
+	return fmt.Sprintf("unknown geometry: %T", e.Geom)
 }
 
 // ErrInvalidGeoJSON is a wrapper around a []byte that is invalid GeoJson
@@ -16,10 +22,7 @@ type ErrInvalidGeoJSON struct {
 	GJSON []byte
 }
 
-func (e ErrUnknownGeometry) Error() string {
-	return fmt.Sprintf("unknown geometry: %T", e.Geom)
-}
-
+// Error fulfills the error interface
 func (e ErrInvalidGeoJSON) Error() string {
 	return fmt.Sprintf("Invalid GeoJSON string: %T", string(e.GJSON))
 }
