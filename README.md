@@ -1,7 +1,15 @@
-[![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/go-spatial/geom)
+[![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://pkg.go.dev/github.com/go-spatial/geom)
 
-# geom
+# Packages
+
+## package geom
 Geometry interfaces to help drive interoperability within the Go geospatial community. This package focuses on 2D geometries.
+
+
+## package encoding
+
+Encoding package describes a few interfaces and common errors for various sub packages implementing
+different encoders.
 
 # Dependencies
 
