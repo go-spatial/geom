@@ -1,5 +1,11 @@
+// Package geojson implements encoding and decoding of GeoJSON as
+// defined in [RFC 7946](https://tools.ietf.org/html/rfc7946). The
+// mapping between JSON and geom Geometry values are described in
+// the documentation for the Marshal and Unmarshal functions.
+//
+// At current this pacakge only supports 2D Geometries unless stated
+// otherwise by the documentation of the Marshal and Unmarshal functions
 package geojson
-
 import (
 	"encoding/json"
 
@@ -21,6 +27,8 @@ const (
 	FeatureCollectionType  GeoJSONType = "FeatureCollection"
 )
 
+// Geometry wraps a geom Geometry so that it can be encoded as a GeoJSON
+// feature
 type Geometry struct {
 	geom.Geometry
 }
@@ -66,7 +74,6 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 
 		return json.Marshal(coordinates{
 			Type: PolygonType,
-			// make sure our rings are closed
 			Coords: ps,
 		})
 
@@ -110,12 +117,15 @@ func (_ featureType) MarshalJSON() ([]byte, error) {
 }
 func (fc *featureType) UnmarshalJSON(b []byte) error { return nil }
 
+
+
+// Feature represents as geojson feature
 type Feature struct {
 	Type featureType `json:"type"`
 	ID   *uint64     `json:"id,omitempty"`
-	// can be null
+	// Geometry can be null
 	Geometry Geometry `json:"geometry"`
-	// can be null
+	// Properties can be null
 	Properties map[string]interface{} `json:"properties"`
 }
 
@@ -128,11 +138,16 @@ func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
 }
 func (fc *featureCollectionType) UnmarshalJSON(b []byte) error { return nil }
 
+
+// FeatureCollection describes a geoJSON collection feature
 type FeatureCollection struct {
 	Type     featureCollectionType `json:"type"`
 	Features []Feature             `json:"features"`
 }
 
+// closePolygon will ensure that the last point of a polygon is the same as the first
+// point of the polygon. geom Polygon rings are not "closed", however geoJSON polygon
+// ring are.
 func closePolygon(p geom.Polygon) {
 	for i := range p {
 		if len(p[i]) == 0 {
@@ -147,6 +162,9 @@ func closePolygon(p geom.Polygon) {
 	}
 }
 
+// UnmarshalJSON will attempt to unmarshal the given bytes into a GeoJSON object.
+// It can produce a varity of json Marshaling errors or
+// encoding.InvalidGeometry if the geometry type in unsupported
 func (geo *Geometry) UnmarshalJSON(b []byte) error {
 	var geojsonMap map[string]*json.RawMessage
 	if err := json.Unmarshal(b, &geojsonMap); err != nil {
