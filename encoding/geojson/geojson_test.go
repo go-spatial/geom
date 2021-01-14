@@ -2,6 +2,7 @@ package geojson_test
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -227,5 +228,154 @@ func TestUnmarshalJSON(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) { fn(t, tc) })
+	}
+}
+
+// TestMarshal will test the geojson.Marshal function
+func TestMarshal(t *testing.T) {
+
+	type tcase struct {
+		v interface{}
+
+		// expected values
+		Output []byte
+		Err    error
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			output, err := geojson.Marshal(tc.v)
+			if tc.Err != nil {
+				if !errors.Is(tc.Err, err) {
+					t.Errorf("error, expected %v, got %v", tc.Err, err)
+					return
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("err, expected nil, got %v", err)
+				return
+			}
+			if len(tc.Output) != len(output) {
+				t.Errorf("len(output), expected %v, got %v", len(tc.Output), len(output))
+				t.Logf("Expected:\n%s\nGot:\n%s\n", tc.Output, output)
+				return
+			}
+			if !reflect.DeepEqual(tc.Output, output) {
+				t.Errorf("output, expected %10s..., got %10s...", tc.Output, output)
+				t.Logf("Expected:\n%s\nGot:\n%s\n", tc.Output, output)
+				return
+			}
+		}
+	}
+	tests := map[string]tcase{
+		"geom point": tcase{
+			v:      geom.Point{10, 10},
+			Output: []byte(`{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null}`),
+		},
+		"multiple geom points": tcase{
+			v:      []geom.Geometry{geom.Point{10, 10}, geom.Point{0, 0}},
+			Output: []byte(`{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null},{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":null}]}`),
+		},
+		"nil feature": tcase{
+			Err: geom.ErrUnknownGeometry{},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+// TestMarshalIndent will test the geojson.Marshal function
+func TestMarshalIndent(t *testing.T) {
+
+	type tcase struct {
+		v              interface{}
+		prefix, indent string
+
+		// expected values
+		Output []byte
+		Err    error
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			output, err := geojson.MarshalIndent(tc.v, tc.prefix, tc.indent)
+			if tc.Err != nil {
+				if !errors.Is(tc.Err, err) {
+					t.Errorf("error, expected %v, got %v", tc.Err, err)
+					return
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("err, expected nil, got %v", err)
+				return
+			}
+			if len(tc.Output) != len(output) {
+				t.Errorf("len(output), expected %v, got %v", len(tc.Output), len(output))
+				t.Logf("Expected:\n%s\nGot:\n%s\n", tc.Output, output)
+				return
+			}
+			if !reflect.DeepEqual(tc.Output, output) {
+				t.Errorf("output, expected %10s..., got %10s...", tc.Output, output)
+				t.Logf("Expected:\n%s\nGot:\n%s\n", tc.Output, output)
+				return
+			}
+		}
+	}
+	tests := map[string]tcase{
+		"geom point": tcase{
+			v:      geom.Point{10, 10},
+			indent: "  ",
+			Output: []byte(`{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      10,
+      10
+    ]
+  },
+  "properties": null
+}`),
+		},
+		"multiple geom points": tcase{
+			v:      []geom.Geometry{geom.Point{10, 10}, geom.Point{0, 0}},
+			indent: "  ",
+			Output: []byte(`{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10,
+          10
+        ]
+      },
+      "properties": null
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0,
+          0
+        ]
+      },
+      "properties": null
+    }
+  ]
+}`),
+		},
+		"nil feature": tcase{
+			Err: geom.ErrUnknownGeometry{},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
 	}
 }
