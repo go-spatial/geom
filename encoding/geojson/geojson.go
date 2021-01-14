@@ -6,8 +6,11 @@
 // At current this pacakge only supports 2D Geometries unless stated
 // otherwise by the documentation of the Marshal and Unmarshal functions
 package geojson
+
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding"
@@ -26,6 +29,140 @@ const (
 	FeatureType            GeoJSONType = "Feature"
 	FeatureCollectionType  GeoJSONType = "FeatureCollection"
 )
+
+// Marshal returns the geojson encoding of the geojson.Feature, geojson.FeatureCollection, or a geom.Geometry.
+//
+// If Marshal is given a geom.Geometry, this geometry will be wrapped in a geojson.Feature, with no properties
+// or and ID.
+// If something other then the above is passed in the system will return an geom.ErrUnknownGeometry type.
+// Values in the property map are marshaled according to the type-dependent default encoding as defined
+// by the go's encoding/json package.
+//
+func Marshal(v interface{}) ([]byte, error) {
+	switch g := v.(type) {
+	case Feature:
+		return json.Marshal(g)
+	case Geometry:
+		return json.Marshal(Feature{Geometry: g})
+	case FeatureCollection:
+		return json.Marshal(g)
+
+	default:
+		if isGeomGeometry(v) {
+			return json.Marshal(Feature{Geometry: Geometry{g}})
+		}
+		if s, ok := isGeomGeometrySlice(v); ok {
+			fc := FeatureCollection{
+				Features: make([]Feature, 0, len(s)),
+			}
+			for _, g := range s {
+				if !isGeomGeometry(g) {
+					return nil, fmt.Errorf("in geom.Geometry slice, %w", geom.ErrUnknownGeometry{g})
+				}
+				fc.Features = append(fc.Features, Feature{Geometry: Geometry{g}})
+			}
+			return json.Marshal(fc)
+		}
+		return nil, geom.ErrUnknownGeometry{g}
+	}
+}
+
+// MarshalIndent is like Marshal but applies Indent to format the output
+// Each JSON element is the output will begin on a new line beginning with prefix
+// followed by one or more copies of indent according to indentation nesting.
+func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
+	b, err := Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var buff bytes.Buffer
+	if err = json.Indent(&buff, b, prefix, indent); err != nil {
+		return nil, err
+	}
+	return buff.Bytes(), nil
+}
+
+// isGeomGeometry will check to see if v is type that fulfills one of the
+// geom Geometry Type interfaces. E.G. geom.Pointer, geom.MultiPointer,
+// etc...
+func isGeomGeometry(v interface{}) bool {
+	switch v.(type) {
+	case geom.Pointer:
+		return true
+	case geom.MultiPointer:
+		return true
+	case geom.LineStringer:
+		return true
+	case geom.MultiLineStringer:
+		return true
+	case geom.Polygoner:
+		return true
+	case geom.MultiPolygoner:
+		return true
+	case geom.Collectioner:
+		return true
+	default:
+		return false
+	}
+}
+
+// isGeomGeometrySlice will check to see if v is slice type that fulfills one of the
+// geom Geometry Type interfaces. E.G. geom.Pointer, geom.MultiPointer, includeing
+// geom.Geometry
+// etc...
+//
+// This function does not do a deep check of the values provided, if the type is
+// []geom.Geometry
+func isGeomGeometrySlice(v interface{}) ([]geom.Geometry, bool) {
+	switch g := v.(type) {
+	case []geom.Geometry:
+		return g, true
+	case []geom.Pointer:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	case []geom.MultiPointer:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	case []geom.LineStringer:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	case []geom.MultiLineStringer:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	case []geom.Polygoner:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	case []geom.MultiPolygoner:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	case []geom.Collectioner:
+		gg := make([]geom.Geometry, len(g))
+		for i := range g {
+			gg[i] = g[i]
+		}
+		return gg, true
+	default:
+		return nil, false
+	}
+}
 
 // Geometry wraps a geom Geometry so that it can be encoded as a GeoJSON
 // feature
@@ -73,7 +210,7 @@ func (geo Geometry) MarshalJSON() ([]byte, error) {
 		closePolygon(ps)
 
 		return json.Marshal(coordinates{
-			Type: PolygonType,
+			Type:   PolygonType,
 			Coords: ps,
 		})
 
@@ -117,8 +254,6 @@ func (_ featureType) MarshalJSON() ([]byte, error) {
 }
 func (fc *featureType) UnmarshalJSON(b []byte) error { return nil }
 
-
-
 // Feature represents as geojson feature
 type Feature struct {
 	Type featureType `json:"type"`
@@ -137,7 +272,6 @@ func (_ featureCollectionType) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + FeatureCollectionType + `"`), nil
 }
 func (fc *featureCollectionType) UnmarshalJSON(b []byte) error { return nil }
-
 
 // FeatureCollection describes a geoJSON collection feature
 type FeatureCollection struct {
