@@ -280,6 +280,15 @@ func TestMarshal(t *testing.T) {
 		"nil feature": tcase{
 			Err: geom.ErrUnknownGeometry{},
 		},
+		"simple point feature": tcase{
+			v: geojson.Feature{
+				Properties: map[string]interface{}{
+					"type": "sign",
+				},
+				Geometry: geojson.Geometry{Geometry: geom.Point{10, 10}},
+			},
+			Output: []byte(`{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":{"type":"sign"}}`),
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, fn(tc))
@@ -373,6 +382,63 @@ func TestMarshalIndent(t *testing.T) {
 		},
 		"nil feature": tcase{
 			Err: geom.ErrUnknownGeometry{},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, fn(tc))
+	}
+}
+
+// TestUnmarshal will test the geojson.Unmarshal function
+func TestUnmarshal(t *testing.T) {
+	type tcase struct {
+		input []byte
+		V     interface{}
+		Err   error
+	}
+
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			v, err := geojson.Unmarshal(tc.input)
+			if tc.Err != nil {
+				if !errors.Is(tc.Err, err) {
+					t.Errorf("error, expected %v, got %v", tc.Err, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("error, expected nil, got %v", err)
+				return
+			}
+			if !reflect.DeepEqual(tc.V, v) {
+				t.Logf("Expected:\n%#v\nGot:\n%#v\n", tc.V, v)
+				return
+			}
+		}
+	}
+
+	tests := map[string]tcase{
+		"simple point feature": {
+			V: geojson.Feature{
+				Properties: map[string]interface{}{
+					"type": "sign",
+				},
+				Geometry: geojson.Geometry{Geometry: geom.Point{10, 10}},
+			},
+			input: []byte(`{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":{"type":"sign"}}`),
+		},
+		"multiple geom points": {
+			V: geojson.FeatureCollection{
+				Features: []geojson.Feature{
+					{Geometry: geojson.Geometry{geom.Point{10, 10}}},
+					{Geometry: geojson.Geometry{geom.Point{0, 0}}},
+				},
+			},
+			input: []byte(`{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null},{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":null}]}`),
+		},
+		"unknown type error": {
+			Err:   geojson.ErrUnknownFeatureType,
+			input: []byte(`{"type":"NotKnown","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null},{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":null}]}`),
 		},
 	}
 	for name, tc := range tests {

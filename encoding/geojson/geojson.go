@@ -11,9 +11,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding"
+)
+
+var (
+	ErrUnknownFeatureType = fmt.Errorf("unknown feature type")
 )
 
 type GeoJSONType string
@@ -80,6 +85,34 @@ func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
 		return nil, err
 	}
 	return buff.Bytes(), nil
+}
+
+// Unmarshal parses the GeoJSON-encoded data and returns the result or an error.
+// The result can be either a geojson.Features or geojson.FeatureCollection.
+// If the encoded data is not one of the above then function will return the
+// error json.InvalidUnmarshalError.
+func Unmarshal(data []byte) (feature interface{}, err error) {
+	var typeMessage struct {
+		Type string `json:"type"`
+	}
+	if err = json.Unmarshal(data, &typeMessage); err != nil {
+		return nil, err
+	}
+	switch strings.ToLower(typeMessage.Type) {
+	case "feature":
+		var f Feature
+		if err = json.Unmarshal(data, &f); err != nil {
+			return nil, err
+		}
+		return f, err
+	case "featurecollection":
+		var fc FeatureCollection
+		if err = json.Unmarshal(data, &fc); err != nil {
+			return nil, err
+		}
+		return fc, nil
+	}
+	return nil, ErrUnknownFeatureType
 }
 
 // isGeomGeometry will check to see if v is type that fulfills one of the
