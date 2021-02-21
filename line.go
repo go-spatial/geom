@@ -10,8 +10,12 @@ const (
 	PrecisionLevelBigFloat = 20
 )
 
-// Line has exactly two points
+// Line has exactly two points - we define here also the extended Z, M and ZM versions
+// which refer respectively to PointZ, PointM and PointZM geometries
 type Line [2][2]float64
+type LineZ [2][3]float64
+type LineM [2][3]float64
+type LineZM [2][4]float64
 
 // IsVertical returns true if the `y` elements of the points that make up the line (l) are equal.
 func (l Line) IsVertical() bool { return l[0][0] == l[1][0] }
@@ -79,3 +83,14 @@ func (l Line) LengthSquared() float64 {
 	deltax, deltay := l[1][0]-l[0][0], l[1][1]-l[0][1]
 	return (deltax * deltax) + (deltay * deltay)
 }
+
+// for the extended geometries, just extract the related pair of points - the user will then
+// use the XY coordinates to eventually build the Line object if needed and use the related methods
+func (lz LineZ) PointZ1() *PointZ { return (*PointZ)(&lz[0]) }
+func (lz LineZ) PointZ2() *PointZ { return (*PointZ)(&lz[1]) }
+
+func (lm LineM) PointM1() *PointM { return (*PointM)(&lm[0]) }
+func (lm LineM) PointM2() *PointM { return (*PointM)(&lm[1]) }
+
+func (lzm LineZM) PointZM1() *PointZM { return (*PointZM)(&lzm[0]) }
+func (lzm LineZM) PointZM2() *PointZM { return (*PointZM)(&lzm[1]) }

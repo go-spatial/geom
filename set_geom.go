@@ -200,6 +200,49 @@ type MultiLineStringZMSSetter interface {
 type PolygonSetter interface {
 	Polygoner
 	SetLinearRings([][][2]float64) error
+	AsSegments() ([][]Line, error)
+}
+
+type PolygonZSetter interface {
+	PolygonZer
+	SetLinearRings([][][3]float64) error
+	AsSegments() ([][]LineZ, error)
+}
+
+type PolygonMSetter interface {
+	PolygonMer
+	SetLinearRings([][][3]float64) error
+	AsSegments() ([][]LineM, error)
+}
+
+type PolygonZMSetter interface {
+	PolygonZMer
+	SetLinearRings([][][4]float64) error
+	AsSegments() ([][]LineZM, error)
+}
+
+type PolygonSSetter interface {
+	PolygonSer
+	SetLinearRings(srid uint32, pol Polygon) error
+	AsSegments() ([][]Line, uint32, error)
+}
+
+type PolygonZSSetter interface {
+	PolygonZSer
+	SetLinearRings(srid uint32, polz PolygonZ) error
+	AsSegments() ([][]LineZ, uint32, error)
+}
+
+type PolygonMSSetter interface {
+	PolygonMSer
+	SetLinearRings(srid uint32, polm PolygonM) error
+	AsSegments() ([][]LineM, uint32, error)
+}
+
+type PolygonZMSSetter interface {
+	PolygonZMSer
+	SetLinearRings(srid uint32, polzm PolygonZM) error
+	AsSegments() ([][]LineZM, uint32, error)
 }
 
 // MultiPolygonSetter is a mutable MultiPolygoner.

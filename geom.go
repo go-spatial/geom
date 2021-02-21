@@ -259,6 +259,53 @@ type Polygoner interface {
 	LinearRings() [][][2]float64
 }
 
+type PolygonZer interface {
+	Geometry
+	LinearRings() [][][3]float64
+}
+
+type PolygonMer interface {
+	Geometry
+	LinearRings() [][][3]float64
+}
+
+type PolygonZMer interface {
+	Geometry
+	LinearRings() [][][4]float64
+}
+
+type PolygonSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid uint32
+		Pol  Polygon
+	}
+}
+
+type PolygonZSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid uint32
+		Polz PolygonZ
+	}
+}
+
+type PolygonMSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid uint32
+		Polm PolygonM
+	}
+}
+
+type PolygonZMSer interface {
+	Geometry
+	LinearRings() struct {
+		Srid  uint32
+		Polzm PolygonZM
+	}
+}
+
 // MultiPolygoner is a geometry of multiple polygons.
 type MultiPolygoner interface {
 	Geometry

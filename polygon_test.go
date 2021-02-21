@@ -11,6 +11,7 @@ import (
 func TestPolygonSetter(t *testing.T) {
 	type tcase struct {
 		points   [][][2]float64
+		lines    [][]geom.Line
 		setter   geom.PolygonSetter
 		expected geom.PolygonSetter
 		err      error
@@ -38,6 +39,15 @@ func TestPolygonSetter(t *testing.T) {
 		glr := tc.setter.LinearRings()
 		if !reflect.DeepEqual(tc.points, glr) {
 			t.Errorf("linear rings, expected %v got %v", tc.points, glr)
+			return
+		}
+
+		// compare the extracted segments
+		segs, err := tc.setter.AsSegments()
+		if err != nil {
+			if !reflect.DeepEqual(tc.lines, segs) {
+				t.Errorf("segments, expected %v got %v", tc.lines, segs)
+			}
 		}
 	}
 	tests := []tcase{
@@ -48,6 +58,22 @@ func TestPolygonSetter(t *testing.T) {
 					{30, 40},
 					{-10, -5},
 					{10, 20},
+				},
+			},
+			lines: [][]geom.Line{
+				{
+					{
+						{10, 20},
+						{30, 40},
+					},
+					{
+						{30, 40},
+						{-10, -5},
+					},
+					{
+						{-10, -5},
+						{10, 20},
+					},
 				},
 			},
 			setter: &geom.Polygon{
