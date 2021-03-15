@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-spatial/geom"
+	"github.com/go-spatial/geom/cmp"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -448,7 +449,7 @@ func (h *Handle) CalculateGeometryExtent(tablename string) (*geom.Extent, error)
 
 	for rows.Next() {
 		rows.Scan(&sb)
-		if geom.IsEmpty(sb.Geometry) {
+		if cmp.IsEmptyGeo(sb.Geometry) {
 			continue
 		}
 		if ext == nil {

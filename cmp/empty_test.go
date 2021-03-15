@@ -11,22 +11,11 @@ func TestIsEmptyGeo(t *testing.T) {
 	type tcase struct {
 		geo     geom.Geometry
 		isEmpty bool
-		err     string
 	}
 
 	fn := func(tc tcase) func(t *testing.T) {
 		return func(t *testing.T) {
-			isEmpty, err := IsEmptyGeo(tc.geo)
-			if err != nil {
-				if err.Error() != tc.err {
-					t.Errorf("expected error %v, got %v", tc.err, err)
-				}
-				return
-			} else if tc.err != "" {
-				t.Errorf("expected error %v, got nil", tc.err)
-				return
-			}
-
+			isEmpty := IsEmptyGeo(tc.geo)
 			if isEmpty != tc.isEmpty {
 				t.Errorf("expected isEmpty %v, got %v", tc.isEmpty, isEmpty)
 			}
@@ -43,23 +32,23 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: true,
 		},
 		"nil point": {
-			geo: (*geom.Point)(nil),
+			geo:     (*geom.Point)(nil),
 			isEmpty: true,
 		},
 		"non-nil point": {
-			geo: &geom.Point{},
+			geo:     &geom.Point{},
 			isEmpty: false,
 		},
 		"multipoint": {
-			geo: geom.MultiPoint{geom.Point{}},
+			geo:     geom.MultiPoint{geom.Point{}},
 			isEmpty: false,
 		},
 		"empty multipoint": {
-			geo: geom.MultiPoint{},
+			geo:     geom.MultiPoint{},
 			isEmpty: true,
 		},
 		"empty multipoint 1": {
-			geo: geom.MultiPoint{geom.Point{math.NaN(), math.NaN()}},
+			geo:     geom.MultiPoint{geom.Point{math.NaN(), math.NaN()}},
 			isEmpty: true,
 		},
 		"non empty multipoint": {
@@ -70,19 +59,19 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"nil multipoint": {
-			geo: (*geom.MultiPoint)(nil),
+			geo:     (*geom.MultiPoint)(nil),
 			isEmpty: true,
 		},
 		"linestring": {
-			geo: geom.LineString{geom.Point{}},
+			geo:     geom.LineString{geom.Point{}},
 			isEmpty: false,
 		},
 		"empty linestring": {
-			geo: geom.LineString{},
+			geo:     geom.LineString{},
 			isEmpty: true,
 		},
 		"empty linestring 1": {
-			geo: geom.LineString{geom.Point{math.NaN(), math.NaN()}},
+			geo:     geom.LineString{geom.Point{math.NaN(), math.NaN()}},
 			isEmpty: true,
 		},
 		"non empty linestring": {
@@ -93,7 +82,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"nil linestring": {
-			geo: (*geom.LineString)(nil),
+			geo:     (*geom.LineString)(nil),
 			isEmpty: true,
 		},
 		"multilinestring": {
@@ -105,7 +94,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"empty multilinestring": {
-			geo: geom.MultiLineString{},
+			geo:     geom.MultiLineString{},
 			isEmpty: true,
 		},
 		"empty multilinestring 1": {
@@ -155,7 +144,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"nil multilinestring": {
-			geo: (*geom.MultiLineString)(nil),
+			geo:     (*geom.MultiLineString)(nil),
 			isEmpty: true,
 		},
 		"polygon": {
@@ -167,7 +156,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"empty polygon": {
-			geo: geom.Polygon{},
+			geo:     geom.Polygon{},
 			isEmpty: true,
 		},
 		"empty polygon 1": {
@@ -217,7 +206,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"nil polygon": {
-			geo: (*geom.Polygon)(nil),
+			geo:     (*geom.Polygon)(nil),
 			isEmpty: true,
 		},
 		"multipolygon": {
@@ -231,7 +220,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"empty multipolygon": {
-			geo: geom.MultiPolygon{},
+			geo:     geom.MultiPolygon{},
 			isEmpty: true,
 		},
 		"empty multipolygon 1": {
@@ -338,7 +327,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"nil multipolygon": {
-			geo: (*geom.Polygon)(nil),
+			geo:     (*geom.Polygon)(nil),
 			isEmpty: true,
 		},
 		"collection": {
@@ -348,7 +337,7 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"empty collection": {
-			geo: geom.Collection{},
+			geo:     geom.Collection{},
 			isEmpty: true,
 		},
 		"empty collection 1": {
@@ -390,20 +379,21 @@ func TestIsEmptyGeo(t *testing.T) {
 			isEmpty: false,
 		},
 		"nil collection": {
-			geo: (*geom.Collection)(nil),
+			geo:     (*geom.Collection)(nil),
 			isEmpty: true,
 		},
 		"type check": {
-			geo: int(0),
-			err: "unknown geometry int",
+			// unknown geometry is always return that false.
+			geo:     0,
+			isEmpty: false,
 		},
 		// non-nil pointers
 		"*point": {
-			geo: &geom.Point{},
+			geo:     &geom.Point{},
 			isEmpty: false,
 		},
 		"empty *point": {
-			geo: &geom.Point{math.NaN(), math.NaN()},
+			geo:     &geom.Point{math.NaN(), math.NaN()},
 			isEmpty: true,
 		},
 		"*multipoint": {
