@@ -7,11 +7,11 @@ import (
 	"github.com/go-spatial/geom"
 )
 
-// Compare holds the tolerances for the comparsion functions
+// Compare holds the tolerances for the comparison functions
 type Compare struct {
 	// Tolerance is the epsilon value used in comparing floats with zero
 	Tolerance float64
-	// BitTolerance is the epsilon value for comaparing float bit-patterns.
+	// BitTolerance is the epsilon value for comparing float bit-patterns.
 	BitTolerance int64
 }
 
@@ -81,7 +81,7 @@ func (cmp Compare) FloatSlice(f1, f2 []float64) bool {
 	return true
 }
 
-// Extent will check to see if the Extents's are the same.
+// Extent will check to see if the Extents' are the same.
 func (cmp Compare) Extent(extent1, extent2 [4]float64) bool {
 	return cmp.Float(extent1[0], extent2[0]) && cmp.Float(extent1[1], extent2[1]) &&
 		cmp.Float(extent1[2], extent2[2]) && cmp.Float(extent1[3], extent2[3])
@@ -275,7 +275,7 @@ func (cmp Compare) MultiPolygonerEqual(geo1, geo2 geom.MultiPolygoner) bool {
 }
 
 // CollectionerEqual will check if the two collections are equal based on length
-// then if each geometry inside is equal. Therefor order matters.
+// then if each geometry inside is equal. Therefore order matters.
 func (cmp Compare) CollectionerEqual(col1, col2 geom.Collectioner) bool {
 	if colNil, col2Nil := col1 == NilCollection, col2 == NilCollection; colNil || col2Nil {
 		return colNil && col2Nil
@@ -328,3 +328,9 @@ func (cmp Compare) GeometryEqual(g1, g2 geom.Geometry) bool {
 	}
 	return false
 }
+
+// Empty functions
+func (Compare) IsEmptyPoint(pt [2]float64) bool      { return IsEmptyPoint(pt) }
+func (Compare) IsEmptyPoints(pts [][2]float64) bool  { return IsEmptyPoints(pts) }
+func (Compare) IsEmptyLines(lns [][][2]float64) bool { return IsEmptyLines(lns) }
+func (Compare) IsEmptyGeo(geo geom.Geometry) bool    { return IsEmptyGeo(geo) }

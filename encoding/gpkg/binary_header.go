@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/go-spatial/geom/cmp"
+
 	"github.com/gdey/errors"
 
 	"github.com/go-spatial/geom"
@@ -328,7 +330,7 @@ func (sb StandardBinary) Encode() ([]byte, error) {
 func NewBinary(srs int32, geo geom.Geometry) (*StandardBinary, error) {
 
 	var (
-		emptyGeo = geom.IsEmpty(geo)
+		emptyGeo = cmp.IsEmptyGeo(geo)
 		err      error
 		extent   = []float64{nan, nan, nan, nan}
 		h        *BinaryHeader
@@ -358,7 +360,7 @@ func (sb *StandardBinary) Extent() *geom.Extent {
 	if sb == nil {
 		return nil
 	}
-	if geom.IsEmpty(sb.Geometry) {
+	if cmp.IsEmptyGeo(sb.Geometry) {
 		return nil
 	}
 	extent, err := geom.NewExtentFromGeometry(sb.Geometry)

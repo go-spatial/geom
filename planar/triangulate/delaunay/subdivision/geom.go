@@ -37,7 +37,7 @@ func NewSubdivisionFromGeomLines(lines []geom.Line, order winding.Order) *Subdiv
 
 	for i := range lines {
 		orig, dest := geom.Point(lines[i][0]), geom.Point(lines[i][1])
-		if geom.IsEmpty(orig) || geom.IsEmpty(dest) {
+		if cmp.IsEmptyGeo(orig) || cmp.IsEmptyGeo(dest) {
 			log.Printf("orig %v or dest %v is empty", orig, dest)
 		}
 		if ext == nil {

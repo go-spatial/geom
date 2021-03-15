@@ -88,14 +88,14 @@ func checkMakeValid(tb testing.TB) {
 			if !cmp.MultiPolygonerEqual(tc.ExpectedMultiPolygon, mp) {
 				//t.Logf("input: \n%v", wkt.MustEncode(tc.MultiPolygon))
 				t.Errorf("multipolygon, expected \n%v\n got \n%v", wkt.MustEncode(tc.ExpectedMultiPolygon), wkt.MustEncode(mp))
-				if !geom.IsEmpty(tc.ExpectedMultiPolygon) {
+				if !cmp.IsEmptyGeo(tc.ExpectedMultiPolygon) {
 					for p, ply := range tc.ExpectedMultiPolygon.Polygons() {
 						for l, ln := range ply {
 							t.Logf("expected windorder %v:%v: %v", p, l, order.OfPoints(ln...))
 						}
 					}
 				}
-				if !geom.IsEmpty(mp) {
+				if !cmp.IsEmptyGeo(mp) {
 					for p, ply := range mp.Polygons() {
 						for l, ln := range ply {
 							t.Logf("got      windorder %v:%v: %v", p, l, order.OfPoints(ln...))
@@ -117,7 +117,7 @@ func checkMakeValid(tb testing.TB) {
 			didClip:              true,
 		},
 		"issue#70_full": {
-			ClipBox: webMercatorTileExtent(13, 8054, 2677).ExpandBy(64.0),
+			ClipBox:              webMercatorTileExtent(13, 8054, 2677).ExpandBy(64.0),
 			MultiPolygon:         must.MPPointer(must.ReadMultiPolygon("testdata/issue/70/multipolygon_full_input.wkt")),
 			ExpectedMultiPolygon: must.MPPointer(must.ReadMultiPolygon("testdata/issue/70/multipolygon_full_expected.wkt")),
 			didClip:              true,

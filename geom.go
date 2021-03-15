@@ -537,51 +537,11 @@ func ExtractLines(g Geometry) (lines []Line, err error) {
 	return lines, err
 }
 
-// helper function to check it the given interface is nil, or the
+// IsNil is a helper function to check it the given interface is nil, or the
 // value store in it is nil
-func isNil(a interface{}) bool {
+func IsNil(a interface{}) bool {
 	defer func() { recover() }()
 	return a == nil || reflect.ValueOf(a).IsNil()
-}
-
-// IsEmpty returns if the geometry represents an empty geometry
-func IsEmpty(geo Geometry) bool {
-	if isNil(geo) {
-		return true
-	}
-	switch g := geo.(type) {
-	case Point:
-		return g[0] == nan && g[1] == nan
-	case Pointer:
-		xy := g.XY()
-		return xy[0] == nan && xy[1] == nan
-	case LineString:
-		return len(g) == 0
-	case LineStringer:
-		return len(g.Vertices()) == 0
-	case Polygon:
-		return len(g) == 0
-	case Polygoner:
-		return len(g.LinearRings()) == 0
-	case MultiPoint:
-		return len(g) == 0
-	case MultiPointer:
-		return len(g.Points()) == 0
-	case MultiLineString:
-		return len(g) == 0
-	case MultiLineStringer:
-		return len(g.LineStrings()) == 0
-	case MultiPolygon:
-		return len(g) == 0
-	case MultiPolygoner:
-		return len(g.Polygons()) == 0
-	case Collection:
-		return len(g) == 0
-	case Collectioner:
-		return len(g.Geometries()) == 0
-	default:
-		return true
-	}
 }
 
 // RoundToPrec will round the given value to the precision value.
