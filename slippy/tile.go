@@ -93,8 +93,7 @@ func FromBounds(g Grid, bounds *geom.Extent, z uint) []Tile {
 		}
 	}
 
-	return nil
-
+	return ret
 }
 
 // ZXY returns back the z,x,y of the tile
