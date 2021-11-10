@@ -421,8 +421,8 @@ func fromLngLat(lnglat coord.LngLat, zone Zone, ellips coord.Ellipsoid) Coord {
 		digraph, _ = newDigraph(zone, lnglat)
 	}
 	return Coord{
-		Northing: math.Round(northing),
-		Easting:  math.Round(easting),
+		Northing: northing,
+		Easting:  easting,
 		Zone:     zone,
 		Digraph:  digraph,
 	}
