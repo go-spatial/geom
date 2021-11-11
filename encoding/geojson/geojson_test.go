@@ -21,7 +21,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 		// t.Parallel()
 
 		f := geojson.Feature{
-			Geometry: geojson.Geometry{tc.geom},
+			Geometry: geojson.Geometry{Geometry: tc.geom},
 		}
 
 		output, err := json.Marshal(f)
@@ -109,7 +109,7 @@ func TestFeatureMarshalJSON(t *testing.T) {
 			geom: nil,
 			expectedErr: json.MarshalerError{
 				Type: reflect.TypeOf(geojson.Geometry{}),
-				Err:  geom.ErrUnknownGeometry{nil},
+				Err:  geom.ErrUnknownGeometry{Geom: nil},
 			},
 		},
 	}
@@ -124,7 +124,7 @@ func TestUnmarshalJSON(t *testing.T) {
 	type tcase struct {
 		gjson       []byte
 		expected    geom.Geometry
-		expectedErr json.InvalidUnmarshalError
+		expectedErr error
 	}
 
 	tests := map[string]tcase{
@@ -132,13 +132,37 @@ func TestUnmarshalJSON(t *testing.T) {
 			gjson:    []byte(`{"type":"Point","coordinates":[12.2,17.7]}`),
 			expected: geom.Point{12.2, 17.7},
 		},
+		"point error missing field type": {
+			gjson:       []byte(`{"coordinates":[12.2,17.7]}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyType),
+		},
+		"point error missing field coordinates": {
+			gjson:       []byte(`{"type":"Point"}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyCoordinates),
+		},
 		"multi point": {
 			gjson:    []byte(`{"type":"MultiPoint","coordinates":[[12.2,17.7],[13.3,18.8]]}`),
 			expected: geom.MultiPoint{{12.2, 17.7}, {13.3, 18.8}},
 		},
+		"multi point missing field type": {
+			gjson:       []byte(`{"coordinates":[[12.2,17.7],[13.3,18.8]]}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyType),
+		},
+		"multi point missing field coordinates": {
+			gjson:       []byte(`{"type":"MultiPoint"}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyCoordinates),
+		},
 		"linestring": {
 			gjson:    []byte(`{"type":"LineString","coordinates":[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9]]}`),
 			expected: geom.LineString{geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9}},
+		},
+		"linestring missing field type": {
+			gjson:       []byte(`{"coordinates":[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9]]}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyType),
+		},
+		"linestring missing field coordinates": {
+			gjson:       []byte(`{"type":"LineString"}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyCoordinates),
 		},
 		"multi linestring": {
 			gjson: []byte(`{"type":"MultiLineString","coordinates":[[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9]],[[2.3,3.4],[4.5,5.6],[6.7,7.8],[8.9,9.1]],[[2.2,3.3],[4.4,5.5],[6.6,7.7],[8.8,9.9]]]}`),
@@ -148,6 +172,14 @@ func TestUnmarshalJSON(t *testing.T) {
 				{geom.Point{2.2, 3.3}, geom.Point{4.4, 5.5}, geom.Point{6.6, 7.7}, geom.Point{8.8, 9.9}},
 			},
 		},
+		"multi linestring missing field type": {
+			gjson:       []byte(`{"coordinates":[[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9]],[[2.3,3.4],[4.5,5.6],[6.7,7.8],[8.9,9.1]],[[2.2,3.3],[4.4,5.5],[6.6,7.7],[8.8,9.9]]]}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyType),
+		},
+		"multi linestring missing field coordinates": {
+			gjson:       []byte(`{"type":"MultiLineString"}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyCoordinates),
+		},
 		"polygon": {
 			gjson: []byte(`{"type":"Polygon","coordinates":[[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9],[3.2,4.3]]]}`),
 			expected: geom.Polygon{
@@ -155,6 +187,14 @@ func TestUnmarshalJSON(t *testing.T) {
 					geom.Point{3.2, 4.3}, geom.Point{5.4, 6.5}, geom.Point{7.6, 8.7}, geom.Point{9.8, 10.9}, geom.Point{3.2, 4.3},
 				},
 			},
+		},
+		"polygon missing field type": {
+			gjson:       []byte(`{"coordinates":[[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9],[3.2,4.3]]]}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyType),
+		},
+		"polygon missing field coordinates": {
+			gjson:       []byte(`{"type":"Polygon"}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyCoordinates),
 		},
 		"multi polygon": {
 			gjson: []byte(`{"type":"MultiPolygon","coordinates":[[[[10.1,10.1],[5.5,20.2],[7.7,30.3],[30.3,30.3],[30.3,10.1],[10.1,10.1]],[[15.5,15.5],[11.1,14.4],[11.1,11.1],[15.5,11.1],[15.5,15.5]],[[25.5,25.5],[21.1,24.4],[21.1,21.1],[25.5,21.1],[25.5,25.5]]],[[[75.5,75.5],[71.1,74.4],[71.1,71.1],[75.5,71.1],[75.5,75.5]]]]}`),
@@ -188,6 +228,14 @@ func TestUnmarshalJSON(t *testing.T) {
 				},
 			},
 		},
+		"multi polygon missing field type": {
+			gjson:       []byte(`{"coordinates":[[[[10.1,10.1],[5.5,20.2],[7.7,30.3],[30.3,30.3],[30.3,10.1],[10.1,10.1]],[[15.5,15.5],[11.1,14.4],[11.1,11.1],[15.5,11.1],[15.5,15.5]],[[25.5,25.5],[21.1,24.4],[21.1,21.1],[25.5,21.1],[25.5,25.5]]],[[[75.5,75.5],[71.1,74.4],[71.1,71.1],[75.5,71.1],[75.5,75.5]]]]}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyType),
+		},
+		"multi polygon missing field coordinates": {
+			gjson:       []byte(`{"type":"MultiPolygon"}`),
+			expectedErr: geojson.ErrMissingField(geojson.FieldKeyCoordinates),
+		},
 		"geometry collection": {
 			gjson: []byte(`{"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[12.2,17.7]},{"type":"MultiPoint","coordinates":[[12.2,17.7],[13.3,18.8]]},{"type":"LineString","coordinates":[[3.2,4.3],[5.4,6.5],[7.6,8.7],[9.8,10.9]]}]}`),
 			expected: geom.Collection{
@@ -196,17 +244,29 @@ func TestUnmarshalJSON(t *testing.T) {
 				geom.LineString{{3.2, 4.3}, {5.4, 6.5}, {7.6, 8.7}, {9.8, 10.9}},
 			},
 		},
+		"geometry collection missing field geometries": {
+			gjson:    []byte(`{"type":"GeometryCollection"}`),
+			expected: geom.Collection{},
+		},
 		"feature": {
 			gjson: []byte(`{"type":"Feature","geometry":{"type":"Point","coordinates":[12.2,17.7]},"properties":null}`),
 			expected: geojson.Feature{
-				Geometry: geojson.Geometry{geom.Point{12.2, 17.7}},
+				Geometry: geojson.Geometry{Geometry: geom.Point{12.2, 17.7}},
 			},
+		},
+		"feature missing field geometry": {
+			gjson:    []byte(`{"type":"Feature","properties":null}`),
+			expected: geojson.Feature{},
 		},
 		"feature collection": {
 			gjson: []byte(`{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[12.2,17.7]},"properties":null}]}`),
 			expected: geojson.FeatureCollection{
-				Features: []geojson.Feature{{Geometry: geojson.Geometry{geom.Point{12.2, 17.7}}}},
+				Features: []geojson.Feature{{Geometry: geojson.Geometry{Geometry: geom.Point{12.2, 17.7}}}},
 			},
+		},
+		"feature collection missing field features": {
+			gjson:    []byte(`{"type":"FeatureCollection"}`),
+			expected: geojson.FeatureCollection{},
 		},
 	}
 
@@ -215,8 +275,8 @@ func TestUnmarshalJSON(t *testing.T) {
 
 		var output geojson.Geometry
 		err := json.Unmarshal(tc.gjson, &output)
-		if err != nil && err.Error() != tc.expectedErr.Error() {
-			t.Errorf("%s expected err %v got %v", t.Name(), tc.expectedErr.Error(), err)
+		if err != nil && !errors.Is(err, tc.expectedErr) {
+			t.Errorf("%s err, expected %v got %v", t.Name(), tc.expectedErr, err)
 			return
 		}
 
@@ -269,18 +329,18 @@ func TestMarshal(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"geom point": tcase{
+		"geom point": {
 			v:      geom.Point{10, 10},
 			Output: []byte(`{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null}`),
 		},
-		"multiple geom points": tcase{
+		"multiple geom points": {
 			v:      []geom.Geometry{geom.Point{10, 10}, geom.Point{0, 0}},
 			Output: []byte(`{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null},{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":null}]}`),
 		},
-		"nil feature": tcase{
+		"nil feature": {
 			Err: geom.ErrUnknownGeometry{},
 		},
-		"simple point feature": tcase{
+		"simple point feature": {
 			v: geojson.Feature{
 				Properties: map[string]interface{}{
 					"type": "sign",
@@ -334,7 +394,7 @@ func TestMarshalIndent(t *testing.T) {
 		}
 	}
 	tests := map[string]tcase{
-		"geom point": tcase{
+		"geom point": {
 			v:      geom.Point{10, 10},
 			indent: "  ",
 			Output: []byte(`{
@@ -349,7 +409,7 @@ func TestMarshalIndent(t *testing.T) {
   "properties": null
 }`),
 		},
-		"multiple geom points": tcase{
+		"multiple geom points": {
 			v:      []geom.Geometry{geom.Point{10, 10}, geom.Point{0, 0}},
 			indent: "  ",
 			Output: []byte(`{
@@ -380,7 +440,7 @@ func TestMarshalIndent(t *testing.T) {
   ]
 }`),
 		},
-		"nil feature": tcase{
+		"nil feature": {
 			Err: geom.ErrUnknownGeometry{},
 		},
 	}
@@ -430,8 +490,8 @@ func TestUnmarshal(t *testing.T) {
 		"multiple geom points": {
 			V: geojson.FeatureCollection{
 				Features: []geojson.Feature{
-					{Geometry: geojson.Geometry{geom.Point{10, 10}}},
-					{Geometry: geojson.Geometry{geom.Point{0, 0}}},
+					{Geometry: geojson.Geometry{Geometry: geom.Point{10, 10}}},
+					{Geometry: geojson.Geometry{Geometry: geom.Point{0, 0}}},
 				},
 			},
 			input: []byte(`{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[10,10]},"properties":null},{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":null}]}`),
