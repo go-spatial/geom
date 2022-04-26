@@ -1,21 +1,25 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
 
 import (
+	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/cmp"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/mattn/go-sqlite3"
 )
 
 const (
-	// SQLITE3 is the database driver name
-	SQLITE3 = "sqlite3"
+	// SPATIALITE database driver name
+	SPATIALITE = "spatialite"
 
 	// ApplicationID is the required application id for the file
 	ApplicationID = 0x47504B47 // "GPKG"
@@ -71,6 +75,18 @@ const (
 		CONSTRAINT uk_gc_table_name UNIQUE (table_name),
 		CONSTRAINT fk_gc_tn FOREIGN KEY (table_name) REFERENCES gpkg_contents(table_name),
 		CONSTRAINT fk_gc_srs FOREIGN KEY (srs_id) REFERENCES gpkg_spatial_ref_sys (srs_id)
+	  );
+	`
+
+	// https://www.geopackage.org/spec/#gpkg_extensions_sql
+	TableExtensionsSQL = `
+	CREATE TABLE IF NOT EXISTS gpkg_extensions (
+		table_name TEXT,
+		column_name TEXT,
+		extension_name TEXT NOT NULL,
+		definition TEXT NOT NULL,
+		scope TEXT NOT NULL,
+		CONSTRAINT ge_tce UNIQUE (table_name, column_name, extension_name)
 	  );
 	`
 )
@@ -192,11 +208,48 @@ func nonZeroFileExists(filename string) bool {
 	return info.Size() > 0
 }
 
+// Return spatialite drivename while loading the required libs
+func drivername() string {
+	// quick hotwired of https://github.com/shaxbee/go-spatialite/blob/master/spatialite.go
+	type entrypoint struct {
+		lib  string
+		proc string
+	}
+
+	var libs = []entrypoint{
+		{"mod_spatialite", "sqlite3_modspatialite_init"},
+		{"mod_spatialite.dylib", "sqlite3_modspatialite_init"},
+		{"libspatialite.so", "sqlite3_modspatialite_init"},
+		{"libspatialite.so.5", "spatialite_init_ex"},
+		{"libspatialite.so", "spatialite_init_ex"},
+	}
+
+	for _, s := range sql.Drivers() {
+		if s == SPATIALITE {
+			return SPATIALITE
+		}
+	}
+
+	sql.Register(SPATIALITE, &sqlite3.SQLiteDriver{
+		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+			for _, v := range libs {
+				if err := conn.LoadExtension(v.lib, v.proc); err == nil {
+					return nil
+				}
+			}
+			return errors.New("spatialite extension not found")
+		},
+	})
+
+	return SPATIALITE
+
+}
+
 // Open will open or create the sqlite file, and return a new db handle to it.
 func Open(filename string) (*Handle, error) {
 	var h = new(Handle)
 
-	db, err := sql.Open(SQLITE3, filename)
+	db, err := sql.Open(drivername(), filename)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +279,7 @@ func initHandle(h *Handle) error {
 		return err
 	}
 	// Make sure the required metadata tables are available
-	for _, sql := range []string{TableSpatialRefSysSQL, TableContentsSQL, TableGeometryColumnsSQL} {
+	for _, sql := range []string{TableSpatialRefSysSQL, TableContentsSQL, TableGeometryColumnsSQL, TableExtensionsSQL} {
 		_, err := h.Exec(sql)
 		if err != nil {
 			return err
@@ -280,10 +333,106 @@ func (h *Handle) AddGeometryTable(table TableDescription) error {
 		VALUES(?,?,?,?,?,?)
     	ON CONFLICT(table_name) DO NOTHING;
 		`
+
+		updateExtensionTableSQL = `
+		INSERT INTO gpkg_extensions(
+			table_name,
+			column_name,
+			extension_name,
+			definition,
+			scope
+		)
+		VALUES(?,?,?,?,?)
+    	ON CONFLICT(table_name, column_name, extension_name) DO NOTHING;		
+		`
+
+		// DDL and DML for the RTree -> http://www.geopackage.org/spec120/#extension_rtree
+		// SQL statements based on the requeriments as of spec 1.2.0
+
+		createRTreeTableSQL = `
+		CREATE VIRTUAL TABLE "rtree_%v_%v" USING rtree(id, minx, maxx, miny, maxy);
+		`
+
+		selectPKfromTable = `SELECT name FROM pragma_table_info(("%v")) WHERE pk = 1;`
+
+		tableTriggerTemplate = `
+        /* Conditions: Insertion of non-empty geometry
+           Actions   : Insert record into rtree */
+        CREATE TRIGGER rtree_{{ .T }}_{{ .C }}_insert AFTER INSERT ON "{{ .T }}"
+          WHEN (new."{{ .C }}" NOT NULL AND NOT ST_IsEmpty(NEW."{{ .C }}"))
+        BEGIN
+          INSERT OR REPLACE INTO rtree_{{ .T }}_{{ .C }} VALUES (
+            NEW."{{ .I }}",
+            ST_MinX(NEW."{{ .C }}"), ST_MaxX(NEW."{{ .C }}"),
+            ST_MinY(NEW."{{ .C }}"), ST_MaxY(NEW."{{ .C }}")
+          );
+        END;
+        
+        /* Conditions: Update of geometry column to non-empty geometry
+                       No row ID change
+           Actions   : Update record in rtree */
+        CREATE TRIGGER rtree_{{ .T }}_{{ .C }}_update1 AFTER UPDATE OF "{{ .C }}" ON "{{ .T }}"
+          WHEN OLD."{{ .I }}" = NEW."{{ .I }}" AND
+               (NEW."{{ .C }}" NOTNULL AND NOT ST_IsEmpty(NEW."{{ .C }}"))
+        BEGIN
+          INSERT OR REPLACE INTO rtree_{{ .T }}_{{ .C }} VALUES (
+            NEW."{{ .I }}",
+            ST_MinX(NEW."{{ .C }}"), ST_MaxX(NEW."{{ .C }}"),
+            ST_MinY(NEW."{{ .C }}"), ST_MaxY(NEW."{{ .C }}")
+          );
+        END;
+        
+        /* Conditions: Update of geometry column to empty geometry
+                       No row ID change
+           Actions   : Remove record from rtree */
+        CREATE TRIGGER rtree_{{ .T }}_{{ .C }}_update2 AFTER UPDATE OF "{{ .C }}" ON "{{ .T }}"
+          WHEN OLD."{{ .I }}" = NEW."{{ .I }}" AND
+               (NEW."{{ .C }}" ISNULL OR ST_IsEmpty(NEW."{{ .C }}"))
+        BEGIN
+          DELETE FROM rtree_{{ .T }}_{{ .C }} WHERE id = OLD."{{ .I }}";
+        END;
+        
+        /* Conditions: Update of any column
+                       Row ID change
+                       Non-empty geometry
+           Actions   : Remove record from rtree for old "{{ .I }}"
+                       Insert record into rtree for new "{{ .I }}" */
+        CREATE TRIGGER rtree_{{ .T }}_{{ .C }}_update3 AFTER UPDATE OF "{{ .C }}" ON "{{ .T }}"
+          WHEN OLD."{{ .I }}" != NEW."{{ .I }}" AND
+               (NEW."{{ .C }}" NOTNULL AND NOT ST_IsEmpty(NEW."{{ .C }}"))
+        BEGIN
+          DELETE FROM rtree_{{ .T }}_{{ .C }} WHERE id = OLD."{{ .I }}";
+          INSERT OR REPLACE INTO rtree_{{ .T }}_{{ .C }} VALUES (
+            NEW."{{ .I }}",
+            ST_MinX(NEW."{{ .C }}"), ST_MaxX(NEW."{{ .C }}"),
+            ST_MinY(NEW."{{ .C }}"), ST_MaxY(NEW."{{ .C }}")
+          );
+        END;
+        
+        /* Conditions: Update of any column
+                       Row ID change
+                       Empty geometry
+           Actions   : Remove record from rtree for old and new "{{ .I }}" */
+        CREATE TRIGGER rtree_{{ .T }}_{{ .C }}_update4 AFTER UPDATE ON "{{ .T }}"
+          WHEN OLD."{{ .I }}" != NEW."{{ .I }}" AND
+               (NEW."{{ .C }}" ISNULL OR ST_IsEmpty(NEW."{{ .C }}"))
+        BEGIN
+          DELETE FROM rtree_{{ .T }}_{{ .C }} WHERE id IN (OLD."{{ .I }}", NEW."{{ .I }}");
+        END;
+        
+        /* Conditions: Row deleted
+           Actions   : Remove record from rtree for old "{{ .I }}" */
+        CREATE TRIGGER rtree_{{ .T }}_{{ .C }}_delete AFTER DELETE ON "{{ .T }}"
+          WHEN old."{{ .C }}" NOT NULL
+        BEGIN
+          DELETE FROM rtree_{{ .T }}_{{ .C }} WHERE id = OLD."{{ .I }}";
+        END;
+		`
 	)
 
 	var (
 		count int
+		pk    string
 	)
 
 	// Validate that the value already exists in the data base.
@@ -311,6 +460,40 @@ func (h *Handle) AddGeometryTable(table TableDescription) error {
 		return err
 	}
 	_, err = h.Exec(updateGeometryColumnsTableSQL, table.Name, table.GeometryField, table.GeometryType.String(), table.SRS, table.Z, table.M)
+	if err != nil {
+		return err
+	}
+
+	err = h.QueryRow(fmt.Sprintf(selectPKfromTable, table.Name)).Scan(&pk)
+	if err != nil {
+		return err
+	}
+
+	// Requirement 77
+	type tableTriggerParameters struct {
+		T string // <t>: The name of the feature table containing the geometry column
+		C string // <c>: The name of the geometry column in <t> that is being indexed
+		I string // <i>: The name of the integer primary key column in <t> as specified in Requirement 29
+	}
+
+	param := tableTriggerParameters{T: table.Name, C: table.GeometryField, I: pk}
+
+	_, err = h.Exec(fmt.Sprintf(createRTreeTableSQL,
+		param.T, param.C,
+	))
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	template.Must(template.New("createtabletriggers").Parse(tableTriggerTemplate)).Execute(buf, param)
+
+	_, err = h.Exec(buf.String())
+	if err != nil {
+		return err
+	}
+
+	_, err = h.Exec(updateExtensionTableSQL, table.Name, table.GeometryField, `gpkg_rtree_index`, `http://www.geopackage.org/spec120/#extension_rtree`, `write-only`)
 	return err
 
 }
