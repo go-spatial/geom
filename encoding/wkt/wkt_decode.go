@@ -98,7 +98,7 @@ func (d *Decoder) readFloat() (float64, error) {
 			// b == ',' || // technically part of the spec,
 			// but even postgis does not support it
 			b == 'E' ||
-		        b == 'e'
+			b == 'e'
 	}
 
 	token := []byte{}
