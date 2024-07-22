@@ -55,7 +55,7 @@ func readInputWKT(filename string) (geom.Geometry, error) {
 }
 
 type outfile struct {
-	tile   *slippy.Tile
+	tile   slippy.Tile
 	format string
 }
 type outfilefile struct {
@@ -83,7 +83,7 @@ func (off *outfilefile) WriteWKTGeom(geos ...geom.Geometry) *outfilefile {
 	return off
 }
 
-func newOutFile(tile *slippy.Tile, tag string) outfile {
+func newOutFile(tile slippy.Tile, tag string) outfile {
 	path := fmt.Sprintf("%v/%v/%v", tile.Z, tile.X, tile.Y)
 	if tag != "" {
 		path = fmt.Sprintf("%v/%v", path, tag)
@@ -94,6 +94,17 @@ func newOutFile(tile *slippy.Tile, tag string) outfile {
 		tile:   tile,
 		format: fmt.Sprintf("%v/%%v.wkt", path),
 	}
+}
+
+// MvtTileDim is the number of pixels in a tile
+const MvtTileDim = 4096.0
+
+func PixelToNative(g slippy.TileGridder, z slippy.Zoom) (float64, error) {
+	ext, err := slippy.Extent(g, slippy.Tile{Z: z})
+	if err != nil {
+		return 0, err
+	}
+	return ext.XSpan() / MvtTileDim, nil
 }
 
 func main() {
@@ -126,7 +137,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unabled to parse y: %v", err)
 		usage()
 	}
-	tile := slippy.NewTile(uint(z), uint(x), uint(y))
+	tile := slippy.Tile{
+		Z: slippy.Zoom(z),
+		X: uint(x),
+		Y: uint(y),
+	}
 	fileTemplate := newOutFile(tile, *tag)
 	geo, err := readInputWKT(flag.Args()[1])
 	if err != nil {
@@ -134,29 +149,28 @@ func main() {
 		usage()
 	}
 	ctx := context.Background()
-	/*
-		plywkt, err := wkt.EncodeString(geo)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Polygon:\n%v\n", plywkt)
-	*/
 	order := winding.Order{}
-	grid3857, _ := slippy.NewGrid(3857)
+	grid3857 := slippy.NewGrid(3857, 0)
 
 	var clipRegion *geom.Extent
 	{
-		webs := slippy.PixelsToNative(grid3857, tile.Z, uint(*buffer))
+		webs, err := PixelToNative(grid3857, tile.Z)
+		if err != nil {
+			panic(err)
+		}
 		ext, _ := slippy.Extent(grid3857, tile)
 		clipRegion = ext.ExpandBy(webs)
 	}
 
 	if *simplifyGeo {
+		tol, err := PixelToNative(grid3857, tile.Z)
+		if err != nil {
+			panic(err)
+		}
 		simp := simplify.DouglasPeucker{
-			Tolerance: slippy.PixelsToNative(grid3857, tile.Z, 10.0),
+			Tolerance: tol,
 		}
 
-		var err error
 		geo, err = planar.Simplify(ctx, simp, geo)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unabled to simplify geo : %v", err)
