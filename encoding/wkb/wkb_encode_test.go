@@ -23,7 +23,8 @@ func TestWKBEncode(t *testing.T) {
 				t.Skip("instructed to skip.")
 			}
 
-			bs, err := wkb.EncodeBytes(tc.Expected)
+			t.Logf("SRID: %v", tc.SRID)
+			bs, err := wkb.EncodeBytesSRID(tc.SRID, tc.Expected)
 			if err != nil {
 				log.Println("TestCase:", tc)
 				t.Errorf("error, expected nil got %v", err)
@@ -31,7 +32,7 @@ func TestWKBEncode(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(bs, tc.Bytes) {
-				t.Errorf(" encoded geometry, expected %v got %v", tcase.SprintBinary(tc.Bytes, "\t"), tcase.SprintBinary(bs, "\t"))
+				t.Errorf(" encoded geometry, expected\n\t%v\n got\n\t%v\n\n", tcase.SprintBinary(tc.Bytes, "\t"), tcase.SprintBinary(bs, "\t"))
 			}
 		}
 	}

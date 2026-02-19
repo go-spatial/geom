@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-spatial/geom/encoding/wkb/internal/tcase/token"
@@ -38,6 +39,7 @@ type C struct {
 	EncodeError   string
 	Bytes         []byte
 	BytesPosition parsing.Position
+	SRID          uint32
 }
 
 func (c C) HasErrorFor(t Type) bool {
@@ -153,6 +155,19 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			case "both":
 				cC.Skip = TypeBoth
 			}
+		case "srid":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			sridStr := strings.ToLower(strings.TrimSpace(string(t.ParseTillEndIgnoreComments())))
+			srid, err := strconv.ParseUint(sridStr, 10, 32)
+			if err != nil {
+				return cases, parsing.ErrAt{
+					Pos: t.Position(),
+					Err: fmt.Errorf("failed to parse srid[%s]: %w", sridStr, err),
+				}
+			}
+			cC.SRID = uint32(srid)
 
 		default:
 			return cases, fmt.Errorf("unknown label:%v", string(label))

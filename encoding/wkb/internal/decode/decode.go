@@ -45,6 +45,11 @@ func ByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err err
 	return byteOrder, typ, err
 }
 
+func SRID(r io.Reader, bom binary.ByteOrder) (srid uint32, err error) {
+	err = binary.Read(r, bom, &srid)
+	return srid, err
+}
+
 func Point(r io.Reader, bom binary.ByteOrder) (pt geom.Point, err error) {
 	err = binary.Read(r, bom, &pt)
 	return pt, err

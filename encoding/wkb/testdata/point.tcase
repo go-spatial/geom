@@ -27,4 +27,17 @@ bytes:{{
   00 00 00 00 00 00 10 40 // y 4
 }}
  
+desc: Simple Point with SRID
+bom: little
+SRID: 3857
+expected: -13056181.25608333,4021927.9949415172
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01                      // Byte order Marker little
+  01 00 00 20             // Type 1 Point, with SRID indicator
+  11 0F 00 00             // SRID 3857
+  AB D5 31 A8 16 E7 68 C1 // x -13056181.25608333
+  5F 3E 5A FF 53 AF 4E 41 // y 4021927.9949415172
+}}
+
 

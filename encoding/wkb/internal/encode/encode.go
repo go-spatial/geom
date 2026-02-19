@@ -13,8 +13,10 @@ type Encoder struct {
 	// W is the writer to which the binary data will be written to.
 	W io.Writer
 	// ByteOrder is the Byte Order Marker, it defaults to binary.LittleEndian
-	ByteOrder binary.ByteOrder
-	err       error
+	ByteOrder   binary.ByteOrder
+	SRID        uint32
+	encodedSRID bool
+	err         error
 }
 
 var EncoderIsNilErr = errors.New("Encoder can not be nil")
@@ -28,6 +30,38 @@ func (en *Encoder) Write(data ...any) *Encoder {
 	if en.ByteOrder == nil {
 		en.ByteOrder = binary.LittleEndian
 	}
+	for i := range data {
+		en.err = binary.Write(en.W, en.ByteOrder, data[i])
+		if en.err != nil {
+			return en
+		}
+	}
+	return en
+}
+func (en *Encoder) WriteTyp(typ uint32, data ...any) *Encoder {
+	if !en.conti() {
+		return en
+	}
+	if en.ByteOrder == nil {
+		en.ByteOrder = binary.LittleEndian
+	}
+
+	if en.SRID != 0 {
+		typ = typ + consts.WKBSRID
+	}
+
+	en.err = binary.Write(en.W, en.ByteOrder, typ)
+	if en.err != nil {
+		return en
+	}
+
+	if typ&consts.WKBSRID == consts.WKBSRID {
+		en.err = binary.Write(en.W, en.ByteOrder, en.SRID)
+		if en.err != nil {
+			return en
+		}
+	}
+
 	for i := range data {
 		en.err = binary.Write(en.W, en.ByteOrder, data[i])
 		if en.err != nil {
@@ -57,31 +91,31 @@ func (en *Encoder) BOM() *Encoder {
 }
 
 func (en *Encoder) Point(pt [2]float64) {
-	en.BOM().Write(consts.Point, pt[0], pt[1])
+	en.BOM().WriteTyp(consts.Point, pt[0], pt[1])
 }
 func (en *Encoder) MultiPoint(pts [][2]float64) {
-	en.BOM().Write(consts.MultiPoint, uint32(len(pts)))
+	en.BOM().WriteTyp(consts.MultiPoint, uint32(len(pts)))
 
 	for _, p := range pts {
 		en.Point(p)
 	}
 }
 func (en *Encoder) LineString(ln [][2]float64) {
-	en.BOM().Write(consts.LineString, uint32(len(ln)))
+	en.BOM().WriteTyp(consts.LineString, uint32(len(ln)))
 	for _, p := range ln {
 		en.Write(p[0], p[1])
 	}
 }
 
 func (en *Encoder) MultiLineString(lns [][][2]float64) {
-	en.BOM().Write(consts.MultiLineString, uint32(len(lns)))
+	en.BOM().WriteTyp(consts.MultiLineString, uint32(len(lns)))
 	for _, l := range lns {
 		en.LineString(l)
 	}
 }
 
 func (en *Encoder) Polygon(ply [][][2]float64) {
-	en.BOM().Write(consts.Polygon, uint32(len(ply)))
+	en.BOM().WriteTyp(consts.Polygon, uint32(len(ply)))
 	for _, r := range ply {
 		// close definition is:
 		// •  Verify that the line segments close (z coordinates at start and endpoints must also be the same) and don't cross.
@@ -105,7 +139,7 @@ func (en *Encoder) Polygon(ply [][][2]float64) {
 }
 
 func (en *Encoder) MultiPolygon(mply [][][][2]float64) {
-	en.BOM().Write(consts.MultiPolygon, uint32(len(mply)))
+	en.BOM().WriteTyp(consts.MultiPolygon, uint32(len(mply)))
 	for _, p := range mply {
 		en.Polygon(p)
 	}
@@ -115,7 +149,7 @@ func (en *Encoder) Collection(geoms []geom.Geometry) {
 	if !en.conti() {
 		return
 	}
-	en.BOM().Write(consts.Collection, uint32(len(geoms)))
+	en.BOM().WriteTyp(consts.Collection, uint32(len(geoms)))
 	for _, gg := range geoms {
 		en.Geometry(gg)
 		if !en.conti() {
