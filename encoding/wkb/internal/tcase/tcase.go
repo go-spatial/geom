@@ -5,13 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-spatial/geom/encoding/wkb/internal/tcase/token"
+	"github.com/go-spatial/geom/internal/parsing"
 )
 
 var ErrMissingDesc = fmt.Errorf("missing desc field")
@@ -20,21 +20,24 @@ type Type uint8
 
 const (
 	TypeNone   Type = 0
-	TypeEncode      = 1
-	TypeDecode      = 2
-	TypeBoth        = 3
+	TypeEncode Type = 1
+	TypeDecode Type = 2
+	TypeBoth   Type = 3
 )
 
 func (ot Type) Is(t Type) bool { return ot&t == t }
 
 type C struct {
-	Desc        string
-	BOM         binary.ByteOrder
-	Skip        Type
-	Expected    interface{}
-	DecodeError string
-	EncodeError string
-	Bytes       []byte
+	Filename      string
+	Desc          string
+	DescPosition  parsing.Position
+	BOM           binary.ByteOrder
+	Skip          Type
+	Expected      any
+	DecodeError   string
+	EncodeError   string
+	Bytes         []byte
+	BytesPosition parsing.Position
 }
 
 func (c C) HasErrorFor(t Type) bool {
@@ -89,7 +92,8 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			case "big":
 				cC.BOM = binary.BigEndian
 			default:
-				return cases, fmt.Errorf("invalid bom(%v), expect “little” or “big”", bom)
+				pos := t.Position()
+				return cases, fmt.Errorf("invalid bom(%v) at %s, expect “little” or “big”", bom, pos.String())
 			}
 
 		case "bytes":
@@ -100,6 +104,7 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			if err != nil {
 				return cases, err
 			}
+			cC.BytesPosition = t.Position()
 			cC.Bytes = bin
 
 		case "desc":
@@ -107,6 +112,8 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 				cases = append(cases, *cC)
 			}
 			cC = new(C)
+			cC.Filename = filename
+			cC.DescPosition = t.Position()
 			cC.Desc = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
 
 		case "decode_error":
@@ -171,7 +178,7 @@ func ParseFile(filename string) ([]C, error) {
 var isolatedFilenames = flag.String("tcase.Files", "", "List of comma separated file name to grab the test cases from; instead of all the files in the directory.")
 
 func GetFiles(dir string) (filenames []string, err error) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

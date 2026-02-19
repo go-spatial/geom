@@ -1,0 +1,53 @@
+/* This file uses short hand to describe the various geometry types.
+// 12,45                                     — represents a point made up of two elements
+// [ 10,10 10,11 ]                           — represents a linestring made up of two points
+// { [ 10,10 10,11 ] [ 20,10 20,11 ] }       — represents a polygon made up of two linestrings
+// {{ { [ 10,10 10,11 ] [ 20,10 20,11 ] } }} — represents a multiPolygon made up of one polygon
+*/
+desc: Simple polygon with two rings.
+bom: little
+geometry: { 
+[ 35,10 45,45 15,40 10,20 ]
+[ 20,30 35,35 30,20 ]
+}
+
+bytes:{{
+//01 02 03 04 05 06 07 08
+  01                      // BOM
+  03 00 00 00             // Type
+  02 00 00 00             // Number of Rings 2
+
+
+  05 00 00 00             // Number of Points in ring 5
+  00 00 00 00 00 80 41 40 // X1 35
+  00 00 00 00 00 00 24 40 // Y1 10
+
+  00 00 00 00 00 80 46 40 // X2 45
+  00 00 00 00 00 80 46 40 // Y2 45
+
+  00 00 00 00 00 00 2e 40 // X3 15
+  00 00 00 00 00 00 44 40 // Y3 40
+
+  00 00 00 00 00 00 24 40 // X4 10
+  00 00 00 00 00 00 34 40 // Y4 20
+
+  00 00 00 00 00 80 41 40 // X5 35
+  00 00 00 00 00 00 24 40 // Y5 10
+
+
+  04 00 00 00             // Number of Points in ring 4 
+  00 00 00 00 00 00 34 40 // X1 20
+  00 00 00 00 00 00 3e 40 // Y1 30
+
+  00 00 00 00 00 80 41 40 // X2 35
+  00 00 00 00 00 80 41 40 // Y2 35
+
+  00 00 00 00 00 00 3e 40 // X3 30
+  00 00 00 00 00 00 34 40 // Y3 20
+
+  00 00 00 00 00 00 34 40 // X4 20
+  00 00 00 00 00 00 3e 40 // Y4 30
+
+}}
+
+

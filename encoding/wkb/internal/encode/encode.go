@@ -21,7 +21,7 @@ var EncoderIsNilErr = errors.New("Encoder can not be nil")
 
 func (en *Encoder) conti() bool { return !(en == nil || en.err != nil) }
 
-func (en *Encoder) Write(data ...interface{}) *Encoder {
+func (en *Encoder) Write(data ...any) *Encoder {
 	if !en.conti() {
 		return en
 	}

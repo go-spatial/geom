@@ -17,13 +17,14 @@ type T struct {
 
 var InvalidStartMarkerErr = fmt.Errorf("invalid start marker.")
 
-func (t *T) NextRaw() ([]byte, bool) { return t.Sym.RawPeek() }
-func (t *T) Peek() byte              { return t.Sym.NextSymbol() }
-func (t *T) Bytes() []byte           { return t.Sym.Bytes() }
-func (t *T) Scan() bool              { return t.Sym.Scan() }
-func (t *T) Symbol() byte            { return t.Sym.Symbol() }
-func (t *T) AtEnd() bool             { return t.Sym.AtEnd() }
-func (t *T) NextText() string        { return t.Sym.NextText() }
+func (t *T) NextRaw() ([]byte, bool)    { return t.Sym.RawPeek() }
+func (t *T) Peek() byte                 { return t.Sym.NextSymbol() }
+func (t *T) Bytes() []byte              { return t.Sym.Bytes() }
+func (t *T) Scan() bool                 { return t.Sym.Scan() }
+func (t *T) Symbol() byte               { return t.Sym.Symbol() }
+func (t *T) AtEnd() bool                { return t.Sym.AtEnd() }
+func (t *T) NextText() string           { return t.Sym.NextText() }
+func (t *T) Position() parsing.Position { return t.Sym.Position() }
 
 func (t *T) ScanTill(sym byte) (contents []byte) {
 	for t.Peek() != sym {
@@ -128,7 +129,7 @@ loop1:
 		case symbol.Letter:
 			break loop1
 		default:
-			return content, fmt.Errorf("Expected to find start of label")
+			return content, fmt.Errorf("Expected to find start of label, failed at %v", t.Position())
 
 		}
 		if t.AtEnd() {
@@ -147,7 +148,7 @@ loop1:
 			t.Scan()
 			content = append(content, t.Bytes()...)
 		default:
-			return content, fmt.Errorf("Expected to find colon")
+			return content, fmt.Errorf("Expected to find colon, at %v", t.Position())
 		}
 	}
 	return content, fmt.Errorf("Expected to find colon")
@@ -180,11 +181,11 @@ loop1:
 			t.Scan()
 			break loop1
 		default:
-			return content, fmt.Errorf("Expected to find start of binary block")
+			return content, fmt.Errorf("Expected to find start of binary block, at %v", t.Position())
 
 		}
 		if t.AtEnd() {
-			return content, fmt.Errorf("Expected to find start of binary block")
+			return content, fmt.Errorf("Expected to find start of binary block, end of file instead")
 		}
 	}
 	var cbytes []byte
@@ -224,7 +225,7 @@ loop1:
 		case parsing.EOF:
 			return content, fmt.Errorf("Unexpected end of file.")
 		default:
-			return content, fmt.Errorf("Unexpected chars: %v", t.NextText())
+			return content, fmt.Errorf("Unexpected chars: %v after %v", t.NextText(), t.Position())
 
 		}
 		if t.AtEnd() {
@@ -253,7 +254,6 @@ func (t *T) parseFloat64EVal() []byte {
 			return d
 		}
 	}
-	return d
 }
 
 func (t *T) ParseFloat64() (float64, error) {
@@ -324,7 +324,7 @@ func (t *T) ParsePoint() (pt geom.Point, err error) {
 			}
 		case symbol.Comma:
 			if !lookingForComma {
-				return pt, fmt.Errorf("expected to find a float found a comma instead.")
+				return pt, fmt.Errorf("expected to find a float found a comma instead, at %v.", t.Position())
 			}
 			coordidx = 1
 			lookingForComma = false
@@ -332,10 +332,9 @@ func (t *T) ParsePoint() (pt geom.Point, err error) {
 		case parsing.EOF:
 			return pt, nil
 		default:
-			return pt, fmt.Errorf("Expected a number or comma, not '%v' -- %v", t.NextText(), coordidx)
+			return pt, fmt.Errorf("Expected a number or comma, not '%v' -- %v at %v", t.NextText(), coordidx, t.Position())
 		}
 	}
-	return pt, fmt.Errorf("Expected a number or comma, not '%v'", t.NextText())
 }
 
 func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
@@ -359,7 +358,7 @@ func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
 			return pts, nil
 		case symbol.Digit, symbol.Dash, symbol.Dot, symbol.Plus:
 			if !stringStarted {
-				return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected '(', found '%v' at %v", t.NextText(), t.Position())
 			}
 			// Looks like a number, assume we have a point.
 			pt, err := t.ParsePoint()
@@ -370,9 +369,9 @@ func (t *T) ParseMultiPoint() (pts geom.MultiPoint, err error) {
 
 		default:
 			if !stringStarted {
-				return nil, fmt.Errorf("Expected '(', found '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected '(', found '%v' at %v", t.NextText(), t.Position())
 			}
-			return nil, fmt.Errorf("Expected point or ')' not '%v'", t.NextText())
+			return nil, fmt.Errorf("Expected point or ')' not '%v' at %v", t.NextText(), t.Position())
 		}
 	}
 	return nil, fmt.Errorf("Expected point or ')' not end of file.")
@@ -399,7 +398,7 @@ func (t *T) ParseLineString() (pts geom.LineString, err error) {
 			return pts, nil
 		case symbol.Digit, symbol.Dash, symbol.Dot, symbol.Plus:
 			if !stringStarted {
-				return nil, fmt.Errorf("Expected '[', found '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected '[', found '%v' at %v", t.NextText(), t.Position())
 			}
 			// Looks like a number, assume we have a point.
 			pt, err := t.ParsePoint()
@@ -409,7 +408,7 @@ func (t *T) ParseLineString() (pts geom.LineString, err error) {
 			pts = append(pts, pt)
 
 		default:
-			return nil, fmt.Errorf("Expected point or ']' not '%v'", t.NextText())
+			return nil, fmt.Errorf("Expected point or ']' not '%v' at %v", t.NextText(), t.Position())
 		}
 	}
 	return nil, fmt.Errorf("Expected point or ']' not end of file.")
@@ -436,7 +435,7 @@ func (t *T) ParseMultiLineString() (lns geom.MultiLineString, err error) {
 			return lns, nil
 		case symbol.Bracket:
 			if !started {
-				return nil, fmt.Errorf("Expected '[[', found '['")
+				return nil, fmt.Errorf("Expected '[[', found '[' at %v", t.Position())
 			}
 			// Looks like a number, assume we have a point.
 			ln, err := t.ParseLineString()
@@ -447,9 +446,9 @@ func (t *T) ParseMultiLineString() (lns geom.MultiLineString, err error) {
 
 		default:
 			if !started {
-				return nil, fmt.Errorf("Expected linestring or '[[' not '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected linestring or '[[' not '%v' at %v", t.NextText(), t.Position())
 			}
-			return nil, fmt.Errorf("Expected linestring or ']]' not '%v'", t.NextText())
+			return nil, fmt.Errorf("Expected linestring or ']]' not '%v' at %v", t.NextText(), t.Position())
 		}
 	}
 	if !started {
@@ -479,7 +478,7 @@ Loop:
 			return lns, nil
 		case symbol.Bracket:
 			if !started {
-				return nil, fmt.Errorf("Expected '{' found '['")
+				return nil, fmt.Errorf("Expected '{' found '[' at %v", t.Position())
 			}
 			// Looks like a number, assume we have a point.
 			ln, err := t.ParseLineString()
@@ -492,9 +491,9 @@ Loop:
 
 		default:
 			if !started {
-				return nil, fmt.Errorf("Expected linestring or '{' not '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected linestring or '{' not '%v' at %v", t.NextText(), t.Position())
 			}
-			return nil, fmt.Errorf("Expected linestring or '}' not '%v'\n%v:%v", t.NextText(), t.Peek(), string(t.Bytes()))
+			return nil, fmt.Errorf("Expected linestring or '}' not '%v'\n%v:%v at %v", t.NextText(), t.Peek(), string(t.Bytes()), t.Position())
 		}
 	}
 	if !started {
@@ -521,7 +520,7 @@ Loop:
 			t.Scan()
 		case symbol.Brace:
 			if !started {
-				return nil, fmt.Errorf("Expected '{{' found '{'")
+				return nil, fmt.Errorf("Expected '{{' found '{' at %v", t.Position())
 			}
 			// Looks like a polygon, assume it's a polygon.
 			py, err := t.ParsePolygon()
@@ -537,9 +536,9 @@ Loop:
 
 		default:
 			if !started {
-				return nil, fmt.Errorf("Expected polygon or '{{' not '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected polygon or '{{' not '%v' at %v", t.NextText(), t.Position())
 			}
-			return nil, fmt.Errorf("Expected polygon or '}}' not '%v'", t.NextText())
+			return nil, fmt.Errorf("Expected polygon or '}}' not '%v' at %v", t.NextText(), t.Position())
 		}
 	}
 	if !started {
@@ -576,7 +575,7 @@ Loop:
 
 		case symbol.Digit, symbol.Dot, symbol.Dash, symbol.Plus:
 			if !started {
-				return nil, fmt.Errorf("Expected '((' found a possible point.")
+				return nil, fmt.Errorf("Expected '((' found a possible point at %v.", t.Position())
 			}
 			pt, err := t.ParsePoint()
 			if err != nil {
@@ -585,7 +584,7 @@ Loop:
 			geo = append(geo, pt)
 		case symbol.Pren:
 			if !started {
-				return nil, fmt.Errorf("Expected '((' found a possible muilt-point.")
+				return nil, fmt.Errorf("Expected '((' found a possible muilt-point at %v.", t.Position())
 			}
 			pt, err := t.ParseMultiPoint()
 			if err != nil {
@@ -595,7 +594,7 @@ Loop:
 
 		case symbol.Bracket:
 			if !started {
-				return nil, fmt.Errorf("Expected '((' found a possible linestring.")
+				return nil, fmt.Errorf("Expected '((' found a possible linestring at %v.", t.Position())
 			}
 			ln, err := t.ParseLineString()
 			if err != nil {
@@ -604,7 +603,7 @@ Loop:
 			geo = append(geo, ln)
 		case symbol.Dbracket:
 			if !started {
-				return nil, fmt.Errorf("Expected '((' found a possible linestring.")
+				return nil, fmt.Errorf("Expected '((' found a possible linestring at %v.", t.Position())
 			}
 			ln, err := t.ParseLineString()
 			if err != nil {
@@ -614,7 +613,7 @@ Loop:
 
 		case symbol.Brace:
 			if !started {
-				return nil, fmt.Errorf("Expected '((' found '{'")
+				return nil, fmt.Errorf("Expected '((' found '{' at %v", t.Position())
 			}
 			// Looks like a polygon, assume it's a polygon.
 			py, err := t.ParsePolygon()
@@ -624,7 +623,7 @@ Loop:
 			geo = append(geo, py)
 		case symbol.Dbrace:
 			if !started {
-				return nil, fmt.Errorf("Expected '((' found '{{'")
+				return nil, fmt.Errorf("Expected '((' found '{{' at %v", t.Position())
 			}
 			// Looks like a polygon, assume it's a polygon.
 			py, err := t.ParseMultiPolygon()
@@ -641,9 +640,9 @@ Loop:
 
 		default:
 			if !started {
-				return nil, fmt.Errorf("Expected polygon or '((' not '%v'", t.NextText())
+				return nil, fmt.Errorf("Expected polygon or '((' not '%v' at %v", t.NextText(), t.Position())
 			}
-			return nil, fmt.Errorf("Expected polygon or '))' not '%v'", t.NextText())
+			return nil, fmt.Errorf("Expected polygon or '))' not '%v' at %v", t.NextText(), t.Position())
 		}
 	}
 	if !started {
@@ -652,7 +651,7 @@ Loop:
 	return nil, fmt.Errorf("Expected polygon or '))' not end of file.")
 }
 
-func (t *T) ParseExpectedField() (geo interface{}, err error) {
+func (t *T) ParseExpectedField() (geo any, err error) {
 	//  {{ { [ XXX.xxx,YYY.yyy XXX.xxx,YYY.yyy ] } }}
 Loop:
 	for !t.AtEnd() {

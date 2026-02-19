@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -13,7 +14,12 @@ const (
 	EOF byte = 255
 )
 
-type SplitFunc func([]byte, bool) (int, byte, uint64, []byte, error)
+// SplitFunc is used to tokenized the input. The arguments are the initial substring of the remaining unprocessed data and
+// a flag, atEOF, that reports whether the Reader has no more data to give. The return values
+// are the number of bytes to advance the input, the token, the count of the token, text body for the token (should be a new copy),
+// and an error if there is one.
+// Internally this makes use of [bufio#SplitFunc](https://pkg.go.dev/bufio#SplitFunc) function.
+type SplitFunc func(data []byte, atEOF bool) (advance int, token byte, count uint64, body []byte, err error)
 
 func Err(err error) (int, byte, uint64, []byte, error) { return 0, 0, 0, nil, err }
 func Eof() (int, byte, uint64, []byte, error)          { return 0, EOF, 0, nil, io.EOF }
@@ -142,19 +148,62 @@ func GetSeq1(sym byte, fn func(r rune) bool, data []byte, isEOF bool) (advance i
 	return advance, sym, num, contents, nil
 }
 
+type Position struct {
+	Row uint
+	Col uint
+}
+
+func (pos Position) String() string { return fmt.Sprintf("(%v,%v)", pos.Row, pos.Col) }
+func (pos Position) Add(row, col uint) Position {
+	pos.Row, pos.Col = pos.Row+row, pos.Col+col
+	return pos
+}
+
 type Scanner struct {
-	scanner   *bufio.Scanner
-	symbol    []byte
-	nextBytes []byte
-	hasNext   bool
-	atEnd     bool
+	scanner *bufio.Scanner
+	// symbol is the encoded symbol and contents for that symbol as well as a count
+	// symbol[0]	—— symbol token value
+	// symbol[1:9]	—— count uint64
+	// symbol[9:]	—— text of symbol
+	symbol      []byte
+	nextBytes   []byte
+	hasNext     bool
+	previousPos Position
+	currentPos  Position
+	atEnd       bool
 }
 
 func NewScanner(r io.Reader, splitFn func([]byte, bool) (int, []byte, error)) *Scanner {
 	s := new(Scanner)
+	fn := func(b []byte, atEnd bool) (int, []byte, error) {
+		adv, body, err := splitFn(b, atEnd)
+		pos := calculatePosition(b, adv, s.currentPos)
+		if err != nil || adv <= 0 {
+			if err != nil {
+				err = ErrAt{Err: err, Pos: pos}
+			}
+			return adv, body, err
+		}
+		s.currentPos = pos
+		return adv, body, nil
+	}
 	s.scanner = bufio.NewScanner(r)
-	s.scanner.Split(splitFn)
+	s.scanner.Split(fn)
 	return s
+}
+
+func calculatePosition(b []byte, adv int, current Position) Position {
+	if adv == 0 {
+		return current
+	}
+	rows := uint(bytes.Count(b[:adv], []byte("\n")))
+	if rows == 0 {
+		return current.Add(0, uint(adv))
+	}
+	if idx := bytes.LastIndexByte(b[:adv], '\n'); idx != -1 {
+		return current.Add(rows, uint(len(b[:adv])-idx))
+	}
+	return current.Add(rows, 0)
 }
 
 func (s *Scanner) RawPeek() (sym []byte, more bool) {
@@ -169,8 +218,19 @@ func (s *Scanner) RawPeek() (sym []byte, more bool) {
 		return []byte{EOF}, false
 	}
 	s.hasNext = true
+	s.previousPos = s.currentPos
 	s.nextBytes = s.scanner.Bytes()
 	return s.nextBytes, true
+}
+
+func (s *Scanner) Position() Position {
+	if s == nil {
+		return Position{}
+	}
+	if s.hasNext {
+		return s.previousPos
+	}
+	return s.currentPos
 }
 
 func (s *Scanner) NextBytes() []byte {
