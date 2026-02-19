@@ -132,7 +132,7 @@ loop1:
 
 		}
 		if t.AtEnd() {
-			return content, fmt.Errorf("Expected to find start of label")
+			return content, fmt.Errorf("Expected to find start of label, reached the end of file.")
 		}
 	}
 	t.Scan()

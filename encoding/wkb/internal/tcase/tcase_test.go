@@ -14,25 +14,27 @@ type tcase struct {
 
 func TestParse(t *testing.T) {
 
-	fn := func(t *testing.T, tc tcase) {
-		cases, err := ParseFile(tc.filename)
-		if err != nil {
-			t.Errorf("error, expected nil got %v", err)
-		}
-		if len(cases) != len(tc.cases) {
-			t.Errorf("number of cases, expected %v got %v", len(tc.cases), len(cases))
-			return
-		}
-		for i, tcase := range tc.cases {
-			acase := cases[i]
-			if acase.Desc != tcase.Desc {
-				t.Errorf("Desc, expected %v got %v", tcase.Desc, acase.Desc)
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			cases, err := ParseFile(tc.filename)
+			if err != nil {
+				t.Errorf("error, expected nil got %v", err)
 			}
-			if !reflect.DeepEqual(tcase.Expected, acase.Expected) {
-				t.Errorf("Expected, expected %#v got %#v", tcase.Expected, acase.Expected)
+			if len(cases) != len(tc.cases) {
+				t.Errorf("number of cases, expected %v got %v", len(tc.cases), len(cases))
+				return
 			}
-			if !reflect.DeepEqual(tcase.Bytes, acase.Bytes) {
-				t.Errorf("Bytes, expected %v got %v", tcase.Bytes, acase.Bytes)
+			for i, tcase := range tc.cases {
+				acase := cases[i]
+				if acase.Desc != tcase.Desc {
+					t.Errorf("Desc, expected %v got %v", tcase.Desc, acase.Desc)
+				}
+				if !reflect.DeepEqual(tcase.Expected, acase.Expected) {
+					t.Errorf("Expected, expected %#v got %#v", tcase.Expected, acase.Expected)
+				}
+				if !reflect.DeepEqual(tcase.Bytes, acase.Bytes) {
+					t.Errorf("Bytes, expected %v got %v", tcase.Bytes, acase.Bytes)
+				}
 			}
 		}
 	}
@@ -54,7 +56,6 @@ func TestParse(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

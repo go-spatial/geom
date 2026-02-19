@@ -75,13 +75,62 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 			log.Printf("error trying to get label %#v", cC)
 			return nil, err
 		}
+
 		switch strings.ToLower(string(label)) {
+
+		case "bom":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			bom := strings.ToLower(strings.TrimSpace(string(t.ParseTillEndIgnoreComments())))
+			switch bom {
+			case "little":
+				cC.BOM = binary.LittleEndian
+			case "big":
+				cC.BOM = binary.BigEndian
+			default:
+				return cases, fmt.Errorf("invalid bom(%v), expect “little” or “big”", bom)
+			}
+
+		case "bytes":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			bin, err := t.ParseBinaryField()
+			if err != nil {
+				return cases, err
+			}
+			cC.Bytes = bin
+
 		case "desc":
 			if cC != nil {
 				cases = append(cases, *cC)
 			}
 			cC = new(C)
 			cC.Desc = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
+
+		case "decode_error":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			cC.DecodeError = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
+
+		case "encode_error":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			cC.EncodeError = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
+
+		case "expected", "geometry":
+			if cC == nil {
+				return cases, ErrMissingDesc
+			}
+			geom, err := t.ParseExpectedField()
+			if err != nil {
+				return cases, err
+			}
+			cC.Expected = geom
+
 		case "skip":
 			if cC == nil {
 				return cases, ErrMissingDesc
@@ -98,55 +147,9 @@ func parse(r io.Reader, filename string) (cases []C, err error) {
 				cC.Skip = TypeBoth
 			}
 
-			if err != nil {
-				return cases, err
-			}
-
-		case "decode_error":
-			if cC == nil {
-				return cases, ErrMissingDesc
-			}
-			cC.DecodeError = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
-		case "encode_error":
-			if cC == nil {
-				return cases, ErrMissingDesc
-			}
-			cC.EncodeError = strings.TrimSpace(string(t.ParseTillEndIgnoreComments()))
-		case "bytes":
-			if cC == nil {
-				return cases, ErrMissingDesc
-			}
-			bin, err := t.ParseBinaryField()
-			if err != nil {
-				return cases, err
-			}
-			cC.Bytes = bin
-		case "bom":
-			if cC == nil {
-				return cases, ErrMissingDesc
-			}
-			bom := strings.ToLower(strings.TrimSpace(string(t.ParseTillEndIgnoreComments())))
-			switch bom {
-			case "little":
-				cC.BOM = binary.LittleEndian
-			case "big":
-				cC.BOM = binary.BigEndian
-			default:
-				return cases, fmt.Errorf("invalid bom(%v), expect “little” or “big”", bom)
-			}
-		case "geometry":
-			fallthrough
-		case "expected":
-			if cC == nil {
-				return cases, ErrMissingDesc
-			}
-			geom, err := t.ParseExpectedField()
-			if err != nil {
-				return cases, err
-			}
-			cC.Expected = geom
 		default:
 			return cases, fmt.Errorf("unknown label:%v", string(label))
+
 		}
 	}
 	cases = append(cases, *cC)

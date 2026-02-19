@@ -16,7 +16,7 @@ func TestWKBEncode(t *testing.T) {
 	}
 	var fname string
 
-	fn := func(t *testing.T, tc tcase.C) func(*testing.T) {
+	fn := func(tc tcase.C) func(*testing.T) {
 		return func(t *testing.T) {
 
 			if tc.Skip.Is(tcase.TypeEncode) {
@@ -43,10 +43,8 @@ func TestWKBEncode(t *testing.T) {
 				t.Fatalf("error parsing file: %v : %v ", fname, err)
 			}
 			for _, tc := range cases {
-				tc := tc
-				t.Run(tc.Desc, func(t *testing.T) { fn(t, tc) })
+				t.Run(tc.Desc, fn(tc))
 			}
-
 		})
 	}
 }

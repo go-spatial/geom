@@ -15,38 +15,40 @@ func TestSymbol(t *testing.T) {
 		expected [][]byte
 		err      error
 	}
-	fn := func(t *testing.T, tc tcase) {
-		r := strings.NewReader(tc.input)
-		s := parsing.NewScanner(r, SplitFn)
-		i := 0
-		for s.Scan() {
-			if i >= len(tc.expected) {
-				t.Errorf("number of entries, expected %v got %v", i, len(tc.expected))
-			}
-			b := s.RawBytes()
-			if !reflect.DeepEqual(tc.expected[i], b) {
-				t.Errorf("bytes, expected %v got %v", tc.expected[i], b)
-			}
-			f, m := s.RawPeek()
-			i++
-			if m {
+	fn := func(tc tcase) func(*testing.T) {
+		return func(t *testing.T) {
+			r := strings.NewReader(tc.input)
+			s := parsing.NewScanner(r, SplitFn)
+			i := 0
+			for s.Scan() {
 				if i >= len(tc.expected) {
-					t.Errorf("number of entries, expected %v got %v", len(tc.expected), i)
-					break
+					t.Errorf("number of entries, expected %v got %v", i, len(tc.expected))
 				}
-				if !reflect.DeepEqual(tc.expected[i], f) {
-					t.Errorf("M, expected %v got %v", tc.expected[i], f)
+				b := s.RawBytes()
+				if !reflect.DeepEqual(tc.expected[i], b) {
+					t.Errorf("bytes, expected %v got %v", tc.expected[i], b)
 				}
-			} else {
-				if !reflect.DeepEqual([]byte{parsing.EOF}, f) {
-					t.Errorf("!M, expected %v got %v", []byte{parsing.EOF}, f)
+				f, m := s.RawPeek()
+				i++
+				if m {
+					if i >= len(tc.expected) {
+						t.Errorf("number of entries, expected %v got %v", len(tc.expected), i)
+						break
+					}
+					if !reflect.DeepEqual(tc.expected[i], f) {
+						t.Errorf("M, expected %v got %v", tc.expected[i], f)
+					}
+				} else {
+					if !reflect.DeepEqual([]byte{parsing.EOF}, f) {
+						t.Errorf("!M, expected %v got %v", []byte{parsing.EOF}, f)
+					}
 				}
 			}
-		}
-		if i < len(tc.expected) {
-			t.Errorf("number of entries, expected %v got %v", len(tc.expected), i)
-			for j := i; j < len(tc.expected); j++ {
-				t.Errorf("\tmissing: %v:%v:%v", tc.expected[j][0], string(tc.expected[j][1:]), tc.expected[j])
+			if i < len(tc.expected) {
+				t.Errorf("number of entries, expected %v got %v", len(tc.expected), i)
+				for j := i; j < len(tc.expected); j++ {
+					t.Errorf("\tmissing: %v:%v:%v", tc.expected[j][0], string(tc.expected[j][1:]), tc.expected[j])
+				}
 			}
 		}
 	}
@@ -117,7 +119,6 @@ func TestSymbol(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) { fn(t, tc) })
+		t.Run(name, fn(tc))
 	}
 }

@@ -24,7 +24,7 @@ func (e ErrInvalidType) Error() string {
 }
 
 func ByteOrderType(r io.Reader) (byteOrder binary.ByteOrder, typ uint32, err error) {
-	var bom = make([]byte, 1, 1)
+	var bom = make([]byte, 1)
 	// the bom is the first byte
 	if _, err = r.Read(bom); err != nil {
 		return byteOrder, typ, err
