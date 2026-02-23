@@ -9,14 +9,14 @@ var ErrNilPointZS = errors.New("geom: nil PointZS")
 
 // Point describes a simple 3D point with SRID
 type PointZS struct {
-	Srid uint32
-	Xyz  PointZ
+	Srid
+	Xyz PointZ
 }
 
 // XYZS returns the struct itself
 func (p PointZS) XYZS() struct {
-	Srid uint32
-	Xyz  PointZ
+	Srid
+	Xyz PointZ
 } {
 	return p
 }
@@ -28,7 +28,7 @@ func (p PointZS) XYZ() PointZ {
 
 // S returns the srid as uint32
 func (p PointZS) S() uint32 {
-	return p.Srid
+	return p.SRID()
 }
 
 // SetXYZS sets the XYZ coordinates and the SRID
@@ -37,7 +37,7 @@ func (p *PointZS) SetXYZS(srid uint32, xyz PointZ) (err error) {
 		return ErrNilPointZS
 	}
 
-	p.Srid = srid
+	p.Srid = Srid(srid)
 	p.Xyz = xyz
 	return
 }

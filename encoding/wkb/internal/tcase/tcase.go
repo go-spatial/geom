@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-spatial/geom"
 	"github.com/go-spatial/geom/encoding/wkb/internal/tcase/token"
 	"github.com/go-spatial/geom/internal/parsing"
 )
@@ -65,6 +66,51 @@ func (c C) DoesErrorMatch(t Type, e error) bool {
 		return e == nil
 	}
 	return e.Error() == c.ErrorFor(t)
+}
+
+func (c C) Geometry() geom.Geometry {
+	if c.SRID == 0 {
+		return c.Expected
+	}
+	switch g := c.Expected.(type) {
+	default:
+		return g
+	case geom.Pointer:
+		return geom.PointS{
+			Srid: geom.Srid(c.SRID),
+			Xy:   g.XY(),
+		}
+	case geom.MultiPointer:
+		return geom.MultiPointS{
+			Srid: geom.Srid(c.SRID),
+			Mp:   g.Points(),
+		}
+	case geom.LineStringer:
+		return geom.LineStringS{
+			Srid: geom.Srid(c.SRID),
+			Ls:   g.Vertices(),
+		}
+	case geom.MultiLineStringer:
+		return geom.MultiLineStringS{
+			Srid: geom.Srid(c.SRID),
+			Mls:  g.LineStrings(),
+		}
+	case geom.Polygoner:
+		return geom.PolygonS{
+			Srid: geom.Srid(c.SRID),
+			Pol:  g.LinearRings(),
+		}
+	case geom.MultiPolygoner:
+		return geom.MultiPolygonS{
+			Srid:         geom.Srid(c.SRID),
+			MultiPolygon: g.Polygons(),
+		}
+	case geom.Collectioner:
+		return geom.CollectionS{
+			Srid:       geom.Srid(c.SRID),
+			Collection: g.Geometries(),
+		}
+	}
 }
 
 func parse(r io.Reader, filename string) (cases []C, err error) {

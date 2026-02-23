@@ -7,14 +7,14 @@ var ErrNilMultiPointS = errors.New("geom: nil MultiPointS")
 
 // MultiPointS is a geometry with multiple, referenced 2D points.
 type MultiPointS struct {
-	Srid uint32
-	Mp   MultiPoint
+	Srid
+	Mp MultiPoint
 }
 
 // Points returns the coordinates for the 2D points
 func (mps MultiPointS) Points() struct {
-	Srid uint32
-	Mp   MultiPoint
+	Srid
+	Mp MultiPoint
 } {
 	return mps
 }
@@ -25,7 +25,7 @@ func (mps *MultiPointS) SetSRID(srid uint32, mp MultiPoint) (err error) {
 		return ErrNilMultiPointS
 	}
 
-	mps.Srid = srid
+	mps.Srid = Srid(srid)
 	mps.Mp = mp
 	return
 }

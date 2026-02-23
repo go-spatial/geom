@@ -110,6 +110,10 @@ func TestDecode(t *testing.T) {
 			in:  "POINT(1.3E100 2.3E-35)",
 			out: geom.Point{1.3e100, 2.3e-35},
 		},
+		"point 8 with srid": {
+			in:  "srid=3857;POINT(1.3E100 2.3E-35)",
+			out: geom.PointS{Srid: 3857, Xy: geom.Point{1.3e100, 2.3e-35}},
+		},
 		"multipoint 0": {
 			in:  "MULTIPOINT()",
 			out: geom.MultiPoint{},

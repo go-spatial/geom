@@ -22,3 +22,8 @@ func (c *Collection) SetGeometries(input []Geometry) (err error) {
 	*c = append((*c)[:0], input...)
 	return
 }
+
+type CollectionS struct {
+	Srid
+	Collection
+}

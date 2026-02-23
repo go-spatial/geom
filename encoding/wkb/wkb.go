@@ -1,5 +1,5 @@
 // Package wkb is for decoding ESRI's Well Known Binary (WKB) format for OGC geometry (WKBGeometry)
-// sepcification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
+// specification at http://edndoc.esri.com/arcsde/9.1/general_topics/wkb_representation.htm
 // There are a few types supported by the specification. Each general type is in it's own file.
 // So, to find the implementation of Point (and MultiPoint) it will be located in the point.go
 // file. Each of the basic type here adhere to the geom.Geometry interface. So, a wkb point
@@ -39,56 +39,114 @@ const (
 )
 
 // DecodeBytes will attempt to decode a geometry encoded as WKB into a geom.Geometry.
-func DecodeBytes(b []byte) (geom.Geometry, error) {
-	g, _, e := DecodeWSRID(bytes.NewReader(b))
-	return g, e
-}
-func DecodeBytesWSRID(b []byte) (geom.Geometry, uint32, error) {
-	return DecodeWSRID(bytes.NewReader(b))
-}
+func DecodeBytes(b []byte) (geom.Geometry, error) { return Decode(bytes.NewReader(b)) }
 
-// Decode will attempt to decode a geometry encoded as WKB into a geom.Geometry.
+// Decode will attempt to decode a geometry encode as WKB (or EWKB) into a geom.Geometry.
 func Decode(r io.Reader) (geo geom.Geometry, err error) {
-	g, _, e := DecodeWSRID(r)
-	return g, e
-}
-func DecodeWSRID(r io.Reader) (geo geom.Geometry, srid uint32, err error) {
 
+	var (
+		srid    uint32
+		hasSRID bool
+	)
 	bom, typ, err := decode.ByteOrderType(r)
 	if err != nil {
-		return nil, srid, err
+		return nil, err
 	}
 	if typ&consts.WKBSRID == consts.WKBSRID {
 		typ -= consts.WKBSRID
 		srid, err = decode.SRID(r, bom)
 		if err != nil {
-			return nil, srid, fmt.Errorf("failed to decode srid: %w", err)
+			return nil, fmt.Errorf("failed to decode srid: %w", err)
 		}
+		hasSRID = true
 	}
 	switch typ {
 	case Point:
 		pt, err := decode.Point(r, bom)
-		return geom.Point(pt), srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode point: %w", err)
+		}
+		if hasSRID {
+			return geom.PointS{
+				Srid: geom.Srid(srid),
+				Xy:   pt,
+			}, nil
+		}
+		return pt, nil
 	case MultiPoint:
 		mpt, err := decode.MultiPoint(r, bom)
-		return geom.MultiPoint(mpt), srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode multi point: %w", err)
+		}
+		if hasSRID {
+			return geom.MultiPointS{
+				Srid: geom.Srid(srid),
+				Mp:   mpt,
+			}, nil
+		}
+		return mpt, nil
 	case LineString:
 		ln, err := decode.LineString(r, bom)
-		return geom.LineString(ln), srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode linestring: %w", err)
+		}
+		if hasSRID {
+			return geom.LineStringS{
+				Srid: geom.Srid(srid),
+				Ls:   ln,
+			}, nil
+		}
+		return ln, nil
 	case MultiLineString:
 		mln, err := decode.MultiLineString(r, bom)
-		return geom.MultiLineString(mln), srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode multilinestring: %w", err)
+		}
+		if hasSRID {
+			return geom.MultiLineStringS{
+				Srid: geom.Srid(srid),
+				Mls:  mln,
+			}, nil
+		}
+		return mln, err
 	case Polygon:
 		pl, err := decode.Polygon(r, bom)
-		return geom.Polygon(pl), srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode polygon: %w", err)
+		}
+		if hasSRID {
+			return geom.PolygonS{
+				Srid: geom.Srid(srid),
+				Pol:  pl,
+			}, nil
+		}
+		return pl, nil
 	case MultiPolygon:
 		mpl, err := decode.MultiPolygon(r, bom)
-		return geom.MultiPolygon(mpl), srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode multi polygon: %w", err)
+		}
+		if hasSRID {
+			return geom.MultiPolygonS{
+				Srid:         geom.Srid(srid),
+				MultiPolygon: mpl,
+			}, nil
+		}
+		return mpl, nil
 	case Collection:
 		col, err := decode.Collection(r, bom)
-		return col, srid, err
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode collection: %w", err)
+		}
+		if hasSRID {
+			return geom.CollectionS{
+				Srid:       geom.Srid(srid),
+				Collection: col,
+			}, nil
+		}
+		return col, nil
 	default:
-		return nil, srid, ErrUnknownGeometryType{typ}
+		return nil, ErrUnknownGeometryType{typ}
 	}
 }
 

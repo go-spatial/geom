@@ -7,13 +7,13 @@ var ErrNilMultiLineStringZMS = errors.New("geom: nil MultiLineStringZMS")
 
 // MultiLineStringZMS is a geometry with multiple LineStringSs.
 type MultiLineStringZMS struct {
-	Srid  uint32
+	Srid
 	Mlszm MultiLineStringZM
 }
 
 // LineStrings returns the coordinates for the linestrings
 func (mlszms MultiLineStringZMS) MultiLineStringZMs() struct {
-	Srid  uint32
+	Srid
 	Mlszm MultiLineStringZM
 } {
 	return mlszms
@@ -25,7 +25,7 @@ func (mlszms *MultiLineStringZMS) SetSRID(srid uint32, mlszm MultiLineStringZM) 
 		return ErrNilMultiLineStringZMS
 	}
 
-	mlszms.Srid = srid
+	mlszms.Srid = Srid(srid)
 	mlszms.Mlszm = mlszm
 	return
 }

@@ -12,14 +12,14 @@ var ErrInvalidLineStringMS = errors.New("geom: invalid LineStringMS")
 
 // LineStringMS is a basic line type which is made up of two or more points that don't interacted.
 type LineStringMS struct {
-	Srid uint32
-	Lsm  LineStringM
+	Srid
+	Lsm LineStringM
 }
 
 // Vertices returns a slice of referenced XYM values
 func (lsms LineStringMS) Vertices() struct {
-	Srid uint32
-	Lsm  LineStringM
+	Srid
+	Lsm LineStringM
 } {
 	return lsms
 }
@@ -30,7 +30,7 @@ func (lsms *LineStringMS) SetSRID(srid uint32, lsm LineStringM) (err error) {
 		return ErrNilLineStringMS
 	}
 
-	lsms.Srid = srid
+	lsms.Srid = Srid(srid)
 	lsms.Lsm = lsm
 	return
 }

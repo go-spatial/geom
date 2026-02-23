@@ -12,14 +12,14 @@ var ErrInvalidLineStringZS = errors.New("geom: invalid LineStringZS")
 
 // LineStringZS is a basic line type which is made up of two or more points that don't interacted.
 type LineStringZS struct {
-	Srid uint32
-	Lsz  LineStringZ
+	Srid
+	Lsz LineStringZ
 }
 
 // Vertices returns a slice of referenced XYM values
 func (lszs LineStringZS) Vertices() struct {
-	Srid uint32
-	Lsz  LineStringZ
+	Srid
+	Lsz LineStringZ
 } {
 	return lszs
 }
@@ -30,7 +30,7 @@ func (lszs *LineStringZS) SetSRID(srid uint32, lsz LineStringZ) (err error) {
 		return ErrNilLineStringZS
 	}
 
-	lszs.Srid = srid
+	lszs.Srid = Srid(srid)
 	lszs.Lsz = lsz
 	return
 }

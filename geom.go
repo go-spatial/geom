@@ -6,9 +6,13 @@ import (
 	"reflect"
 )
 
+type Srid uint32
+
+func (srid Srid) SRID() uint32 { return uint32(srid) }
+
 // Geometry is an object with a spatial reference.
 // if a method accepts a Geometry type it's only expected to support the geom types in this package
-type Geometry interface{}
+type Geometry any
 
 // Pointer is a point with two dimensions.
 type Pointer interface {
@@ -38,8 +42,8 @@ type PointZMer interface {
 type PointSer interface {
 	Geometry
 	XYS() struct {
-		Srid uint32
-		Xy   Point
+		Srid
+		Xy Point
 	}
 }
 
@@ -47,8 +51,8 @@ type PointSer interface {
 type PointZSer interface {
 	Geometry
 	XYZS() struct {
-		Srid uint32
-		Xyz  PointZ
+		Srid
+		Xyz PointZ
 	}
 }
 
@@ -56,8 +60,8 @@ type PointZSer interface {
 type PointMSer interface {
 	Geometry
 	XYMS() struct {
-		Srid uint32
-		Xym  PointM
+		Srid
+		Xym PointM
 	}
 }
 
@@ -65,7 +69,7 @@ type PointMSer interface {
 type PointZMSer interface {
 	Geometry
 	XYZMS() struct {
-		Srid uint32
+		Srid
 		Xyzm PointZM
 	}
 }
@@ -98,8 +102,8 @@ type MultiPointZMer interface {
 type MultiPointSer interface {
 	Geometry
 	Points() struct {
-		Srid uint32
-		Mp   MultiPoint
+		Srid
+		Mp MultiPoint
 	}
 }
 
@@ -107,8 +111,8 @@ type MultiPointSer interface {
 type MultiPointZSer interface {
 	Geometry
 	Points() struct {
-		Srid uint32
-		Mpz  MultiPointZ
+		Srid
+		Mpz MultiPointZ
 	}
 }
 
@@ -116,8 +120,8 @@ type MultiPointZSer interface {
 type MultiPointMSer interface {
 	Geometry
 	Points() struct {
-		Srid uint32
-		Mpm  MultiPointM
+		Srid
+		Mpm MultiPointM
 	}
 }
 
@@ -125,7 +129,7 @@ type MultiPointMSer interface {
 type MultiPointZMSer interface {
 	Geometry
 	Points() struct {
-		Srid uint32
+		Srid
 		Mpzm MultiPointZM
 	}
 }
@@ -158,8 +162,8 @@ type LineStringZMer interface {
 type LineStringSer interface {
 	Geometry
 	Vertices() struct {
-		Srid uint32
-		Ls   LineString
+		Srid
+		Ls LineString
 	}
 }
 
@@ -167,8 +171,8 @@ type LineStringSer interface {
 type LineStringMSer interface {
 	Geometry
 	Vertices() struct {
-		Srid uint32
-		Lsm  LineStringM
+		Srid
+		Lsm LineStringM
 	}
 }
 
@@ -176,8 +180,8 @@ type LineStringMSer interface {
 type LineStringZSer interface {
 	Geometry
 	Vertices() struct {
-		Srid uint32
-		Lsz  LineStringZ
+		Srid
+		Lsz LineStringZ
 	}
 }
 
@@ -185,7 +189,7 @@ type LineStringZSer interface {
 type LineStringZMSer interface {
 	Geometry
 	Vertices() struct {
-		Srid uint32
+		Srid
 		Lszm LineStringZM
 	}
 }
@@ -227,7 +231,7 @@ type MultiLineStringSer interface {
 type MultiLineStringZSer interface {
 	Geometry
 	MultiLineStringZs() struct {
-		Srid uint32
+		Srid
 		Mlsz MultiLineStringZ
 	}
 }
@@ -236,7 +240,7 @@ type MultiLineStringZSer interface {
 type MultiLineStringMSer interface {
 	Geometry
 	MultiLineStringMs() struct {
-		Srid uint32
+		Srid
 		Mlsm MultiLineStringM
 	}
 }
@@ -245,7 +249,7 @@ type MultiLineStringMSer interface {
 type MultiLineStringZMSer interface {
 	Geometry
 	MultiLineStringZMs() struct {
-		Srid  uint32
+		Srid
 		Mlszm MultiLineStringZM
 	}
 }
@@ -285,7 +289,7 @@ type PolygonSer interface {
 type PolygonZSer interface {
 	Geometry
 	LinearRings() struct {
-		Srid uint32
+		Srid
 		Polz PolygonZ
 	}
 }
@@ -293,7 +297,7 @@ type PolygonZSer interface {
 type PolygonMSer interface {
 	Geometry
 	LinearRings() struct {
-		Srid uint32
+		Srid
 		Polm PolygonM
 	}
 }
@@ -301,7 +305,7 @@ type PolygonMSer interface {
 type PolygonZMSer interface {
 	Geometry
 	LinearRings() struct {
-		Srid  uint32
+		Srid
 		Polzm PolygonZM
 	}
 }
@@ -316,6 +320,10 @@ type MultiPolygoner interface {
 type Collectioner interface {
 	Geometry
 	Geometries() []Geometry
+}
+
+type SRIDer interface {
+	SRID() uint32
 }
 
 // getCoordinates is a helper function for GetCoordinates to avoid too many

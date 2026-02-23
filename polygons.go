@@ -18,14 +18,14 @@ var ErrInvalidPolygonS = errors.New("geom: invalid PolygonS")
 // There may be one or more interior LineStringSs with a counterclockwise winding orders.
 // The last point in the linear ring will not match the first point.
 type PolygonS struct {
-	Srid uint32
-	Pol  Polygon
+	Srid
+	Pol Polygon
 }
 
 // LinearRings returns the coordinates of the linear rings
 func (p PolygonS) LinearRings() struct {
-	Srid uint32
-	Pol  Polygon
+	Srid
+	Pol Polygon
 } {
 	return p
 }
@@ -36,7 +36,7 @@ func (p *PolygonS) SetLinearRings(srid uint32, pol Polygon) (err error) {
 		return ErrNilPolygonS
 	}
 
-	p.Srid = srid
+	p.Srid = Srid(srid)
 	p.Pol = pol
 	return
 }
@@ -70,5 +70,5 @@ func (p PolygonS) AsSegments() (segs [][]Line, srid uint32, err error) {
 			segs = append(segs, subr)
 		}
 	}
-	return segs, p.Srid, nil
+	return segs, p.SRID(), nil
 }

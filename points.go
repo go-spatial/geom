@@ -9,26 +9,26 @@ var ErrNilPointS = errors.New("geom: nil PointS")
 
 // Point describes a simple 2D point with SRID
 type PointS struct {
-	Srid uint32
-	Xy   Point
+	Srid
+	Xy Point
 }
 
 // XYS returns the struct itself
 func (p PointS) XYS() struct {
-	Srid uint32
-	Xy   Point
+	Srid
+	Xy Point
 } {
 	return p
 }
 
 // XY returns 2D point
-func (p PointS) XY() Point {
-	return p.Xy
+func (p PointS) XY() [2]float64 {
+	return p.Xy.XY()
 }
 
 // S returns the srid as uint32
 func (p PointS) S() uint32 {
-	return p.Srid
+	return p.SRID()
 }
 
 // SetXYS sets the XY coordinates and the SRID
@@ -37,7 +37,7 @@ func (p *PointS) SetXYS(srid uint32, xy Point) (err error) {
 		return ErrNilPointS
 	}
 
-	p.Srid = srid
+	p.Srid = Srid(srid)
 	p.Xy = xy
 	return
 }

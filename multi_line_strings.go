@@ -7,14 +7,14 @@ var ErrNilMultiLineStringS = errors.New("geom: nil MultiLineStringS")
 
 // MultiLineStringS is a geometry with multiple LineStringSs.
 type MultiLineStringS struct {
-	Srid uint32
-	Mls  MultiLineString
+	Srid
+	Mls MultiLineString
 }
 
 // LineStrings returns the coordinates for the linestrings
 func (mlss MultiLineStringS) MultiLineStrings() struct {
-	Srid uint32
-	Mls  MultiLineString
+	Srid
+	Mls MultiLineString
 } {
 	return mlss
 }
@@ -25,7 +25,7 @@ func (mlss *MultiLineStringS) SetSRID(srid uint32, mls MultiLineString) (err err
 		return ErrNilMultiLineStringS
 	}
 
-	mlss.Srid = srid
+	mlss.Srid = Srid(srid)
 	mlss.Mls = mls
 	return
 }

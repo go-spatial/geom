@@ -39,3 +39,8 @@ func (mp MultiPolygon) AsSegments() (segs [][][]Line, err error) {
 	}
 	return segs, nil
 }
+
+type MultiPolygonS struct {
+	Srid
+	MultiPolygon
+}

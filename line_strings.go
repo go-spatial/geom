@@ -12,14 +12,14 @@ var ErrInvalidLineStringS = errors.New("geom: invalid LineStringS")
 
 // LineString is a basic line type which is made up of two or more points that don't interacted.
 type LineStringS struct {
-	Srid uint32
-	Ls   LineString
+	Srid
+	Ls LineString
 }
 
 // Vertices returns a slice of referenced XY values
 func (lss LineStringS) Vertices() struct {
-	Srid uint32
-	Ls   LineString
+	Srid
+	Ls LineString
 } {
 	return lss
 }
@@ -30,7 +30,7 @@ func (lss *LineStringS) SetSRID(srid uint32, ls LineString) (err error) {
 		return ErrNilLineStringS
 	}
 
-	lss.Srid = srid
+	lss.Srid = Srid(srid)
 	lss.Ls = ls
 	return
 }

@@ -90,6 +90,43 @@ func (d *Decoder) syntaxErr(errType string, format string, v ...interface{}) err
 	}
 }
 
+func (d *Decoder) readToken(inTok func(byte) bool) ([]byte, error) {
+	token := []byte{}
+
+	var err error
+	var b byte
+
+	for {
+		b, err = d.readByte()
+		if err != nil {
+			return nil, err
+		}
+
+		if !inTok(b) {
+			d.unreadByte()
+			break
+		}
+		token = append(token, b)
+	}
+	return token, nil
+}
+
+func (d *Decoder) readInteger() (int64, error) {
+	isNumeric := func(b byte) bool {
+		return (b >= '0' && b <= '9') ||
+			b == '-'
+	}
+	token, err := d.readToken(isNumeric)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(string(token), 10, 64)
+	if err != nil {
+		return 0, d.syntaxErr("float", "cannot parse %q", token)
+	}
+	return i, nil
+}
+
 func (d *Decoder) readFloat() (float64, error) {
 	isNumeric := func(b byte) bool {
 		return (b >= '0' && b <= '9') ||
@@ -100,21 +137,11 @@ func (d *Decoder) readFloat() (float64, error) {
 			b == 'E' ||
 			b == 'e'
 	}
-
-	token := []byte{}
-
-	var err error
-	var b byte
-
-	for b, err = d.readByte(); isNumeric(b) && err == nil; b, err = d.readByte() {
-		token = append(token, b)
-	}
+	token, err := d.readToken(isNumeric)
 
 	if err != nil {
 		return 0, err
 	}
-
-	d.unreadByte()
 
 	ret, err := strconv.ParseFloat(string(token), 64)
 	if err != nil {
@@ -351,6 +378,9 @@ func (d *Decoder) readPolys() ([][][][2]float64, error) {
 }
 
 func (d *Decoder) readGeometry() (geom.Geometry, error) {
+	var srid geom.Srid
+
+ReadTag:
 	tag, err := d.readTag()
 	if err != nil {
 		return nil, err
@@ -362,6 +392,45 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 	}
 
 	switch tag {
+	case "srid":
+		if srid != 0 {
+			return nil, fmt.Errorf("srid already set")
+		}
+		// we are in the srid, so we expect: "srid=\d+;..."
+		_, err = d.readWhitespace()
+		if err != nil {
+			return nil, err
+		}
+		b, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		if b != '=' {
+			_ = d.unreadByte()
+			return nil, d.expected("=")
+		}
+		_, _ = d.readWhitespace()
+		i, err := d.readInteger()
+		if err != nil {
+			return nil, err
+		}
+		if i <= 0 {
+			return nil, fmt.Errorf("srid should be greater than or equal to 0; not %v", i)
+		}
+		srid = geom.Srid(i)
+		_, _ = d.readWhitespace()
+		b, err = d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		if b != ';' {
+			_ = d.unreadByte()
+			return nil, d.expected(";")
+		}
+
+		// Let's do the tag processing again.
+		goto ReadTag
+
 	case "point":
 		pts, err := d.readPoints()
 		if err != nil {
@@ -372,6 +441,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		case 0:
 			return nil, d.syntaxErr("POINT", "cannot be empty")
 		case 1:
+			if srid != 0 {
+				return geom.PointS{
+					Srid: srid,
+					Xy:   pts[0],
+				}, nil
+			}
 			return geom.Point(pts[0]), nil
 		default:
 			return nil, d.syntaxErr("POINT", "too many points %d", len(pts))
@@ -382,7 +457,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		if srid != 0 {
+			return geom.MultiPointS{
+				Srid: srid,
+				Mp:   pts,
+			}, nil
+		}
 		return geom.MultiPoint(pts), nil
 
 	case "linestring":
@@ -395,6 +475,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			return nil, d.syntaxErr("LINESTRING", "not enough points %d", len(pts))
 		}
 
+		if srid != 0 {
+			return geom.LineStringS{
+				Srid: srid,
+				Ls:   pts,
+			}, nil
+		}
 		return geom.LineString(pts), nil
 
 	case "multilinestring":
@@ -413,6 +499,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			}
 		}
 
+		if srid != 0 {
+			return geom.MultiLineStringS{
+				Srid: srid,
+				Mls:  lines,
+			}, nil
+		}
 		return geom.MultiLineString(lines), nil
 
 	case "polygon":
@@ -439,6 +531,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			lines[i] = v[:len(v)-1]
 		}
 
+		if srid != 0 {
+			return geom.PolygonS{
+				Srid: srid,
+				Pol:  lines,
+			}, nil
+		}
 		return geom.Polygon(lines), nil
 
 	case "multipolygon":
@@ -467,6 +565,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			}
 		}
 
+		if srid != 0 {
+			return geom.MultiPolygonS{
+				Srid:         srid,
+				MultiPolygon: polys,
+			}, nil
+		}
 		return geom.MultiPolygon(polys), err
 	case "geometrycollection":
 		b, err := d.readByte()
@@ -529,6 +633,12 @@ func (d *Decoder) readGeometry() (geom.Geometry, error) {
 			panic("unreacheable")
 		}
 
+		if srid != 0 {
+			return geom.CollectionS{
+				Srid:       srid,
+				Collection: geoms,
+			}, nil
+		}
 		return geoms, nil
 
 	default:

@@ -296,6 +296,15 @@ func (cmp Compare) CollectionerEqual(col1, col2 geom.Collectioner) bool {
 // GeometryEqual checks if the two geometries are of the same type and then
 // calls the type method to check if they are equal
 func (cmp Compare) GeometryEqual(g1, g2 geom.Geometry) bool {
+	if g1Srid, ok := g1.(geom.SRIDer); ok {
+		g2Srid, ok := g2.(geom.SRIDer)
+		if !ok {
+			return false
+		}
+		if g1Srid.SRID() != g2Srid.SRID() {
+			return false
+		}
+	}
 	switch pg1 := g1.(type) {
 	case geom.Pointer:
 		if pg2, ok := g2.(geom.Pointer); ok {

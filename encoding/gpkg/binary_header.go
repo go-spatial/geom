@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 package gpkg
@@ -319,8 +320,12 @@ func (sb StandardBinary) Encode() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var srid uint32
+	if s, ok := sb.Geometry.(geom.SRIDer); ok {
+		srid = s.SRID()
+	}
 
-	err = wkb.EncodeWithByteOrder(sb.Header.Endian(), &data, sb.Geometry)
+	err = wkb.EncodeWithByteOrder(sb.Header.Endian(), srid, &data, sb.Geometry)
 	if err != nil {
 		return nil, err
 	}

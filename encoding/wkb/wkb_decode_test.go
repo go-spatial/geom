@@ -22,7 +22,7 @@ func TestWKBDecode(t *testing.T) {
 				t.Skip("instructed to skip.")
 			}
 
-			geom, srid, err := wkb.DecodeBytesWSRID(tc.Bytes)
+			geom, err := wkb.DecodeBytes(tc.Bytes)
 			if !tc.DoesErrorMatch(tcase.TypeDecode, err) {
 
 				eerr := "nil"
@@ -38,13 +38,8 @@ func TestWKBDecode(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(geom, tc.Expected) {
+			if !reflect.DeepEqual(geom, tc.Geometry()) {
 				t.Errorf("decode, expected\n\t%v\ngot\n\t%v\n\n", tc.Expected, geom)
-			}
-			if tc.SRID != 0 {
-				if tc.SRID != srid {
-					t.Errorf("srid, expected %v got %v", tc.SRID, srid)
-				}
 			}
 		}
 	}
@@ -53,7 +48,6 @@ func TestWKBDecode(t *testing.T) {
 		cases, err := tcase.ParseFile(fname)
 		if err != nil {
 			t.Fatalf("error parsing file: %v : %v ", fname, err)
-			continue
 		}
 		t.Run(fname, func(t *testing.T) {
 			if len(cases) == 1 {

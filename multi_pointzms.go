@@ -7,13 +7,13 @@ var ErrNilMultiPointZMS = errors.New("geom: nil MultiPointZMS")
 
 // MultiPointZMS is a geometry with multiple, referenced 3+1D points.
 type MultiPointZMS struct {
-	Srid uint32
+	Srid
 	Mpzm MultiPointZM
 }
 
 // Points returns the coordinates for the 3+1D points
 func (mpzms MultiPointZMS) Points() struct {
-	Srid uint32
+	Srid
 	Mpzm MultiPointZM
 } {
 	return mpzms
@@ -25,7 +25,7 @@ func (mpzms *MultiPointZMS) SetSRID(srid uint32, mpzm MultiPointZM) (err error) 
 		return ErrNilMultiPointZMS
 	}
 
-	mpzms.Srid = srid
+	mpzms.Srid = Srid(srid)
 	mpzms.Mpzm = mpzm
 	return
 }
